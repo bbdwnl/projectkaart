@@ -46,7 +46,7 @@ onMounted(async () => {
     <div class="blokkop">
       <div>
         <h2>Financieel</h2>
-        <p class="klein">Alleen zichtbaar voor het MT.<template v-if="modus === 'demo'"> Voorbeeldbedragen.</template></p>
+        <p class="klein">Alleen zichtbaar voor het MT.<template v-if="modus === 'proef'"> Voorbeeldbedragen.</template></p>
       </div>
       <span class="tab later">Alleen MT</span>
     </div>

@@ -3,7 +3,6 @@ import { TABS, type Tab } from '~/lib/weergave'
 import { dagen } from '~/lib/datum'
 
 const route = useRoute()
-const router = useRouter()
 const kaart = useProjectkaart(String(route.params.slug))
 const { project, stand, fout, lichten, mijlpaal, tabFase, filter } = kaart
 const { weergave } = useWeergave()
@@ -15,7 +14,8 @@ if (TABS.includes(uitLink)) weergave.value.tab = uitLink
 const richting = ref(1)
 watch(() => weergave.value.tab, (nieuw, oud) => {
   richting.value = TABS.indexOf(nieuw) >= TABS.indexOf(oud) ? 1 : -1
-  router.replace({ hash: `#${nieuw}` })
+  // Alleen de adresbalk bijwerken (deelbare link), zonder navigatie of scrollen.
+  history.replaceState(history.state, '', `#${nieuw}`)
 })
 
 const kruimel = useState<string | null>('kruimel', () => null)
@@ -51,7 +51,7 @@ function planning() {
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'demo'" class="melding">Demo-modus. Naam, projectnummer en datums komen uit het prototype; statussen, mensen, documenten en bedragen zijn voorbeeldgegevens. Na herladen begint alles opnieuw.</p>
+    <p v-if="modus === 'proef'" class="melding">Proefversie. Naam, projectnummer en datums komen uit het prototype; statussen, mensen, documenten en bedragen zijn voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
 
     <div v-if="stand === 'laden'" class="laden" aria-busy="true">
       <span class="laden-regel kort" /><span class="laden-regel titel" /><span class="laden-regel" /><span class="laden-regel" />

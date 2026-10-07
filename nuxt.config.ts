@@ -47,7 +47,11 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      // Leeg = demo-modus: alles draait in het geheugen met voorbeeldgegevens.
+      // Proefversie: Microsoft is nog niet gekoppeld. De inlogknop laat je zonder account
+      // binnen en alles draait op voorbeeldgegevens in de browser van de tester.
+      // Zet op false (NUXT_PUBLIC_PROEFVERSIE=false) zodra de Microsoft-login werkt.
+      proefversie: true,
+      // Leeg = ook de proefversie.
       supabaseUrl: '',
       supabaseKey: '',
       // Alleen accounts met dit e-maildomein komen erin (ook afgedwongen in RLS).

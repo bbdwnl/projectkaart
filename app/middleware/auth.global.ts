@@ -1,4 +1,4 @@
-// Alles zit achter de Microsoft-login, behalve /login zelf. In de demo-modus is iedereen "Demo".
+// Alles zit achter de login, behalve /login zelf. In de proefversie is de login een knop zonder account.
 export default defineNuxtRouteMiddleware((to) => {
   const { gebruiker } = useGebruiker()
   if (to.path === '/login') {

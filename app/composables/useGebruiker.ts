@@ -1,18 +1,25 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import type { Gebruiker } from '~/lib/types'
 
-const DEMO: Gebruiker = { naam: 'Demo', email: null, isMt: true }
+/** In de proefversie log je in zonder account; dit is wie je dan bent. */
+const PROEF: Gebruiker = { naam: 'Testgebruiker', email: null, isMt: true }
+const PROEF_SLEUTEL = 'projectkaart_proefgebruiker'
+
+function proefIngelogd(): boolean {
+  try { return localStorage.getItem(PROEF_SLEUTEL) === '1' } catch { return false }
+}
 
 export function useGebruiker() {
   const gebruiker = useState<Gebruiker | null>('gebruiker', () => null)
-  const modus = useState<'demo' | 'supabase'>('modus', () => 'demo')
+  /** proef: nep-login en voorbeeldgegevens in de browser. supabase: Microsoft-login en de echte database. */
+  const modus = useState<'proef' | 'supabase'>('modus', () => 'proef')
   const melding = useState('inlogmelding', () => '')
 
-  /** Eenmalig vanuit de plugin. */
+  /** Eenmalig vanuit de plugin. Zonder Supabase-client is het de proefversie. */
   async function start(sb: SupabaseClient | null, domein: string) {
     if (!sb) {
-      modus.value = 'demo'
-      gebruiker.value = DEMO
+      modus.value = 'proef'
+      gebruiker.value = proefIngelogd() ? PROEF : null
       return
     }
     modus.value = 'supabase'
@@ -41,9 +48,16 @@ export function useGebruiker() {
   }
 
   async function inloggen(terug = '/') {
+    melding.value = ''
+    if (modus.value === 'proef') {
+      // Microsoft is nog niet gekoppeld: de knop laat je zonder account binnen.
+      try { localStorage.setItem(PROEF_SLEUTEL, '1') } catch { /* privévenster: dan alleen voor deze sessie */ }
+      gebruiker.value = PROEF
+      await navigateTo(terug)
+      return
+    }
     const sb = useNuxtApp().$supabase
     if (!sb) return
-    melding.value = ''
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'azure',
       options: { scopes: 'email', redirectTo: `${location.origin}${terug}` },
@@ -52,8 +66,11 @@ export function useGebruiker() {
   }
 
   async function uitloggen() {
-    const sb = useNuxtApp().$supabase
-    if (sb) await sb.auth.signOut()
+    if (modus.value === 'proef') {
+      try { localStorage.removeItem(PROEF_SLEUTEL) } catch { /* niets te doen */ }
+    } else {
+      await useNuxtApp().$supabase?.auth.signOut()
+    }
     gebruiker.value = null
     await navigateTo('/login')
   }

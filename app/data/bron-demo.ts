@@ -1,6 +1,6 @@
 import type { Bron, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import { maakDemoGegevens } from './demo'
+import { maakDemoGegevens, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import type { Fase, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging } from '~/lib/types'
 
@@ -14,13 +14,38 @@ const kopie = <T>(o: T): T => JSON.parse(JSON.stringify(o))
 const alsTekst = (v: unknown): string | null => v === null || v === undefined ? null : Array.isArray(v) ? `{${v.join(',')}}` : String(v)
 const wacht = () => new Promise(r => setTimeout(r, 120)) // voelt als een echte opslag
 
-/** De demo-modus: alles in het geheugen, met voorbeeldgegevens. Na herladen begint het opnieuw. */
-export function maakDemoBron(door = 'Demo'): Bron {
-  const db = maakDemoGegevens(new Date())
+function laad(opslag: string): DemoGegevens | null {
+  try {
+    const s = localStorage.getItem(opslag)
+    const d = s ? JSON.parse(s) as DemoGegevens : null
+    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) ? d : null
+  } catch {
+    return null
+  }
+}
+
+/** Waar de proefversie de gegevens van een tester bewaart. Verhoog de versie als de vorm verandert. */
+export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v1'
+
+export function wisProefgegevens() {
+  try { localStorage.removeItem(PROEF_OPSLAG) } catch { /* niets te wissen */ }
+}
+
+/**
+ * Voorbeeldgegevens in het geheugen. Met `opslag` blijven de wijzigingen van een
+ * tester bewaard in zijn eigen browser (localStorage); anderen zien ze niet.
+ */
+export function maakDemoBron({ door = 'Demo', opslag }: { door?: string, opslag?: string } = {}): Bron {
+  const db = (opslag && laad(opslag)) || maakDemoGegevens(new Date())
   let teller = 0
+  const nieuwId = (soort: string) => `${soort}-demo-${Date.now().toString(36)}-${++teller}`
+  function bewaar() {
+    if (!opslag) return
+    try { localStorage.setItem(opslag, JSON.stringify(db)) } catch { /* vol of geblokkeerd: dan alleen in het geheugen */ }
+  }
 
   function log(regel: Omit<LogRegel, 'id' | 'op' | 'door'>) {
-    db.logboek.unshift({ ...regel, id: `l-demo-${++teller}`, op: new Date().toISOString(), door })
+    db.logboek.unshift({ ...regel, id: nieuwId('l'), op: new Date().toISOString(), door })
   }
   function logTaak(oud: Partial<Taak>, nieuw: Taak) {
     for (const v of TAAK_VELDEN) {
@@ -66,6 +91,7 @@ export function maakDemoBron(door = 'Demo'): Bron {
         const a = alsTekst(oud[v as keyof Project]), b = alsTekst(p[v as keyof Project])
         if (a !== b) log({ project_id: id, tabel: 'projecten', taak_id: null, lijst: null, sleutel: null, uitzondering_id: null, veld: v, oud: a, nieuw: b })
       }
+      bewaar()
       return kopie(p)
     },
 
@@ -73,13 +99,14 @@ export function maakDemoBron(door = 'Demo'): Bron {
       await wacht()
       let t = db.taken.find(x => x.project_id === projectId && x.lijst === lijst && x.sleutel === sleutel)
       if (!t) {
-        t = leegTaak({ id: `t-demo-${++teller}`, project_id: projectId, fase: lijst, lijst, sleutel })
+        t = leegTaak({ id: nieuwId('t'), project_id: projectId, fase: lijst, lijst, sleutel })
         db.taken.push(t)
         pasToe(t, wijziging)
         logTaak({}, t)
       } else {
         logTaak(pasToe(t, wijziging), t)
       }
+      bewaar()
       return kopie(t)
     },
 
@@ -88,6 +115,7 @@ export function maakDemoBron(door = 'Demo'): Bron {
       const t = db.taken.find(x => x.id === taakId)
       if (!t) throw new BronFout('Deze taak bestaat niet (meer).')
       logTaak(pasToe(t, wijziging), t)
+      bewaar()
       return kopie(t)
     },
 
@@ -98,15 +126,16 @@ export function maakDemoBron(door = 'Demo'): Bron {
         const titel = invoer.nieuweTitel.trim()
         u = db.uitzonderingen.find(x => x.titel.toLowerCase() === titel.toLowerCase())
         if (!u) {
-          u = { id: `u-demo-${++teller}`, titel, fase: invoer.fase, status: 'uitzondering', aangemaakt_op: new Date().toISOString() }
+          u = { id: nieuwId('u'), titel, fase: invoer.fase, status: 'uitzondering', aangemaakt_op: new Date().toISOString() }
           db.uitzonderingen.push(u)
         }
       }
       if (!u) throw new BronFout('Kies een uitzondering of typ een nieuwe.')
       if (db.taken.some(t => t.project_id === projectId && t.uitzondering_id === u!.id)) throw new BronFout('Deze uitzondering staat al in dit project.')
-      const t = leegTaak({ id: `t-demo-${++teller}`, project_id: projectId, fase: invoer.fase, uitzondering_id: u.id, deadline: invoer.deadline })
+      const t = leegTaak({ id: nieuwId('t'), project_id: projectId, fase: invoer.fase, uitzondering_id: u.id, deadline: invoer.deadline })
       db.taken.push(t)
       log({ project_id: projectId, tabel: 'taken', taak_id: t.id, lijst: null, sleutel: null, uitzondering_id: u.id, veld: 'toegevoegd', oud: null, nieuw: null })
+      bewaar()
       return { taak: kopie(t), uitzondering: kopie(u) }
     },
 
@@ -116,12 +145,14 @@ export function maakDemoBron(door = 'Demo'): Bron {
       if (i < 0) return
       const [t] = db.taken.splice(i, 1)
       if (t!.uitzondering_id) log({ project_id: t!.project_id, tabel: 'taken', taak_id: t!.id, lijst: null, sleutel: null, uitzondering_id: t!.uitzondering_id, veld: 'verwijderd', oud: null, nieuw: null })
+      bewaar()
     },
 
     async zetUitzonderingStatus(id, status) {
       await wacht()
       const u = db.uitzonderingen.find(x => x.id === id)
       if (u) u.status = status
+      bewaar()
     },
   }
 }

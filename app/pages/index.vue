@@ -50,7 +50,7 @@ const mijlpaalTekst = (m: ReturnType<typeof volgendeMijlpaal>) => !m ? 'Geen mij
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'demo'" class="melding">Demo-modus. De projecten en datums komen uit het prototype; de statussen zijn voorbeeldgegevens.</p>
+    <p v-if="modus === 'proef'" class="melding">Proefversie. De projecten en datums komen uit het prototype; statussen, mensen en documenten zijn voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
     <header class="paginakop">
       <p class="label">Alle lopende projecten</p>
       <h1>Projecten</h1>
