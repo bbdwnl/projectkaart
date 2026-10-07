@@ -1,12 +1,31 @@
-// Voorbeeldgegevens voor de demo-modus. Projectnamen, nummers en datums komen uit het
+// Voorbeeldgegevens voor de proefversie. Projectnamen, nummers en datums komen uit het
 // prototype (projecten.json); statussen, mensen, documenten en bedragen zijn verzonnen.
-import projectenJson from './projecten.json'
-import type { Fase, Financien, LogRegel, Project, Status, Taak, Uitzondering } from '~/lib/types'
-import { FASEN, faseIndex, MENSEN } from '~/lib/fasen'
-import { LIJSTEN } from '~/lib/taken'
-import { deadlineVan } from '~/lib/stoplicht'
-import { dagenTussen, naarIso, plusDagen } from '~/lib/datum'
-import { leegTaak } from '~/lib/taak'
+// Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
+// JavaScript van de browser zitten. Daarom relatieve imports.
+import type { Fase, Financien, LogRegel, Project, Status, Taak, Uitzondering } from '../lib/types'
+import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
+import { LIJSTEN } from '../lib/taken'
+import { deadlineVan } from '../lib/stoplicht'
+import { dagenTussen, naarIso, plusDagen } from '../lib/datum'
+import { leegTaak } from '../lib/taak'
+
+/** Eén regel uit projecten.json. */
+export interface ProjectBasis {
+  slug: string
+  nummer: string | null
+  naam: string
+  plaats: string | null
+  fase: string
+  prio: boolean
+  po: string | null
+  datum_casco: string | null
+  datum_voorbereiding: string | null
+  datum_inkoop: string | null
+  datum_afbouw: string | null
+  datum_oplevering: string | null
+}
+
+export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [] })
 
 export interface DemoGegevens {
   projecten: Project[]
@@ -82,9 +101,9 @@ const VLIJTSEWEG: Record<string, [Status, string, string?, { akk?: boolean, n?: 
   'ontwikkeling:energielabel_vl': ['niet_gestart', 'Adviseur'],
 }
 
-export function maakDemoGegevens(nu: Date): DemoGegevens {
+export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens {
   const nummerOf = (p: { nummer: string | null, naam: string }) => p.nummer ?? p.naam
-  const projecten: Project[] = projectenJson.map((j) => {
+  const projecten: Project[] = basis.map((j) => {
     const fase = j.fase as Fase
     const p: Project = {
       id: `p-${j.slug}`, slug: j.slug, nummer: j.nummer, afas_nummer: null, naam: j.naam, plaats: j.plaats, adres: null,

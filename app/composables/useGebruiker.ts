@@ -14,12 +14,15 @@ export function useGebruiker() {
   /** proef: nep-login en voorbeeldgegevens in de browser. supabase: Microsoft-login en de echte database. */
   const modus = useState<'proef' | 'supabase'>('modus', () => 'proef')
   const melding = useState('inlogmelding', () => '')
+  /** Proefversie: heeft deze browser het wachtwoord al gegeven (of is er geen)? */
+  const toegang = useState('proeftoegang', () => true)
 
   /** Eenmalig vanuit de plugin. Zonder Supabase-client is het de proefversie. */
-  async function start(sb: SupabaseClient | null, domein: string) {
+  async function start(sb: SupabaseClient | null, domein: string, proefToegang = true) {
     if (!sb) {
       modus.value = 'proef'
-      gebruiker.value = proefIngelogd() ? PROEF : null
+      toegang.value = proefToegang
+      gebruiker.value = proefToegang && proefIngelogd() ? PROEF : null
       return
     }
     modus.value = 'supabase'
@@ -47,11 +50,25 @@ export function useGebruiker() {
     })
   }
 
-  async function inloggen(terug = '/') {
+  async function inloggen(terug = '/', wachtwoord = '') {
     melding.value = ''
     if (modus.value === 'proef') {
+      if (!toegang.value) {
+        // Eerst het wachtwoord van de proefversie langs de server; die zet een cookie.
+        try {
+          await $fetch('/api/proef/toegang', { method: 'POST', body: { wachtwoord } })
+        } catch (e) {
+          melding.value = (e as { statusCode?: number }).statusCode === 401 ? 'Dat wachtwoord klopt niet.' : 'Inloggen lukte niet. Probeer het nog eens.'
+          return
+        }
+      }
       // Microsoft is nog niet gekoppeld: de knop laat je zonder account binnen.
       try { localStorage.setItem(PROEF_SLEUTEL, '1') } catch { /* privévenster: dan alleen voor deze sessie */ }
+      if (!toegang.value) {
+        // Opnieuw laden: nu haalt de app de gegevens op.
+        location.assign(terug)
+        return
+      }
       gebruiker.value = PROEF
       await navigateTo(terug)
       return
@@ -78,5 +95,5 @@ export function useGebruiker() {
   const initialen = computed(() => (gebruiker.value?.naam ?? '')
     .split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join(''))
 
-  return { gebruiker, modus, melding, start, inloggen, uitloggen, initialen }
+  return { gebruiker, modus, melding, toegang, start, inloggen, uitloggen, initialen }
 }

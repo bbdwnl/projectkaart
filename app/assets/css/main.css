@@ -482,3 +482,6 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 
 /* proefversie op de inlogpagina */
 .proef-uitleg{margin:20px 0 0;padding:14px 16px;border-radius:var(--radius);background:var(--grijs-2);font-size:14px;line-height:21px;color:#3d3d3d}
+.wachtwoord{display:grid;gap:6px;margin:0 0 16px;max-width:320px}
+.wachtwoord label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.wachtwoord .veld{height:42px;font-size:15px}

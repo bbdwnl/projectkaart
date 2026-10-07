@@ -1,6 +1,6 @@
 import type { Bron, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import { maakDemoGegevens, type DemoGegevens } from './demo'
+import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import type { Fase, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging } from '~/lib/types'
 
@@ -32,11 +32,12 @@ export function wisProefgegevens() {
 }
 
 /**
- * Voorbeeldgegevens in het geheugen. Met `opslag` blijven de wijzigingen van een
- * tester bewaard in zijn eigen browser (localStorage); anderen zien ze niet.
+ * Voorbeeldgegevens in het geheugen. `gegevens` komen van de server (alleen met toegang).
+ * Met `opslag` blijven de wijzigingen van een tester bewaard in zijn eigen browser
+ * (localStorage); anderen zien ze niet. Zonder toegang: een lege bron.
  */
-export function maakDemoBron({ door = 'Demo', opslag }: { door?: string, opslag?: string } = {}): Bron {
-  const db = (opslag && laad(opslag)) || maakDemoGegevens(new Date())
+export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: string, opslag?: string, gegevens: DemoGegevens | null }): Bron {
+  const db = gegevens ? (opslag && laad(opslag)) || gegevens : LEGE_GEGEVENS()
   let teller = 0
   const nieuwId = (soort: string) => `${soort}-demo-${Date.now().toString(36)}-${++teller}`
   function bewaar() {

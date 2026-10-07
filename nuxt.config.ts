@@ -46,6 +46,9 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // Tijdelijk: wachtwoord voor de proefversie (NUXT_PROEF_WACHTWOORD). Leeg = geen wachtwoord.
+    // Wordt op de server gecontroleerd; komt nooit in de browser.
+    proefWachtwoord: '',
     public: {
       // Proefversie: Microsoft is nog niet gekoppeld. De inlogknop laat je zonder account
       // binnen en alles draait op voorbeeldgegevens in de browser van de tester.
