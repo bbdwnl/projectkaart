@@ -1,0 +1,32 @@
+{
+  "name": "projectkaart",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "test": "vitest run",
+    "typecheck": "nuxt typecheck",
+    "check": "npm run test && npm run typecheck",
+    "seed:sql": "node scripts/seed-sql.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/schibsted-grotesk": "5.3.0",
+    "@supabase/supabase-js": "2.117.0",
+    "nuxt": "4.5.2",
+    "vue": "3.5.43",
+    "vue-router": "5.3.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3",
+    "vitest": "5.0.1",
+    "vue-tsc": "3.3.11"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

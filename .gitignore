@@ -1,0 +1,27 @@
+# Dependencies
+node_modules
+
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+.vercel
+dist
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Supabase CLI (lokale koppeling)
+supabase/.temp
+supabase/.branches
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

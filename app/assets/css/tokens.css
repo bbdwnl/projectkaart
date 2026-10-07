@@ -1,0 +1,33 @@
+/* =========================================================
+   Kaartenbak BbDW: tokens
+   Basis: design system "Wat als ik later dood ben?" (kaart + tab,
+   2px zwarte rand, één letter). Kleuren: het BbDW-logo.
+   Het stoplicht is het logo: salie = klaar, oker = let op,
+   baksteen = te laat. Blauw = identiteit, focus, huidige fase.
+   Bron van de vormgeving: design-referentie.html
+   ========================================================= */
+:root{
+  --wit:#ffffff;
+  --zwart:#111111;
+  --grijs:#eeeeee;
+  --grijs-2:#f6f6f4;
+  --stil:#6b6b6b;            /* 5,3:1 op wit (bron had #8a8a8a, 3,45:1) */
+  --blauw:#6ba4b8;  --blauw-diep:#2f6a80;
+  --salie:#6fa287;  --salie-diep:#3f6b55;
+  --oker:#d6a461;   --oker-diep:#8a5a17;
+  --baksteen:#c26e60; --baksteen-diep:#9b4335;
+  --marker:#dcebe2;
+  --verloop-zacht:linear-gradient(180deg,#e9f2f5 0%,#ffffff 100%);
+  --verloop-zwart:linear-gradient(145deg,#262626 0%,#111111 52%,#0b1e26 100%);
+  --rand:2px solid var(--zwart);
+  --lijn-dun:1px solid #e4e4e0;
+  --radius:12px; --radius-s:7px; --radius-l:20px; --rond:999px;
+  --zacht:0 6px 18px -14px rgba(17,17,17,.30);
+  --zacht-hoog:0 14px 30px -18px rgba(17,17,17,.38);
+  --stapel:6px 6px 0 -2px #fff,6px 6px 0 0 #111,12px 12px 0 -2px #fff,12px 12px 0 0 #111;
+  --ruimte:26px;
+  --kolom:1320px;
+  --veer:cubic-bezier(.34,1.56,.64,1);
+  --uit:cubic-bezier(.22,1,.36,1);
+  --font:"Schibsted Grotesk Variable","Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+}
