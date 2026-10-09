@@ -44,6 +44,7 @@ export function beschrijf(r: LogRegel, catalogus: Uitzondering[]): LogDeel[] {
     case 'afas_nummer': return [t('zette het AFAS-nummer op '), n(r.nieuw || '—')]
     case 'nummer': return [t('zette het projectnummer op '), n(r.nieuw || '—')]
     case 'soort': return [t('paste de '), n('soort project'), t(' aan')]
+    case 'slagingskans': return [t('zette de '), n('slagingskans'), t(` op ${r.nieuw ? `${r.nieuw}%` : 'onbekend'}`)]
     case 'prio': return [t(r.nieuw === 'true' ? 'gaf het project ' : 'haalde '), n('prio'), t(r.nieuw === 'true' ? '' : ' weg')]
     case 'sharepoint_url': case 'extern_url': case 'notitieblok_url': return [t('paste een '), n('link'), t(' aan')]
     case 'tekeningen_locatie': return [t('paste de '), n('locatie van de tekeningen'), t(' aan')]

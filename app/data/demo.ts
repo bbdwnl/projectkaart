@@ -1,13 +1,14 @@
 // Voorbeeldgegevens voor de proefversie. Projectnamen, nummers en datums komen uit het
-// prototype (projecten.json); statussen, mensen, documenten en bedragen zijn verzonnen.
+// prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import type { Fase, Financien, LogRegel, Project, Status, Taak, Uitzondering } from '../lib/types'
+import type { Fase, Financien, LogRegel, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
 import { dagenTussen, naarIso, plusDagen } from '../lib/datum'
 import { leegTaak } from '../lib/taak'
+import { leegProject, maakSlug } from '../lib/leads'
 
 /** Eén regel uit projecten.json. */
 export interface ProjectBasis {
@@ -43,6 +44,18 @@ function kans(sleutel: string): number {
 }
 const kies = <T>(lijst: T[], sleutel: string): T => lijst[Math.floor(kans(sleutel) * lijst.length)]!
 
+
+// Het prototype had geen leads: deze zijn verzonnen. Naam, plaats, AM, kans, prio, soort, m², dagen sinds de laatste wijziging.
+const LEADS: [string, string, string | null, number | null, boolean, Soort[], number | null, number][] = [
+  ['Gezondheidscentrum De Brink', 'Zwolle', 'Jeroen', 75, true, ['ont', 'tk'], 1400, 3],
+  ['Huisartsenpost Rivierenland', 'Tiel', 'Peter', 50, false, ['ont'], 620, 12],
+  ['Fysio en tandarts Kloosterhof', 'Veghel', 'Jeroen', 25, false, [], null, 40],
+  ['Medisch centrum Stationsplein', 'Ede', 'Benno', 100, true, ['tk'], 2100, 1],
+  ['Apotheek en huisartsen Oosterpark', 'Groningen', 'Peter', null, false, [], null, 65],
+  ['Kindergezondheidscentrum Het Anker', 'Harderwijk', 'Michiel', 50, false, ['adv'], 480, 20],
+  ['Gezondheidshuis Molenwijk', 'Oss', null, 0, false, [], null, 90],
+  ['Zorgplein Noord', 'Almere', 'Jeroen', 75, false, ['ont'], 1750, 6],
+]
 
 const CATALOGUS: [string, string, Fase, number][] = [
   ['u-netcongestie', 'Nutsaansluiting verzwaren (netcongestie)', 'ontwikkeling', 7],
@@ -121,6 +134,10 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
     }
     return p
   })
+  for (const [naam, plaats, am, slagingskans, prio, soort, m2, dagenGeleden] of LEADS) {
+    const slug = maakSlug(naam, projecten.map(p => p.slug))
+    projecten.push(leegProject({ id: `p-${slug}`, slug, naam, plaats, am, slagingskans, prio, soort, m2, gewijzigd_op: plusDagen(nu, -dagenGeleden).toISOString() }))
+  }
 
   const taken: Taak[] = []
   const nieuw = (p: Project, extra: Partial<Taak> & Pick<Taak, 'fase'>) => {

@@ -3,7 +3,8 @@ import { wisProefgegevens } from '~/data/bron-demo'
 
 const { gebruiker, modus, initialen, uitloggen } = useGebruiker()
 const route = useRoute()
-const kruimel = useState<string | null>('kruimel', () => null)
+const kruimel = useState<{ naam: string, lead: boolean } | null>('kruimel', () => null)
+const opKaart = computed(() => !!kruimel.value && route.path.startsWith('/projecten/'))
 const menuOpen = ref(false)
 const menu = ref<HTMLElement>()
 
@@ -30,7 +31,9 @@ onBeforeUnmount(() => document.removeEventListener('click', sluit))
       </NuxtLink>
       <nav class="nav" aria-label="Hoofdmenu">
         <NuxtLink to="/">Projecten</NuxtLink>
-        <span v-if="kruimel && route.path.startsWith('/projecten/')" class="kruimel" aria-current="page">{{ kruimel }}</span>
+        <span v-if="opKaart && !kruimel!.lead" class="kruimel" aria-current="page">{{ kruimel!.naam }}</span>
+        <NuxtLink to="/leads">Leads</NuxtLink>
+        <span v-if="opKaart && kruimel!.lead" class="kruimel" aria-current="page">{{ kruimel!.naam }}</span>
         <NuxtLink to="/uitzonderingen">Uitzonderingen</NuxtLink>
       </nav>
       <div class="rechts">

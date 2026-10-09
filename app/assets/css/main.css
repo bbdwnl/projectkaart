@@ -434,6 +434,39 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .mini-balk{display:flex;height:6px;border-radius:6px;overflow:hidden;background:var(--grijs);margin:6px 0 2px}
 .mini-balk .seg-open{background:var(--grijs)}
 
+/* leads */
+.leadkop{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.nieuwe-lead{margin-top:34px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end;padding-top:26px}
+.nieuwe-lead label{display:grid;gap:6px}
+.nieuwe-lead .label{margin:0}
+.nieuwe-lead .veld{width:100%;height:38px}
+.nieuwe-lead .knoppen{display:flex;align-items:center;gap:14px}
+.leadfilters{margin-top:34px}
+.filtergroep{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;min-width:0;max-width:100%}
+.filtergroep>.label{margin:0}
+.filtergroep .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.filtergroep .seg button{flex:none;white-space:nowrap}
+.filtergroep .schakel{font-size:14px}
+.filtergroep .schakel small{margin-left:-6px;font-size:11px;font-weight:700;opacity:.7}
+.telregel{display:flex;align-items:center;gap:16px;margin:6px 0 12px}
+.telregel .link{font-size:14px}
+.leadlijst .kolkop,.leadlijst .rij-hoofd{grid-template-columns:86px minmax(0,1fr) 120px 96px minmax(0,150px) 92px 150px}
+.kolkop .sorteer{border:0;background:none;padding:0;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left;cursor:pointer}
+.kolkop .sorteer[aria-pressed="true"]{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
+.leadrij{display:block;text-decoration:none}
+.leadrij .titel .prio{height:18px;padding:0 7px;font-size:9px;margin-left:8px;vertical-align:2px}
+.leadrij .titel .mobiel{display:none}
+.leadlijst .kans .voortgang{width:48px}
+@media (max-width:1100px){
+  .leadlijst .rij-hoofd{grid-template-columns:86px minmax(0,1fr);grid-template-areas:none}
+  .leadlijst .rij-hoofd>:nth-child(n+3){display:none}
+  .leadrij .titel .mobiel{display:block}
+  .nieuwe-lead{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  .nieuwe-lead{grid-template-columns:1fr}
+}
+
 /* inloggen */
 .login{min-height:100vh;display:grid;place-items:center;padding:24px}
 .login-kaart{max-width:520px;padding:40px 36px 34px}

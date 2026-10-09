@@ -1,4 +1,5 @@
 import type { Fase, Financien, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { NieuweLead } from '~/lib/leads'
 
 /**
  * Waar de gegevens vandaan komen. Twee uitvoeringen: Supabase (echt) en demo
@@ -15,6 +16,8 @@ export interface Bron {
   financien(projectId: string): Promise<Financien | null>
   logboek(projectId: string, limiet?: number): Promise<LogRegel[]>
   bewaarProject(id: string, wijziging: ProjectWijziging): Promise<Project>
+  /** Een nieuw project in de fase lead. */
+  nieuweLead(invoer: NieuweLead): Promise<Project>
   /** Maakt de taakregel aan als die er nog niet is. */
   bewaarStandaardtaak(projectId: string, lijst: Fase, sleutel: string, wijziging: TaakWijziging): Promise<Taak>
   bewaarTaak(taakId: string, wijziging: TaakWijziging): Promise<Taak>

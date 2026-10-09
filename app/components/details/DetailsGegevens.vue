@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { MENSEN, ROLLEN, SOORTEN } from '~/lib/fasen'
+import { SLAGINGSKANSEN } from '~/lib/leads'
 import type { Project, ProjectWijziging, Rol, Soort } from '~/lib/types'
 
 const { project, wijzigProject } = useKaart()
@@ -34,6 +35,10 @@ function getal(e: Event) {
   const m2 = v ? Number(v) : null
   if (m2 !== null && Number.isNaN(m2)) return toon('Vul de oppervlakte in als getal, bijvoorbeeld 1850.', 'fout')
   if (m2 !== project.value?.m2) wijzigProject({ m2 })
+}
+function kans(e: Event) {
+  const v = (e.target as HTMLSelectElement).value
+  wijzigProject({ slagingskans: v === '' ? null : Number(v) })
 }
 function soort(id: Soort, aan: boolean) {
   const huidig = new Set(project.value?.soort ?? [])
@@ -86,7 +91,18 @@ async function kopieer() {
               <a v-if="route" :href="route" target="_blank" rel="noopener">Route ↗</a>
             </dd>
           </div>
-          <div><dt><label for="g-m2">Oppervlakte (m²)</label></dt><dd><input id="g-m2" class="veld" inputmode="decimal" :value="project.m2 ?? ''" placeholder="bijvoorbeeld 1850" @change="getal"></dd></div>
+          <div class="naast">
+            <div><dt><label for="g-m2">Oppervlakte (m²)</label></dt><dd><input id="g-m2" class="veld" inputmode="decimal" :value="project.m2 ?? ''" placeholder="bijvoorbeeld 1850" @change="getal"></dd></div>
+            <div>
+              <dt><label for="g-kans">Slagingskans</label></dt>
+              <dd>
+                <select id="g-kans" class="veld" :value="project.slagingskans ?? ''" @change="kans">
+                  <option value="">onbekend</option>
+                  <option v-for="k in SLAGINGSKANSEN" :key="k" :value="k">{{ k }}%</option>
+                </select>
+              </dd>
+            </div>
+          </div>
           <div>
             <dt>Soort project</dt>
             <dd class="kolpillen">

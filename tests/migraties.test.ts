@@ -124,4 +124,14 @@ describe('aftekenen en logboek', () => {
     const log = await als<{ veld: string, nieuw: string }>(MICHIEL, `select veld, nieuw from public.logboek where tabel = 'projecten' and project_id = $1 order by id`, [projectId])
     expect(log).toEqual([{ veld: 'fase', nieuw: 'uitvoering' }, { veld: 'afas_nummer', nieuw: '12345' }])
   })
+
+  it('laat een medewerker een lead aanmaken en logt de slagingskans', async () => {
+    const [lead] = await als<{ id: string, fase: string }>(MICHIEL,
+      `insert into public.projecten (slug, naam, am, slagingskans) values ('zorgplein-noord', 'Zorgplein Noord', 'Jeroen', 50) returning id, fase`)
+    expect(lead!.fase).toBe('lead')
+    await als(MICHIEL, `update public.projecten set slagingskans = 75 where id = $1`, [lead!.id])
+    await expect(als(MICHIEL, `update public.projecten set slagingskans = 60 where id = $1`, [lead!.id])).rejects.toThrow()
+    const log = await als<{ veld: string, oud: string, nieuw: string }>(MICHIEL, `select veld, oud, nieuw from public.logboek where project_id = $1`, [lead!.id])
+    expect(log).toEqual([{ veld: 'slagingskans', oud: '50', nieuw: '75' }])
+  })
 })

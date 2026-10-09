@@ -30,7 +30,9 @@ async function laad() {
 onMounted(laad)
 
 const WOORD: Record<Licht, string> = { telaat: 'Te laat', letop: 'Let op', open: 'Op schema', klaar: 'Klaar', later: 'Geen taken' }
-const kaartjes = computed(() => projecten.value.map((p) => {
+// Leads hebben hun eigen lijst (/leads); hier staan de projecten vanaf haalbaarheid.
+const lopend = computed(() => projecten.value.filter(p => p.fase !== 'lead'))
+const kaartjes = computed(() => lopend.value.map((p) => {
   const regels = takenVan(p.fase, p, taken.value.filter(t => t.project_id === p.id), catalogus.value, nu)
   return { p, t: telling(regels), licht: samen(regels.map(r => r.b.licht)), mijlpaal: volgendeMijlpaal(p, nu) }
 }).sort((a, b) => ORDE[a.licht] - ORDE[b.licht] || b.t.telaat - a.t.telaat || (a.mijlpaal?.dagen ?? 1e6) - (b.mijlpaal?.dagen ?? 1e6)))
@@ -40,7 +42,7 @@ const zichtbaar = computed(() => {
   return kaartjes.value.filter(k => (fase.value === 'alle' || k.p.fase === fase.value)
     && (!z || [k.p.naam, k.p.nummer, k.p.afas_nummer, k.p.plaats].filter(Boolean).join(' ').toLowerCase().includes(z)))
 })
-const perFase = computed(() => FASEN.map(f => ({ ...f, aantal: projecten.value.filter(p => p.fase === f.id).length })).filter(f => f.aantal))
+const perFase = computed(() => FASEN.map(f => ({ ...f, aantal: lopend.value.filter(p => p.fase === f.id).length })).filter(f => f.aantal))
 const zin = computed(() => {
   const laat = kaartjes.value.filter(k => k.t.telaat).length
   return `${kaartjes.value.length} lopende projecten. ${laat ? `${laat} ${laat === 1 ? 'heeft' : 'hebben'} taken die te laat zijn.` : 'Niets te laat.'}`
@@ -62,7 +64,7 @@ const mijlpaalTekst = (m: ReturnType<typeof volgendeMijlpaal>) => !m ? 'Geen mij
     <template v-else>
       <div class="filters projectfilters">
         <div class="seg" role="group" aria-label="Fase">
-          <button type="button" :aria-pressed="fase === 'alle'" @click="fase = 'alle'">Alle <span class="n">{{ projecten.length }}</span></button>
+          <button type="button" :aria-pressed="fase === 'alle'" @click="fase = 'alle'">Alle <span class="n">{{ lopend.length }}</span></button>
           <button v-for="f in perFase" :key="f.id" type="button" :aria-pressed="fase === f.id" @click="fase = f.id">{{ f.naam }} <span class="n">{{ f.aantal }}</span></button>
         </div>
         <input v-model="zoek" class="veld zoekveld" type="search" placeholder="Zoek op naam, projectnummer of AFAS-nummer" aria-label="Zoek een project">

@@ -47,6 +47,11 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     async bewaarProject(id, wijziging) {
       return uitkomst(await sb.from('projecten').update(wijziging).eq('id', id).select().single(), 'opslaan') as Project
     },
+    async nieuweLead(invoer) {
+      const res = await sb.from('projecten').insert({ ...invoer, fase: 'lead' }).select().single()
+      if (res.error?.code === UNIEK) throw new BronFout('Er bestaat al een project met deze naam. Kies een andere naam.')
+      return uitkomst(res, 'de lead opslaan') as Project
+    },
     async bewaarStandaardtaak(projectId, lijst, sleutel, wijziging) {
       return uitkomst(await sb.from('taken')
         .upsert({ project_id: projectId, lijst, sleutel, fase: lijst, ...wijziging }, { onConflict: 'project_id,lijst,sleutel' })

@@ -2,10 +2,11 @@ import type { Bron, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
 import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
+import { leegProject } from '~/lib/leads'
 import type { Fase, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging } from '~/lib/types'
 
 // Dezelfde velden als de logboektriggers in de migratie.
-const PROJECT_VELDEN = ['fase', 'prio', 'nummer', 'afas_nummer', 'naam', 'adres', 'm2', 'soort', 'am', 'po', 'pm', 'opzichter',
+const PROJECT_VELDEN = ['fase', 'prio', 'nummer', 'afas_nummer', 'naam', 'adres', 'm2', 'soort', 'slagingskans', 'am', 'po', 'pm', 'opzichter',
   'datum_casco', 'datum_voorbereiding', 'datum_inkoop', 'datum_afbouw', 'datum_oplevering',
   'sharepoint_url', 'extern_url', 'notitieblok_url', 'tekeningen_locatie'] as const
 const TAAK_VELDEN = ['status', 'eigenaar', 'klantakkoord', 'document_url', 'document_naam', 'reden_nvt', 'deadline', 'notitie', 'aanleiding'] as const
@@ -25,7 +26,7 @@ function laad(opslag: string): DemoGegevens | null {
 }
 
 /** Waar de proefversie de gegevens van een tester bewaart. Verhoog de versie als de vorm verandert. */
-export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v1'
+export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v2'
 
 export function wisProefgegevens() {
   try { localStorage.removeItem(PROEF_OPSLAG) } catch { /* niets te wissen */ }
@@ -92,6 +93,15 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
         const a = alsTekst(oud[v as keyof Project]), b = alsTekst(p[v as keyof Project])
         if (a !== b) log({ project_id: id, tabel: 'projecten', taak_id: null, lijst: null, sleutel: null, uitzondering_id: null, veld: v, oud: a, nieuw: b })
       }
+      bewaar()
+      return kopie(p)
+    },
+
+    async nieuweLead(invoer) {
+      await wacht()
+      if (db.projecten.some(p => p.slug === invoer.slug)) throw new BronFout('Er bestaat al een project met deze naam. Kies een andere naam.')
+      const p = leegProject({ ...invoer, id: nieuwId('p'), fase: 'lead', gewijzigd_op: new Date().toISOString() })
+      db.projecten.push(p)
       bewaar()
       return kopie(p)
     },

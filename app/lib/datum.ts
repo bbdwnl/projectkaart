@@ -44,3 +44,14 @@ export function fmtMoment(iso: string, nu: Date = vandaag()): string {
 }
 
 export const dagen = (n: number) => `${n} ${Math.abs(n) === 1 ? 'dag' : 'dagen'}`
+
+/** Hoe lang geleden, grof: "Vandaag", "Gisteren", "5 dagen", "3 weken" of "4 maanden geleden". */
+export function geleden(iso: string, nu: Date = vandaag()): string {
+  const d = new Date(iso)
+  const n = dagenTussen(new Date(d.getFullYear(), d.getMonth(), d.getDate()), nu)
+  if (n <= 0) return 'Vandaag'
+  if (n === 1) return 'Gisteren'
+  if (n < 14) return `${n} dagen geleden`
+  if (n < 61) return `${Math.floor(n / 7)} weken geleden`
+  return `${Math.floor(n / 30)} maanden geleden`
+}

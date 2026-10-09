@@ -18,8 +18,11 @@ watch(() => weergave.value.tab, (nieuw, oud) => {
   history.replaceState(history.state, '', `#${nieuw}`)
 })
 
-const kruimel = useState<string | null>('kruimel', () => null)
-watch(() => project.value?.naam, n => (kruimel.value = n ?? null), { immediate: true })
+// In het menu staat de naam achter Projecten, of achter Leads zolang het project een lead is.
+const kruimel = useState<{ naam: string, lead: boolean } | null>('kruimel', () => null)
+watch(() => project.value && `${project.value.fase}:${project.value.naam}`, () => {
+  kruimel.value = project.value ? { naam: project.value.naam, lead: project.value.fase === 'lead' } : null
+}, { immediate: true })
 onBeforeUnmount(() => (kruimel.value = null))
 useHead({ title: () => project.value ? `${project.value.naam} · Projectkaart` : 'Projectkaart · BbDW' })
 
