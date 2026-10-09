@@ -22,6 +22,17 @@ describe('voorbeeldgegevens van de proefversie', () => {
     }
     expect(g.controlepunten.some(c => c.opgelost) && g.controlepunten.some(c => !c.leverancier_id)).toBe(true)
   })
+  it('zet de aandachtspunten van Vlijtseweg op de voorbeeldtekening, de rest zonder plek', () => {
+    expect(g.tekeningen.map(t => t.project_id)).toEqual([p.id])
+    const op = g.controlepunten.filter(c => c.tekening_id)
+    expect(op.length).toBeGreaterThan(3)
+    for (const c of op) {
+      expect(c.project_id).toBe(p.id)
+      expect([1, 2]).toContain(c.tekening_blad)
+      expect(c.tekening_x! > 0 && c.tekening_x! < 1 && c.tekening_y! > 0 && c.tekening_y! < 1, c.id).toBe(true)
+    }
+    expect(g.controlepunten.filter(c => c.project_id !== p.id).every(c => c.tekening_id === null)).toBe(true)
+  })
   it('laat Apeldoorn Vlijtseweg zien zoals in design-referentie.html', () => {
     const regels = takenVan('ontwikkeling', p, g.taken.filter(t => t.project_id === p.id), g.uitzonderingen, nu)
     const t = telling(regels)

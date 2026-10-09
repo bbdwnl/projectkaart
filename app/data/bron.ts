@@ -1,4 +1,4 @@
-import type { Controlepunt, ControlepuntWijziging, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, ProjectLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, ProjectLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { NieuweLead } from '~/lib/leads'
 
 /**
@@ -24,6 +24,15 @@ export interface Bron {
   voegUitzonderingToe(projectId: string, invoer: NieuweUitzondering): Promise<{ taak: Taak, uitzondering: Uitzondering }>
   verwijderTaak(taakId: string): Promise<void>
   zetUitzonderingStatus(id: string, status: UitzonderingStatus): Promise<void>
+
+  /** De tekeningen van één project, of van alle projecten. */
+  tekeningen(projectId?: string): Promise<Tekening[]>
+  uploadTekening(projectId: string, bestand: Blob, naam: string): Promise<Tekening>
+  hernoemTekening(id: string, naam: string): Promise<Tekening>
+  /** Lukt niet zolang er aandachtspunten op de tekening staan. */
+  verwijderTekening(tekening: Tekening): Promise<void>
+  /** Een adres waar de viewer de pdf kan ophalen (tijdelijk geldig). */
+  tekeningUrl(tekening: Tekening): Promise<string>
 
   /** De leveranciers die op dit project werken; zonder project: alle leveranciers. */
   leveranciers(projectId?: string): Promise<Leverancier[]>
@@ -57,6 +66,8 @@ export interface NieuwControlepunt {
   notitie: string
   /** Al verkleind tot een jpg (utils/foto.ts). */
   foto: Blob
+  /** Optioneel: de plek op een tekening. */
+  plek?: Plek | null
 }
 
 export interface NieuweUitzondering {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fotoPad, groepeerPunten, pastPunt, pdfNaam, sorteerPunten, telPunten } from '~/lib/controle'
+import { fotoPad, groepeerPunten, nummerPerProject, pastPunt, pdfNaam, sorteerPunten, telPunten } from '~/lib/controle'
 import type { Controlepunt } from '~/lib/types'
 
 const punt = (id: string, extra: Partial<Controlepunt> = {}): Controlepunt => ({
@@ -47,5 +47,10 @@ describe('controle', () => {
   })
   it('maakt een nette bestandsnaam voor de pdf', () => {
     expect(pdfNaam(['Apeldoorn Vlijtseweg', 'Glas/Kozijn: "Oost"'], '09-10-2026')).toBe('Controle - Apeldoorn Vlijtseweg - Glas Kozijn Oost - 09-10-2026.pdf')
+  })
+
+  it('nummert per project in volgorde van melden', () => {
+    const ander = punt('elders', { project_id: 'p2', aangemaakt_op: '2026-08-01T09:00:00Z' })
+    expect(Object.fromEntries(nummerPerProject([...punten, ander]))).toEqual({ 'oud-open': 1, 'zonder': 2, 'opgelost': 3, 'nieuw-open': 4, 'elders': 1 })
   })
 })

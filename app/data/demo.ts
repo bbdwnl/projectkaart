@@ -2,7 +2,7 @@
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, ProjectLeverancier, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
+import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, ProjectLeverancier, Tekening, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
@@ -26,7 +26,7 @@ export interface ProjectBasis {
   datum_oplevering: string | null
 }
 
-export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {} })
+export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {}, tekeningen: [] })
 
 export interface DemoGegevens {
   projecten: Project[]
@@ -39,6 +39,8 @@ export interface DemoGegevens {
   controlepunten: Controlepunt[]
   /** De foto's van de aandachtspunten per pad: een data-URL (alleen in de browser van de tester) of de voorbeeldfoto. */
   fotos: Record<string, string>
+  /** De pdf's zelf staan in IndexedDB (demo-bestanden.ts), behalve de voorbeeldtekening (public/). */
+  tekeningen: Tekening[]
 }
 
 /** Vaste "toeval" per sleutel, zodat de demo elke keer hetzelfde is. */
@@ -92,6 +94,24 @@ const NOTITIES = [
   'Lichtschakelaar behandelkamer 2 werkt niet.',
 ]
 const MELDERS = ['Carlo', 'Heino', 'Hugo', 'Michiel']
+
+// De voorbeeldtekening van Vlijtseweg (public/voorbeeld-tekening.pdf, gemaakt met reportlab): twee A3-bladen.
+// Per notitie hierboven de plek op die tekening: blad, x en y van 0 tot 1 (in mm gedeeld door 420 en 297).
+export const VOORBEELDTEKENING = 'voorbeeld/tekening.pdf'
+const PLEKKEN: Record<number, [number, number, number]> = {
+  0: [1, 130 / 420, 236 / 297], // spreekkamer 2, raam
+  1: [1, 200 / 420, 125 / 297], // gang
+  2: [1, 300 / 420, 142 / 297], // deur behandelkamer 3
+  3: [1, 150 / 420, 42 / 297], // wachtkamerpui
+  4: [1, 225 / 420, 80 / 297], // balie
+  5: [2, 90 / 420, 75 / 297], // personeelsruimte (1e verdieping)
+  6: [1, 340 / 420, 168 / 297], // invalidentoilet
+  7: [1, 125 / 420, 107 / 297], // wachtkamer, plint
+  8: [1, 70 / 420, 200 / 297], // spreekkamer 1
+  9: [1, 66 / 420, 42 / 297], // entree
+  10: [1, 305 / 420, 80 / 297], // apotheek
+  11: [1, 228 / 420, 150 / 297], // behandelkamer 2
+}
 
 const CATALOGUS: [string, string, Fase, number][] = [
   ['u-netcongestie', 'Nutsaansluiting verzwaren (netcongestie)', 'ontwikkeling', 7],
@@ -282,6 +302,7 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
     const begin = Math.floor(kans(p.slug + 'nt') * NOTITIES.length)
     for (let i = 0; i < aantal; i++) {
       const r = kans(`${p.slug}cp${i}`)
+      const plek = p === vlijtseweg ? PLEKKEN[(begin + i) % NOTITIES.length] : undefined
       const dagenTerug = 1 + Math.floor(r * 40)
       const opgelost = r > 0.7
       controlepunten.push({
@@ -295,9 +316,21 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
         opgelost_op: opgelost ? opMoment(Math.floor(dagenTerug / 2), `${p.slug}o${i}`) : null,
         aangemaakt_door: kies(MELDERS, `${p.slug}md${i}`),
         aangemaakt_op: opMoment(dagenTerug, `${p.slug}a${i}`),
+        tekening_id: plek ? 'tek-vlijtseweg' : null,
+        tekening_blad: plek ? plek[0] : null,
+        tekening_x: plek ? plek[1] : null,
+        tekening_y: plek ? plek[2] : null,
       })
     }
   }
 
-  return { projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, fotos: { [VOORBEELDFOTO]: '/voorbeeld-aandachtspunt.jpg' } }
+  const tekeningen: Tekening[] = [{
+    id: 'tek-vlijtseweg', project_id: vlijtseweg.id, naam: 'Plattegronden begane grond en 1e verdieping (voorbeeld)',
+    pad: VOORBEELDTEKENING, aangemaakt_door: 'Michiel', aangemaakt_op: opMoment(60, 'tek'),
+  }]
+
+  return {
+    projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, tekeningen,
+    fotos: { [VOORBEELDFOTO]: '/voorbeeld-aandachtspunt.jpg' },
+  }
 }

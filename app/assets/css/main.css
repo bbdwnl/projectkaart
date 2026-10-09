@@ -526,6 +526,20 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .controle-velden select.veld{height:38px}
 .controle-velden .knoppen{display:flex;align-items:center;gap:14px}
 .geen-leveranciers{margin:0;padding:10px 14px;border-radius:var(--radius-s);background:var(--grijs-2)}
+.plek-veld{display:grid;gap:8px}
+.plek-veld .label{margin:0}
+.plek-knoppen{display:flex;flex-wrap:wrap;gap:10px}
+.plek-knoppen label.knop{cursor:pointer}
+.plek-knoppen label.knop:focus-within{outline:3px solid var(--blauw);outline-offset:2px}
+.plek-knoppen .bezig{opacity:.6}
+.plek-gekozen{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0;font-size:14px;font-weight:500}
+.plek-gekozen .link{font-size:14px}
+.controle-knoppen{display:flex;flex-wrap:wrap;gap:10px}
+.punt-nr{font-weight:900;margin-right:2px}
+.plek-link{font-size:12.5px;font-weight:700;color:var(--zwart);text-align:left}
+.plek-knop{width:30px;height:30px;padding:0;border:0;border-radius:50%;background:none;color:var(--stil);display:grid;place-items:center;cursor:pointer}
+.plek-knop:hover{background:var(--grijs);color:var(--zwart)}
+.plek-knop.heeft{background:var(--zwart);color:var(--wit)}
 .geen-leveranciers .link{font-size:14px}
 .fotovenster{max-width:min(1100px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:16px;border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog)}
 .fotovenster::backdrop{background:rgba(17,17,17,.6)}
@@ -548,6 +562,47 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 }
 @media (max-width:760px){
   .notitie-paneel{left:0;right:0!important;top:auto!important;bottom:0!important;width:auto;border-radius:var(--radius) var(--radius) 0 0;padding-bottom:max(16px,env(safe-area-inset-bottom))}
+}
+
+/* tekeningviewer: schermvullend, ook op een telefoon (100dvh en de randen van de notch) */
+.viewer:focus{outline:none}
+.viewer{position:fixed;inset:0;z-index:100;display:grid;grid-template-rows:auto minmax(0,1fr) auto;height:100vh;height:100dvh;background:#1d1d1d;color:var(--wit);overscroll-behavior:contain}
+.viewer-kop{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(8px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 8px calc(16px + env(safe-area-inset-left));background:var(--zwart)}
+.viewer-titel{display:grid;gap:2px;min-width:0}
+.viewer-titel .label{margin:0;color:#bdbdbd}
+.viewer-titel b{font-size:16px;line-height:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.viewer-keuze{max-width:100%;height:34px;padding:0 8px;border:1.5px solid #666;border-radius:var(--radius-s);background:transparent;color:var(--wit);font-size:15px;font-weight:700}
+.viewer-keuze option{color:var(--zwart)}
+.viewer-sluit{flex:none;width:44px;height:44px;padding:0;border:2px solid var(--wit);border-radius:50%;background:none;color:var(--wit);display:grid;place-items:center;cursor:pointer;touch-action:manipulation}
+.viewer-vlak{position:relative;overflow:hidden;background:#2b2b2b;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.viewer-vlak:active{cursor:grabbing}
+.viewer-vlak.markeren{cursor:crosshair}
+.viewer-blad{position:absolute;left:0;top:0;transform-origin:0 0;background:var(--wit);box-shadow:0 10px 40px rgba(0,0,0,.45);will-change:transform}
+.viewer-doek{display:block;width:100%;height:100%}
+.viewer-detail{position:absolute;pointer-events:none}
+.viewer-lagen{position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none}
+.pin-anker{position:absolute;width:0;height:0;transform-origin:0 0;pointer-events:none}
+.viewer-pin{position:absolute;left:-14px;top:-38px;min-width:28px;height:28px;padding:0 6px;border:2px solid var(--zwart);border-radius:var(--rond);background:var(--oker);color:var(--zwart);display:grid;place-items:center;font-size:12px;font-weight:900;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.viewer-pin::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:10px;margin-left:-1px;background:var(--zwart)}
+.viewer-pin.opgelost{background:var(--salie)}
+.viewer-pin.actief{background:var(--blauw);transform:scale(1.25);transform-origin:50% 140%;z-index:1}
+.viewer-marker{position:absolute;left:-11px;top:-11px;width:22px;height:22px;border:3px solid var(--zwart);border-radius:50%;background:var(--baksteen);box-shadow:0 0 0 4px rgba(255,255,255,.85),0 2px 8px rgba(0,0,0,.4)}
+.viewer-marker::after{content:"";position:absolute;inset:-12px;border:2px solid var(--baksteen);border-radius:50%;animation:ring 1.8s var(--uit) infinite}
+.viewer-melding{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#ddd;font-size:15px}
+.viewer-hint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);margin:0;max-width:calc(100% - 32px);padding:8px 14px;border-radius:var(--rond);background:rgba(17,17,17,.85);color:var(--wit);font-size:14px;line-height:20px;text-align:center;pointer-events:none}
+.viewer-voet{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;padding:10px calc(14px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));background:var(--zwart)}
+.viewer-groep{display:flex;align-items:center;gap:6px}
+.viewer-voet button:not(.knop){min-width:44px;height:44px;padding:0 12px;border:2px solid #5a5a5a;border-radius:var(--rond);background:none;color:var(--wit);font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation}
+.viewer-voet button:not(.knop):hover{border-color:var(--wit)}
+.viewer-voet button:disabled{opacity:.35;cursor:default}
+.viewer-blad-nr{font-size:14px;font-weight:700;white-space:nowrap}
+.viewer-acties{margin-left:auto;display:flex;align-items:center;gap:10px}
+.viewer-acties .knop{height:44px;color:var(--zwart);touch-action:manipulation}
+.viewer-info{text-align:left}
+@media (max-width:760px){
+  .viewer-voet{gap:8px}
+  .viewer-acties{flex-basis:100%;margin-left:0}
+  .viewer-acties .knop{flex:1;justify-content:center}
 }
 
 /* controle: het overzicht over alle projecten */
@@ -600,6 +655,20 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .globale-lijst .rij-hoofd{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:none;gap:4px 12px;padding:10px 14px}
   .globale-lijst .rij-hoofd>:nth-child(2),.globale-lijst .rij-hoofd>:nth-child(3){grid-column:1}
   .globale-lijst .acties{grid-column:2;grid-row:1}
+}
+
+/* details: tekeningen */
+.tekeninglijst .kolkop,.tekeninglijst .rij-hoofd{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) 140px auto}
+.tekeninglijst .veld{width:100%;border-color:transparent;background:transparent;font-size:15px;font-weight:700}
+.tekeninglijst .veld:hover,.tekeninglijst .veld:focus{border-color:var(--zwart);background:var(--wit)}
+.tekeninglijst .acties{display:flex;align-items:center;gap:14px;justify-content:flex-end}
+.tekeninglijst .acties .link{font-size:14px}
+#tekeningen .blokkop label.knop{cursor:pointer}
+#tekeningen .blokkop label.knop:focus-within{outline:3px solid var(--blauw);outline-offset:2px}
+#tekeningen .bezig{opacity:.6}
+@media (max-width:1100px){
+  .tekeninglijst .rij-hoofd{grid-template-columns:minmax(0,1fr);grid-template-areas:none;gap:6px;padding:12px 14px}
+  .tekeninglijst .acties{justify-content:flex-start}
 }
 
 /* details: leveranciers */

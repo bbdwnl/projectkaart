@@ -3,7 +3,9 @@ import { BronFout } from './bron'
 import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import { leegProject } from '~/lib/leads'
-import type { Controlepunt, Fase, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging } from '~/lib/types'
+import { GEEN_PLEK, type Controlepunt, type Fase, type LogRegel, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
+import { bewaarBestand, leesBestand, wisAlleBestanden, wisBestand } from './demo-bestanden'
+import { VOORBEELDTEKENING } from './demo'
 import { fotoPad } from '~/lib/controle'
 import { naarDataUrl, verkleinFoto } from '~/utils/foto'
 
@@ -21,18 +23,20 @@ function laad(opslag: string): DemoGegevens | null {
   try {
     const s = localStorage.getItem(opslag)
     const d = s ? JSON.parse(s) as DemoGegevens : null
-    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) && Array.isArray(d.projectLeveranciers) ? d : null
+    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) && Array.isArray(d.projectLeveranciers) && Array.isArray(d.tekeningen) ? d : null
   } catch {
     return null
   }
 }
 
 /** Waar de proefversie de gegevens van een tester bewaart. Verhoog de versie als de vorm verandert. */
-export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v4'
+export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v5'
 
 export function wisProefgegevens() {
   try { localStorage.removeItem(PROEF_OPSLAG) } catch { /* niets te wissen */ }
 }
+/** Ook de geüploade tekeningen van de tester weggooien. */
+export const wisProefbestanden = () => wisAlleBestanden().catch(() => undefined)
 
 /** Gooit de gegevens van oudere versies weg: de foto's onder Controle hebben de ruimte nodig. */
 function ruimOudeVersiesOp() {
@@ -183,6 +187,43 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       bewaar()
     },
 
+    async tekeningen(projectId) {
+      return kopie(projectId ? db.tekeningen.filter(t => t.project_id === projectId) : db.tekeningen)
+    },
+    async uploadTekening(projectId, bestand, naam) {
+      const id = nieuwId('tek')
+      const t: Tekening = { id, project_id: projectId, naam, pad: `${projectId}/${id}.pdf`, aangemaakt_door: door, aangemaakt_op: new Date().toISOString() }
+      try {
+        await bewaarBestand(t.pad, bestand)
+      } catch {
+        throw new BronFout('Deze browser kan de tekening niet bewaren (geen ruimte, of privévenster).')
+      }
+      db.tekeningen.push(t)
+      bewaar()
+      return kopie(t)
+    },
+    async hernoemTekening(id, naam) {
+      await wacht()
+      const t = db.tekeningen.find(x => x.id === id)
+      if (!t) throw new BronFout('Deze tekening bestaat niet (meer).')
+      t.naam = naam
+      bewaar()
+      return kopie(t)
+    },
+    async verwijderTekening(tekening) {
+      await wacht()
+      if (db.controlepunten.some(p => p.tekening_id === tekening.id)) throw new BronFout('Er staan aandachtspunten op deze tekening. Haal eerst hun plek weg of kies een andere tekening.')
+      db.tekeningen = db.tekeningen.filter(t => t.id !== tekening.id)
+      if (tekening.pad !== VOORBEELDTEKENING) await wisBestand(tekening.pad).catch(() => undefined)
+      bewaar()
+    },
+    async tekeningUrl(tekening) {
+      if (tekening.pad === VOORBEELDTEKENING) return '/voorbeeld-tekening.pdf'
+      const bestand = await leesBestand(tekening.pad).catch(() => null)
+      if (!bestand) throw new BronFout('Deze tekening staat alleen in de browser waarin hij is geüpload (proefversie).')
+      return URL.createObjectURL(bestand)
+    },
+
     async leveranciers(projectId) {
       const opNaam = (ls: typeof db.leveranciers) => kopie(ls).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
       if (!projectId) return opNaam(db.leveranciers)
@@ -254,9 +295,11 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       const foto = fotoPad(projectId, id)
       // Kleiner dan in het echt: alles staat in de opslag van de browser, en die is maar een paar MB.
       db.fotos[foto] = await naarDataUrl(await verkleinFoto(invoer.foto, 1024, 0.7))
+      if (invoer.plek && !db.tekeningen.some(t => t.id === invoer.plek!.tekening_id && t.project_id === projectId)) throw new BronFout('Kies een tekening van dit project.')
       const p: Controlepunt = {
         id, project_id: projectId, leverancier_id: invoer.leverancierId, notitie: invoer.notitie, foto, opgelost: false,
         opgelost_door: null, opgelost_op: null, aangemaakt_door: door, aangemaakt_op: new Date().toISOString(),
+        ...GEEN_PLEK, ...invoer.plek,
       }
       db.controlepunten.push(p)
       if (!bewaar()) {
@@ -271,7 +314,9 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       const p = db.controlepunten.find(x => x.id === id)
       if (!p) throw new BronFout('Dit aandachtspunt bestaat niet (meer).')
       if (w.leverancier_id && !db.projectLeveranciers.some(k => k.project_id === p.project_id && k.leverancier_id === w.leverancier_id)) throw new BronFout('Kies een leverancier van dit project.')
+      if (w.tekening_id && !db.tekeningen.some(t => t.id === w.tekening_id && t.project_id === p.project_id)) throw new BronFout('Kies een tekening van dit project.')
       if (w.leverancier_id !== undefined) p.leverancier_id = w.leverancier_id
+      for (const v of ['tekening_id', 'tekening_blad', 'tekening_x', 'tekening_y'] as const) if (w[v] !== undefined) Object.assign(p, { [v]: w[v] })
       if (w.opgelost !== undefined && w.opgelost !== p.opgelost) {
         Object.assign(p, { opgelost: w.opgelost, opgelost_door: w.opgelost ? door : null, opgelost_op: w.opgelost ? new Date().toISOString() : null })
       }

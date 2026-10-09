@@ -149,5 +149,26 @@ export interface Controlepunt {
   opgelost_op: string | null
   aangemaakt_door: string | null
   aangemaakt_op: string
+  /** De plek op een tekening: alle vier, of geen. x en y van 0 tot 1 op het blad. */
+  tekening_id: string | null
+  tekening_blad: number | null
+  tekening_x: number | null
+  tekening_y: number | null
 }
-export type ControlepuntWijziging = Partial<Pick<Controlepunt, 'opgelost' | 'leverancier_id'>>
+export type ControlepuntWijziging = Partial<Pick<Controlepunt, 'opgelost' | 'leverancier_id' | PlekVeld>>
+
+/** Een pdf-tekening van een project (plattegrond, gevel). */
+export interface Tekening {
+  id: string
+  project_id: string
+  naam: string
+  /** Pad in de opslag: '<project_id>/<naam>.pdf'. */
+  pad: string
+  aangemaakt_door: string | null
+  aangemaakt_op: string
+}
+
+export type PlekVeld = 'tekening_id' | 'tekening_blad' | 'tekening_x' | 'tekening_y'
+/** Een plek op een tekening: blad (vanaf 1) en x, y van 0 tot 1 vanaf linksboven. */
+export interface Plek { tekening_id: string, tekening_blad: number, tekening_x: number, tekening_y: number }
+export const GEEN_PLEK: Record<PlekVeld, null> = { tekening_id: null, tekening_blad: null, tekening_x: null, tekening_y: null }

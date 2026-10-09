@@ -1,15 +1,20 @@
 import type { Controlepunt } from '~/lib/types'
 import { fmt } from '~/lib/datum'
 import { naarDataUrl, verkleinFoto } from '~/utils/foto'
+import { sluitTekeningen, tekeningUitsnede, type TekeningCache } from '~/utils/tekeningUitsnede'
 
 // De pdf van het Controle-overzicht: A4, per groep (een leverancier of een project) de punten met foto.
 // jsPDF wordt pas geladen als iemand op de knop drukt.
 
 export interface PdfPunt {
   punt: Controlepunt
+  /** Het nummer zoals op de tekening en in de lijst. */
+  nummer: number | undefined
   fotoUrl: string | null
   /** De andere kant van de indeling: de leverancier (bij een project) of het project (bij een leverancier). */
   bij: string
+  /** De plek op een tekening: daarvan komt een uitsnede naast de foto. */
+  plek?: { url: string, blad: number, x: number, y: number, tekst: string } | null
 }
 
 export interface PdfInvoer {
@@ -25,7 +30,7 @@ export interface PdfInvoer {
 
 interface Foto { data: string, b: number, h: number }
 
-const MM = { marge: 18, pagina: 210, hoogte: 297, foto: 58, fotoHoog: 44 }
+const MM = { marge: 18, pagina: 210, hoogte: 297, foto: 52, fotoHoog: 39 }
 const KLEUR = { zwart: [17, 17, 17], stil: [107, 107, 107], lijn: [214, 214, 208], open: [138, 90, 23], klaar: [63, 107, 85] } as const
 const datum = (iso: string | null) => (iso ? fmt(new Date(iso)) : '')
 
@@ -49,11 +54,17 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<void> {
   const onder = MM.hoogte - MM.marge - 8
   const kleur = (k: readonly number[]) => doc.setTextColor(k[0]!, k[1]!, k[2]!)
 
-  // Elke foto één keer ophalen, ook als punten dezelfde delen.
+  // Elke foto één keer ophalen, ook als punten dezelfde delen; uitsneden van een tekening na elkaar.
   const fotos = new Map<string, Promise<Foto | null>>()
   for (const p of invoer.groepen.flatMap(g => g.punten)) {
     if (p.fotoUrl && !fotos.has(p.fotoUrl)) fotos.set(p.fotoUrl, laadFoto(p.fotoUrl))
   }
+  const tekeningen: TekeningCache = new Map()
+  const uitsneden = new Map<string, Foto | null>()
+  for (const p of invoer.groepen.flatMap(g => g.punten)) {
+    if (p.plek) uitsneden.set(p.punt.id, await tekeningUitsnede(tekeningen, p.plek.url, p.plek.blad, p.plek.x, p.plek.y))
+  }
+  sluitTekeningen(tekeningen)
 
   // Kop
   let y = MM.marge
@@ -94,27 +105,37 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<void> {
     doc.text(`${groep.punten.length} ${groep.punten.length === 1 ? 'punt' : 'punten'}`, MM.marge + breed, y, { align: 'right' })
     y += 6
 
-    for (const { punt, fotoUrl, bij } of groep.punten) {
-      const tekstX = MM.marge + MM.foto + 6
-      const tekstBreed = breed - MM.foto - 6
+    for (const { punt, nummer, fotoUrl, bij, plek } of groep.punten) {
+      const uitsnede = uitsneden.get(punt.id) ?? null
+      const beelden = uitsnede ? 2 : 1
+      const tekstX = MM.marge + beelden * (MM.foto + 4) + 2
+      const tekstBreed = MM.marge + breed - tekstX
       doc.setFont('helvetica', 'normal').setFontSize(11)
-      const notitie = doc.splitTextToSize(punt.notitie, tekstBreed) as string[]
-      const tekstHoog = notitie.length * 5 + 4 * 4.5
+      const notitie = doc.splitTextToSize(`${nummer ? `#${nummer}  ` : ''}${punt.notitie}`, tekstBreed) as string[]
+      const plekRegels = plek ? doc.setFontSize(9).splitTextToSize(`Plek: ${plek.tekst}`, tekstBreed) as string[] : []
+      const tekstHoog = notitie.length * 5 + 4 * 4.5 + plekRegels.length * 4.5
       const blok = Math.max(MM.fotoHoog, tekstHoog) + 6
       if (y + blok > onder) nieuwePagina()
 
-      // Foto, passend in het vak, of een leeg vak met uitleg.
-      const foto = fotoUrl ? await fotos.get(fotoUrl) : null
-      if (foto) {
-        const schaal = Math.min(MM.foto / foto.b, MM.fotoHoog / foto.h)
-        doc.addImage(foto.data, 'JPEG', MM.marge, y, foto.b * schaal, foto.h * schaal)
-      } else {
+      // Foto en tekening-uitsnede, passend in hun vak; of een leeg vak met uitleg.
+      const beeld = (b: Foto | null | undefined, x: number, leeg: string) => {
+        if (b) {
+          const schaal = Math.min(MM.foto / b.b, MM.fotoHoog / b.h)
+          doc.addImage(b.data, 'JPEG', x, y, b.b * schaal, b.h * schaal)
+          if (b === uitsnede) {
+            doc.setDrawColor(KLEUR.lijn[0], KLEUR.lijn[1], KLEUR.lijn[2]).setLineWidth(0.3)
+            doc.rect(x, y, b.b * schaal, b.h * schaal)
+          }
+          return
+        }
         doc.setDrawColor(KLEUR.lijn[0], KLEUR.lijn[1], KLEUR.lijn[2]).setLineWidth(0.3)
-        doc.rect(MM.marge, y, MM.foto, MM.fotoHoog)
-        doc.setFontSize(8)
+        doc.rect(x, y, MM.foto, MM.fotoHoog)
+        doc.setFont('helvetica', 'normal').setFontSize(8)
         kleur(KLEUR.stil)
-        doc.text('Foto niet beschikbaar', MM.marge + MM.foto / 2, y + MM.fotoHoog / 2, { align: 'center' })
+        doc.text(leeg, x + MM.foto / 2, y + MM.fotoHoog / 2, { align: 'center' })
       }
+      beeld(fotoUrl ? await fotos.get(fotoUrl) : null, MM.marge, 'Foto niet beschikbaar')
+      if (uitsnede) beeld(uitsnede, MM.marge + MM.foto + 4, '')
 
       let ty = y + 4
       doc.setFont('helvetica', 'normal').setFontSize(11)
@@ -128,6 +149,10 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<void> {
       kleur(KLEUR.stil)
       doc.text(`${invoer.bijLabel}: ${bij}`, tekstX, ty)
       ty += 4.5
+      for (const regel of plekRegels) {
+        doc.text(regel, tekstX, ty)
+        ty += 4.5
+      }
       doc.text(`Gemeld door ${punt.aangemaakt_door ?? 'onbekend'} op ${datum(punt.aangemaakt_op)}`, tekstX, ty)
       ty += 4.5
       doc.setFont('helvetica', 'bold')

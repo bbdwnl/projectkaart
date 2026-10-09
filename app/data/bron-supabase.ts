@@ -1,7 +1,7 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import type { Controlepunt, Financien, Leverancier, LogRegel, Project, ProjectLeverancier, Taak, Uitzondering } from '~/lib/types'
+import type { Controlepunt, Financien, Leverancier, LogRegel, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
 import { fotoPad } from '~/lib/controle'
 
 function uitkomst<T>(res: { data: T | null, error: PostgrestError | null }, wat: string): T {
@@ -16,6 +16,7 @@ function uitkomst<T>(res: { data: T | null, error: PostgrestError | null }, wat:
 const UNIEK = '23505'
 const IN_GEBRUIK = '23503'
 const FOTOS = 'controle'
+const TEKENINGEN = 'tekeningen'
 
 /** De echte bron: Supabase in Frankfurt. Wat iemand mag, regelt RLS in de database. */
 export function maakSupabaseBron(sb: SupabaseClient): Bron {
@@ -97,6 +98,34 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       uitkomst(await sb.from('uitzonderingen').update({ status }).eq('id', id).select().single(), 'de catalogus bijwerken')
     },
 
+    async tekeningen(projectId) {
+      let q = sb.from('tekeningen').select('*').order('aangemaakt_op')
+      if (projectId) q = q.eq('project_id', projectId)
+      return uitkomst(await q, 'de tekeningen laden') as Tekening[]
+    },
+    async uploadTekening(projectId, bestand, naam) {
+      const pad = `${projectId}/${crypto.randomUUID()}.pdf`
+      const upload = await sb.storage.from(TEKENINGEN).upload(pad, bestand, { contentType: 'application/pdf', upsert: false })
+      if (upload.error) throw new BronFout(`De tekening uploaden is niet gelukt. ${upload.error.message}`)
+      const res = await sb.from('tekeningen').insert({ project_id: projectId, naam, pad }).select().single()
+      if (res.error) await sb.storage.from(TEKENINGEN).remove([pad])
+      return uitkomst(res, 'de tekening opslaan') as Tekening
+    },
+    async hernoemTekening(id, naam) {
+      return uitkomst(await sb.from('tekeningen').update({ naam }).eq('id', id).select().single(), 'de naam opslaan') as Tekening
+    },
+    async verwijderTekening(tekening) {
+      const res = await sb.from('tekeningen').delete().eq('id', tekening.id)
+      if (res.error?.code === IN_GEBRUIK) throw new BronFout('Er staan aandachtspunten op deze tekening. Haal eerst hun plek weg of kies een andere tekening.')
+      if (res.error) throw new BronFout(`De tekening weghalen is niet gelukt. ${res.error.message}`)
+      await sb.storage.from(TEKENINGEN).remove([tekening.pad]) // lukt dit niet, dan blijft alleen een los bestand achter
+    },
+    async tekeningUrl(tekening) {
+      const res = await sb.storage.from(TEKENINGEN).createSignedUrl(tekening.pad, 60 * 60)
+      if (res.error || !res.data) throw new BronFout(`De tekening openen is niet gelukt. ${res.error?.message ?? ''}`)
+      return res.data.signedUrl
+    },
+
     async leveranciers(projectId) {
       if (!projectId) return uitkomst(await sb.from('leveranciers').select('*').order('naam'), 'de leveranciers laden') as Leverancier[]
       const rijen = uitkomst(await sb.from('project_leveranciers').select('leverancier:leveranciers(*)').eq('project_id', projectId), 'de leveranciers laden')
@@ -163,7 +192,7 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       const upload = await sb.storage.from(FOTOS).upload(pad, invoer.foto, { contentType: 'image/jpeg', upsert: false })
       if (upload.error) throw new BronFout(`De foto opslaan is niet gelukt. ${upload.error.message}`)
       const res = await sb.from('controlepunten')
-        .insert({ project_id: projectId, leverancier_id: invoer.leverancierId, notitie: invoer.notitie, foto: pad }).select().single()
+        .insert({ project_id: projectId, leverancier_id: invoer.leverancierId, notitie: invoer.notitie, foto: pad, ...invoer.plek }).select().single()
       if (res.error) await sb.storage.from(FOTOS).remove([pad])
       return uitkomst(res, 'het aandachtspunt opslaan') as Controlepunt
     },

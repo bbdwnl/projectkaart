@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { wisProefgegevens } from '~/data/bron-demo'
+import { wisProefbestanden, wisProefgegevens } from '~/data/bron-demo'
 
 const { gebruiker, modus, initialen, uitloggen } = useGebruiker()
 const route = useRoute()
@@ -29,8 +29,9 @@ onBeforeUnmount(() => {
 })
 
 /** Proefversie: gooit je eigen wijzigingen weg en laadt de voorbeeldgegevens opnieuw. */
-function opnieuw() {
+async function opnieuw() {
   wisProefgegevens()
+  await wisProefbestanden()
   location.reload()
 }
 </script>

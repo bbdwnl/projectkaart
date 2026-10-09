@@ -12,7 +12,7 @@ export interface Weergave {
     kolommen: { eigenaar: boolean, deadline: boolean, akkoord: boolean, document: boolean }
   }
   proces: { flow: boolean, tijdlijn: boolean, datums: boolean }
-  details: { gegevens: boolean, leveranciers: boolean, geld: boolean, logboek: boolean }
+  details: { gegevens: boolean, leveranciers: boolean, tekeningen: boolean, geld: boolean, logboek: boolean }
 }
 
 export const WEERGAVE_STANDAARD: Weergave = {
@@ -20,7 +20,7 @@ export const WEERGAVE_STANDAARD: Weergave = {
   kop: { stoplicht: true, planningstrook: true },
   taken: { eerstDit: false, compact: false, kolommen: { eigenaar: true, deadline: true, akkoord: true, document: true } },
   proces: { flow: true, tijdlijn: true, datums: true },
-  details: { gegevens: true, leveranciers: true, geld: true, logboek: true },
+  details: { gegevens: true, leveranciers: true, tekeningen: true, geld: true, logboek: true },
 }
 
 const kopie = <T>(o: T): T => JSON.parse(JSON.stringify(o))

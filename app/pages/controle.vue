@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { Controlepunt, Leverancier, Project } from '~/lib/types'
-import { groepeerPunten, pastPunt, pdfNaam, telPunten, type ControleFilter, type Indeling } from '~/lib/controle'
+import type { Controlepunt, Leverancier, Project, Tekening } from '~/lib/types'
+import { groepeerPunten, nummerPerProject, pastPunt, pdfNaam, telPunten, type ControleFilter, type Indeling } from '~/lib/controle'
+import { pinsVan } from '~/lib/tekening'
 import { fmt, fmtMoment, vandaag } from '~/lib/datum'
 
 // Alle aandachtspunten over alle projecten. Per project (eventueel één leverancier) of per leverancier
@@ -18,11 +19,12 @@ const projecten = ref<Project[]>([])
 const leveranciers = ref<Leverancier[]>([])
 const punten = ref<Controlepunt[]>([])
 const fotos = ref<Record<string, string>>({})
+const tekeningen = ref<Tekening[]>([])
 
 async function laad() {
   stand.value = 'laden'
   try {
-    ;[projecten.value, leveranciers.value, punten.value] = await Promise.all([bron.projecten(), bron.leveranciers(), bron.controlepunten()])
+    ;[projecten.value, leveranciers.value, punten.value, tekeningen.value] = await Promise.all([bron.projecten(), bron.leveranciers(), bron.controlepunten(), bron.tekeningen()])
     stand.value = 'klaar'
   } catch (e) {
     fout.value = foutTekst(e)
@@ -118,6 +120,16 @@ watch(zichtbaar, async (ps) => {
   } catch { /* zonder foto */ }
 })
 
+// ---------- nummers en de tekening ----------
+const nummers = computed(() => nummerPerProject(punten.value))
+const viewer = ref<Controlepunt | null>(null)
+const viewerTekeningen = computed(() => tekeningen.value.filter(t => t.project_id === viewer.value?.project_id))
+const viewerPins = computed(() => pinsVan(punten.value.filter(p => p.project_id === viewer.value?.project_id), p => nummers.value.get(p.id) ?? '?', p => leverancierNaam(p.leverancier_id)))
+const tekeningTekst = (p: Controlepunt) => {
+  const t = tekeningen.value.find(x => x.id === p.tekening_id)
+  return t ? `${t.naam}, blad ${p.tekening_blad}` : ''
+}
+
 // ---------- pdf ----------
 const bezig = ref(false)
 async function pdf() {
@@ -126,6 +138,16 @@ async function pdf() {
   try {
     const paden = [...new Set(zichtbaar.value.map(p => p.foto))]
     const urls = await bron.fotoUrls(paden).catch(() => ({} as Record<string, string>))
+    // Per tekening één adres, voor de uitsneden met de plek.
+    const tekeningUrls = new Map<string, string | null>()
+    for (const id of new Set(zichtbaar.value.map(p => p.tekening_id).filter((t): t is string => !!t))) {
+      const t = tekeningen.value.find(x => x.id === id)
+      tekeningUrls.set(id, t ? await bron.tekeningUrl(t).catch(() => null) : null)
+    }
+    const plekVan = (p: Controlepunt) => {
+      const url = p.tekening_id ? tekeningUrls.get(p.tekening_id) : null
+      return url ? { url, blad: p.tekening_blad!, x: p.tekening_x!, y: p.tekening_y!, tekst: tekeningTekst(p) } : null
+    }
     await maakControlePdf({
       titel: titel.value,
       ondertitel: ondertitel.value,
@@ -133,7 +155,7 @@ async function pdf() {
       bijLabel: anders.value === 'project' ? 'Project' : 'Leverancier',
       groepen: groepen.value.map(g => ({
         titel: g.titel,
-        punten: g.punten.map(p => ({ punt: p, fotoUrl: urls[p.foto] ?? null, bij: g.titel })),
+        punten: g.punten.map(p => ({ punt: p, nummer: nummers.value.get(p.id), fotoUrl: urls[p.foto] ?? null, bij: g.titel, plek: plekVan(p) })),
       })),
       bestandsnaam: pdfNaam([titel.value, ondertitel.value], fmt(nu)),
     })
@@ -207,8 +229,11 @@ async function pdf() {
                 <div class="rij-hoofd">
                   <span class="duim"><img v-if="fotos[p.foto]" :src="fotos[p.foto]" alt="" loading="lazy"></span>
                   <div class="titel">
-                    <span class="notitie">{{ p.notitie }}</span>
+                    <span class="notitie"><b class="punt-nr">#{{ nummers.get(p.id) }}</b> {{ p.notitie }}</span>
                     <small>Gemeld door {{ p.aangemaakt_door ?? 'onbekend' }} · {{ fmtMoment(p.aangemaakt_op, nu) }}</small>
+                    <small v-if="p.tekening_id">
+                      <button type="button" class="link plek-link" @click="viewer = p">Op tekening: {{ tekeningTekst(p) }}</button>
+                    </small>
                     <small v-if="p.opgelost && p.opgelost_op">Opgelost door {{ p.opgelost_door ?? 'onbekend' }} · {{ fmtMoment(p.opgelost_op, nu) }}</small>
                   </div>
                   <span><StatusTab :licht="p.opgelost ? 'klaar' : 'letop'" :woord="p.opgelost ? 'Opgelost' : 'Open'" /></span>
@@ -220,6 +245,11 @@ async function pdf() {
         </section>
       </div>
     </template>
+    <TekeningViewer
+      v-if="viewer && viewer.tekening_id" :tekeningen="viewerTekeningen" :tekening-id="viewer.tekening_id" :pins="viewerPins"
+      :plek="{ tekening_id: viewer.tekening_id, blad: viewer.tekening_blad!, x: viewer.tekening_x!, y: viewer.tekening_y! }" :actief="viewer.id"
+      :titel="`#${nummers.get(viewer.id)} · ${projectNaam(viewer.project_id)}`" @sluit="viewer = null"
+    />
     <footer>Projectkaart BbDW</footer>
   </main>
 </template>

@@ -1,11 +1,13 @@
 import type { InjectionKey } from 'vue'
 import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
-import type { Controlepunt, ControlepuntWijziging, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
+import type { Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
 import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, type TaakRegel } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
 import { leegTaak } from '~/lib/taak'
 import { vandaag } from '~/lib/datum'
+import { GEEN_PLEK } from '~/lib/types'
+import { nummerPerProject } from '~/lib/controle'
 
 export type Filter = 'open' | 'klaar' | 'alles' | 'telaat' | 'letop'
 
@@ -30,6 +32,7 @@ function maakKaart(slug: string) {
   const leveranciers = ref<Leverancier[]>([])
   const globaleLeveranciers = ref<Leverancier[]>([])
   const controlepunten = ref<Controlepunt[]>([])
+  const tekeningen = ref<Tekening[]>([])
   const stand = ref<'laden' | 'klaar' | 'niet-gevonden' | 'fout'>('laden')
   const fout = ref('')
   // Blijft staan als je van tabblad wisselt.
@@ -46,9 +49,9 @@ function maakKaart(slug: string) {
         stand.value = 'niet-gevonden'
         return
       }
-      const [t, c, f, l, alle, ps, lev, glob, cp] = await Promise.all([
+      const [t, c, f, l, alle, ps, lev, glob, cp, tek] = await Promise.all([
         bron.taken(p.id), bron.uitzonderingen(), bron.financien(p.id), bron.logboek(p.id), bron.taken(), bron.projecten(),
-        bron.leveranciers(p.id), bron.globaleLeveranciers(), bron.controlepunten(p.id),
+        bron.leveranciers(p.id), bron.globaleLeveranciers(), bron.controlepunten(p.id), bron.tekeningen(p.id),
       ])
       project.value = p
       taken.value = t
@@ -58,6 +61,7 @@ function maakKaart(slug: string) {
       leveranciers.value = lev
       globaleLeveranciers.value = glob
       controlepunten.value = cp
+      tekeningen.value = tek
       gebruik.value = aantalPerUitzondering(alle)
       projecten.value = ps.map(x => ({ id: x.id, fase: x.fase }))
       tabFase.value = p.fase
@@ -174,6 +178,44 @@ function maakKaart(slug: string) {
 
   // ---------- Controle: leveranciers en aandachtspunten ----------
   const openPunten = computed(() => controlepunten.value.filter(p => !p.opgelost).length)
+  /** Het nummer van een punt op de tekening en in de lijst: in volgorde van melden, vast per project. */
+  const nummers = computed(() => nummerPerProject(controlepunten.value))
+
+  /** Een pdf uploaden als tekening van dit project; de naam is de bestandsnaam zonder .pdf. */
+  async function uploadTekening(bestand: File): Promise<Tekening | null> {
+    if (!project.value) return null
+    if (bestand.type !== 'application/pdf' && !/\.pdf$/i.test(bestand.name)) {
+      toon('Kies een pdf.', 'fout')
+      return null
+    }
+    try {
+      const t = await bron.uploadTekening(project.value.id, bestand, bestand.name.replace(/\.pdf$/i, '').trim() || 'Tekening')
+      tekeningen.value = [...tekeningen.value, t]
+      toon(`${t.naam} staat bij de tekeningen`)
+      return t
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+      return null
+    }
+  }
+  async function hernoemTekening(t: Tekening, naam: string) {
+    try {
+      const nieuw = await bron.hernoemTekening(t.id, naam)
+      tekeningen.value = tekeningen.value.map(x => (x.id === t.id ? nieuw : x))
+      toon('Opgeslagen')
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+    }
+  }
+  async function verwijderTekening(t: Tekening) {
+    try {
+      await bron.verwijderTekening(t)
+      tekeningen.value = tekeningen.value.filter(x => x.id !== t.id)
+      toon(`${t.naam} weggehaald`)
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+    }
+  }
 
   const opNaam = (ls: Leverancier[]) => [...ls].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
   const vervangIn = (ls: Leverancier[], l: Leverancier) => ls.map(x => (x.id === l.id ? l : x))
@@ -260,6 +302,8 @@ function maakKaart(slug: string) {
     }
   }
   const zetOpgelost = (punt: Controlepunt, opgelost: boolean) => wijzigPunt(punt, { opgelost }, opgelost ? 'Opgelost' : 'Weer open')
+  const zetPlek = (punt: Controlepunt, plek: Plek | null) =>
+    wijzigPunt(punt, plek ?? GEEN_PLEK, plek ? 'Plek op de tekening vastgelegd' : 'Plek weggehaald')
   const kiesLeverancier = (punt: Controlepunt, id: string | null) =>
     wijzigPunt(punt, { leverancier_id: id }, id ? `Leverancier: ${leveranciers.value.find(l => l.id === id)?.naam ?? 'gekozen'}` : 'Leverancier weggehaald')
 
@@ -278,6 +322,7 @@ function maakKaart(slug: string) {
     regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
     laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering,
     nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, kiesLeverancier, verwijderControlepunt,
+    tekeningen, nummers, uploadTekening, hernoemTekening, verwijderTekening, zetPlek,
   }
 }
 

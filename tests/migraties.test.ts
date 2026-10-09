@@ -217,3 +217,36 @@ describe('controle', () => {
     await expect(als(VREEMD, `insert into storage.objects (bucket_id, name) values ('controle', 'x/b.jpg')`)).rejects.toThrow()
   })
 })
+
+describe('tekeningen', () => {
+  it('bewaart een tekening per project, met wie hem toevoegde', async () => {
+    const [t] = await als<{ id: string, aangemaakt_door: string }>(MICHIEL,
+      `insert into public.tekeningen (project_id, naam, pad) values ($1, 'Plattegrond begane grond', $2) returning id, aangemaakt_door`, [projectId, `${projectId}/bg.pdf`])
+    expect(t!.aangemaakt_door).toBe('Michiel')
+    await expect(als(MICHIEL, `insert into public.tekeningen (project_id, naam, pad) values ($1, 'Elders', 'ander/pad.pdf')`, [projectId])).rejects.toThrow()
+    expect(await als(VREEMD, `select id from public.tekeningen`)).toHaveLength(0)
+  })
+
+  it('legt een plek vast op een tekening van het eigen project, compleet of helemaal niet', async () => {
+    const [t] = await als<{ id: string }>(MICHIEL, `select id from public.tekeningen where project_id = $1`, [projectId])
+    const insert = `insert into public.controlepunten (project_id, notitie, foto, tekening_id, tekening_blad, tekening_x, tekening_y) values ($1, 'Kitnaad', $2, $3, $4, $5, $6) returning id`
+    const [p] = await als<{ id: string }>(MICHIEL, insert, [projectId, `${projectId}/k.jpg`, t!.id, 1, 0.42, 0.61])
+    await expect(als(MICHIEL, insert, [projectId, `${projectId}/k.jpg`, t!.id, 1, 1.2, 0.5])).rejects.toThrow()
+    await expect(als(MICHIEL, insert, [projectId, `${projectId}/k.jpg`, t!.id, null, 0.4, 0.5])).rejects.toThrow()
+    const [ander] = (await db.query<{ id: string }>(`select id from public.projecten where id <> $1 limit 1`, [projectId])).rows
+    await expect(als(MICHIEL, insert, [ander!.id, `${ander!.id}/k.jpg`, t!.id, 1, 0.4, 0.5])).rejects.toThrow()
+    // Plek verplaatsen en weghalen kan; de tekening zelf kan niet weg zolang er een punt op staat.
+    await als(MICHIEL, `update public.controlepunten set tekening_x = 0.5, tekening_y = 0.5 where id = $1`, [p!.id])
+    await expect(als(MICHIEL, `delete from public.tekeningen where id = $1`, [t!.id])).rejects.toThrow()
+    await als(MICHIEL, `update public.controlepunten set tekening_id = null, tekening_blad = null, tekening_x = null, tekening_y = null where id = $1`, [p!.id])
+    await als(MICHIEL, `delete from public.tekeningen where id = $1`, [t!.id])
+    expect(await als(MICHIEL, `select id from public.tekeningen where id = $1`, [t!.id])).toHaveLength(0)
+  })
+
+  it('maakt een besloten bucket alleen voor pdf\'s', async () => {
+    const [b] = (await db.query<{ public: boolean, allowed_mime_types: string[] }>(`select public, allowed_mime_types from storage.buckets where id = 'tekeningen'`)).rows
+    expect(b).toEqual({ public: false, allowed_mime_types: ['application/pdf'] })
+    await als(MICHIEL, `insert into storage.objects (bucket_id, name) values ('tekeningen', $1)`, [`${projectId}/bg.pdf`])
+    expect(await als(VREEMD, `select name from storage.objects where bucket_id = 'tekeningen'`)).toHaveLength(0)
+  })
+})

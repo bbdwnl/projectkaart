@@ -56,3 +56,14 @@ export function telPunten(punten: Controlepunt[], op: Indeling): Map<string, { o
 export function pdfNaam(delen: string[], datum: string): string {
   return `${['Controle', ...delen, datum].map(d => d.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' - ')}.pdf`
 }
+
+/** Het nummer van een punt, per project in volgorde van melden: zo staat het op de tekening, in de lijsten en in de pdf. */
+export function nummerPerProject(punten: Controlepunt[]): Map<string, number> {
+  const per = new Map<string, Controlepunt[]>()
+  for (const p of punten) per.set(p.project_id, [...(per.get(p.project_id) ?? []), p])
+  const nummers = new Map<string, number>()
+  for (const ps of per.values()) {
+    ;[...ps].sort((a, b) => Date.parse(a.aangemaakt_op) - Date.parse(b.aangemaakt_op)).forEach((p, i) => nummers.set(p.id, i + 1))
+  }
+  return nummers
+}
