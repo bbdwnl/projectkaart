@@ -1,6 +1,6 @@
 import type { InjectionKey } from 'vue'
-import type { NieuweUitzondering } from '~/data/bron'
-import type { Fase, Financien, Licht, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
+import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
+import type { Controlepunt, Fase, Financien, Leverancier, Licht, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
 import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, type TaakRegel } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
@@ -26,6 +26,8 @@ function maakKaart(slug: string) {
   const projecten = ref<Pick<Project, 'id' | 'fase'>[]>([])
   const financien = ref<Financien | null>(null)
   const logboek = ref<LogRegel[]>([])
+  const leveranciers = ref<Leverancier[]>([])
+  const controlepunten = ref<Controlepunt[]>([])
   const stand = ref<'laden' | 'klaar' | 'niet-gevonden' | 'fout'>('laden')
   const fout = ref('')
   // Blijft staan als je van tabblad wisselt.
@@ -42,14 +44,17 @@ function maakKaart(slug: string) {
         stand.value = 'niet-gevonden'
         return
       }
-      const [t, c, f, l, alle, ps] = await Promise.all([
+      const [t, c, f, l, alle, ps, lev, cp] = await Promise.all([
         bron.taken(p.id), bron.uitzonderingen(), bron.financien(p.id), bron.logboek(p.id), bron.taken(), bron.projecten(),
+        bron.leveranciers(p.id), bron.controlepunten(p.id),
       ])
       project.value = p
       taken.value = t
       catalogus.value = c
       financien.value = f
       logboek.value = l
+      leveranciers.value = lev
+      controlepunten.value = cp
       gebruik.value = aantalPerUitzondering(alle)
       projecten.value = ps.map(x => ({ id: x.id, fase: x.fase }))
       tabFase.value = p.fase
@@ -164,10 +169,74 @@ function maakKaart(slug: string) {
     }
   }
 
+  // ---------- Controle: leveranciers en aandachtspunten ----------
+  const openPunten = computed(() => controlepunten.value.filter(p => !p.opgelost).length)
+
+  async function voegLeverancierToe(invoer: Pick<Leverancier, 'naam' | 'vak'>): Promise<boolean> {
+    if (!project.value) return false
+    try {
+      const l = await bron.voegLeverancierToe(project.value.id, invoer)
+      leveranciers.value = [...leveranciers.value, l].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+      toon(`${l.naam} staat bij de leveranciers`)
+      return true
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+      return false
+    }
+  }
+
+  async function verwijderLeverancier(l: Leverancier) {
+    try {
+      await bron.verwijderLeverancier(l.id)
+      leveranciers.value = leveranciers.value.filter(x => x.id !== l.id)
+      toon(`${l.naam} weggehaald`)
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+    }
+  }
+
+  async function voegControlepuntToe(invoer: NieuwControlepunt): Promise<boolean> {
+    if (!project.value) return false
+    try {
+      controlepunten.value = [await bron.voegControlepuntToe(project.value.id, invoer), ...controlepunten.value]
+      toon('Aandachtspunt toegevoegd')
+      return true
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+      return false
+    }
+  }
+
+  /** Meteen op het scherm; bij een fout terug. */
+  async function zetOpgelost(punt: Controlepunt, opgelost: boolean) {
+    const vorige = kopie(punt)
+    const i = controlepunten.value.findIndex(p => p.id === punt.id)
+    if (i < 0) return
+    controlepunten.value[i] = { ...punt, opgelost }
+    try {
+      controlepunten.value[i] = await bron.zetOpgelost(punt.id, opgelost)
+      toon(opgelost ? 'Opgelost' : 'Weer open')
+    } catch (e) {
+      controlepunten.value[i] = vorige
+      toon(foutTekst(e), 'fout')
+    }
+  }
+
+  async function verwijderControlepunt(punt: Controlepunt) {
+    try {
+      await bron.verwijderControlepunt(punt)
+      controlepunten.value = controlepunten.value.filter(p => p.id !== punt.id)
+      toon('Aandachtspunt weggehaald')
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+    }
+  }
+
   return {
-    project, taken, catalogus, gebruik, financien, logboek, stand, fout, nu, tabFase, filter, nadruk,
-    regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt,
+    project, taken, catalogus, gebruik, financien, logboek, leveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
+    regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
     laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering,
+    voegLeverancierToe, verwijderLeverancier, voegControlepuntToe, zetOpgelost, verwijderControlepunt,
   }
 }
 

@@ -4,7 +4,7 @@ import { dagen } from '~/lib/datum'
 
 const route = useRoute()
 const kaart = useProjectkaart(String(route.params.slug))
-const { project, stand, fout, lichten, mijlpaal, tabFase, filter } = kaart
+const { project, stand, fout, lichten, mijlpaal, tabFase, filter, openPunten } = kaart
 const { weergave } = useWeergave()
 const { modus } = useGebruiker()
 
@@ -18,8 +18,11 @@ watch(() => weergave.value.tab, (nieuw, oud) => {
   history.replaceState(history.state, '', `#${nieuw}`)
 })
 
-const kruimel = useState<string | null>('kruimel', () => null)
-watch(() => project.value?.naam, n => (kruimel.value = n ?? null), { immediate: true })
+// In het menu staat de naam achter Projecten, of achter Leads zolang het project een lead is.
+const kruimel = useState<{ naam: string, lead: boolean } | null>('kruimel', () => null)
+watch(() => project.value && `${project.value.fase}:${project.value.naam}`, () => {
+  kruimel.value = project.value ? { naam: project.value.naam, lead: project.value.fase === 'lead' } : null
+}, { immediate: true })
 onBeforeUnmount(() => (kruimel.value = null))
 useHead({ title: () => project.value ? `${project.value.naam} · Projectkaart` : 'Projectkaart · BbDW' })
 
@@ -33,6 +36,8 @@ const pilProces = computed(() => {
   const m = mijlpaal.value
   return m ? (m.dagen >= 0 ? dagen(m.dagen) : `${dagen(-m.dagen)} geleden`) : null
 })
+
+const pilControle = computed(() => openPunten.value ? `${openPunten.value} open` : null)
 
 function naarTabs() {
   document.getElementById('tabanker')?.scrollIntoView({ behavior: minderBeweging() ? 'auto' : 'smooth', block: 'start' })
@@ -72,10 +77,11 @@ function planning() {
     <template v-else-if="project">
       <KaartKop @lamp="lamp" @planning="planning" />
       <div id="tabanker" />
-      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-proces="pilProces" />
+      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-proces="pilProces" :pil-controle="pilControle" />
       <Transition :name="richting > 0 ? 'paneel-vooruit' : 'paneel-terug'" mode="out-in">
         <KaartTaken v-if="weergave.tab === 'taken'" key="taken" />
         <KaartProces v-else-if="weergave.tab === 'proces'" key="proces" />
+        <KaartControle v-else-if="weergave.tab === 'controle'" key="controle" />
         <KaartDetails v-else key="details" />
       </Transition>
     </template>

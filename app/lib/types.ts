@@ -114,3 +114,27 @@ export interface Gebruiker {
   email: string | null
   isMt: boolean
 }
+
+/** Een leverancier op één project; in te stellen onder Details. */
+export interface Leverancier {
+  id: string
+  project_id: string
+  naam: string
+  /** Wat ze doen, bijvoorbeeld "Installateur". */
+  vak: string | null
+}
+
+/** Een aandachtspunt onder Controle: altijd een foto, een notitie en een leverancier. */
+export interface Controlepunt {
+  id: string
+  project_id: string
+  leverancier_id: string
+  notitie: string
+  /** Pad in de opslag: '<project_id>/<naam>.jpg'. */
+  foto: string
+  opgelost: boolean
+  opgelost_door: string | null
+  opgelost_op: string | null
+  aangemaakt_door: string | null
+  aangemaakt_op: string
+}

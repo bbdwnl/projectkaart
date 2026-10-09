@@ -9,7 +9,11 @@ describe('voorbeeldgegevens van de proefversie', () => {
   const g = maakDemoGegevens(nu, projecten)
   const p = g.projecten.find(x => x.nummer === 'P20038')!
 
-  it('maakt alle 27 projecten', () => expect(g.projecten).toHaveLength(27))
+  it('maakt alle 27 projecten, plus de verzonnen leads, met unieke slugs', () => {
+    expect(g.projecten.filter(x => x.fase !== 'lead')).toHaveLength(27)
+    expect(g.projecten.filter(x => x.fase === 'lead')).toHaveLength(8)
+    expect(new Set(g.projecten.map(x => x.slug)).size).toBe(g.projecten.length)
+  })
   it('laat Apeldoorn Vlijtseweg zien zoals in design-referentie.html', () => {
     const regels = takenVan('ontwikkeling', p, g.taken.filter(t => t.project_id === p.id), g.uitzonderingen, nu)
     const t = telling(regels)
