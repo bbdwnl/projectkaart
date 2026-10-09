@@ -1,4 +1,4 @@
-import type { Fase, Financien, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { NieuweLead } from '~/lib/leads'
 
 /**
@@ -24,6 +24,24 @@ export interface Bron {
   voegUitzonderingToe(projectId: string, invoer: NieuweUitzondering): Promise<{ taak: Taak, uitzondering: Uitzondering }>
   verwijderTaak(taakId: string): Promise<void>
   zetUitzonderingStatus(id: string, status: UitzonderingStatus): Promise<void>
+
+  leveranciers(projectId: string): Promise<Leverancier[]>
+  voegLeverancierToe(projectId: string, invoer: Pick<Leverancier, 'naam' | 'vak'>): Promise<Leverancier>
+  /** Lukt niet zolang de leverancier aandachtspunten heeft. */
+  verwijderLeverancier(id: string): Promise<void>
+  controlepunten(projectId: string): Promise<Controlepunt[]>
+  /** Adressen waarop de browser de foto's kan tonen, per pad. Tijdelijk geldig. */
+  fotoUrls(paden: string[]): Promise<Record<string, string>>
+  voegControlepuntToe(projectId: string, invoer: NieuwControlepunt): Promise<Controlepunt>
+  zetOpgelost(id: string, opgelost: boolean): Promise<Controlepunt>
+  verwijderControlepunt(punt: Controlepunt): Promise<void>
+}
+
+export interface NieuwControlepunt {
+  leverancierId: string
+  notitie: string
+  /** Al verkleind tot een jpg (utils/foto.ts). */
+  foto: Blob
 }
 
 export interface NieuweUitzondering {

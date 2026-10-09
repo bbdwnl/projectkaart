@@ -1,9 +1,11 @@
-import type { Bron, NieuweUitzondering } from './bron'
+import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
 import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import { leegProject } from '~/lib/leads'
-import type { Fase, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging } from '~/lib/types'
+import type { Controlepunt, Fase, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging } from '~/lib/types'
+import { fotoPad } from '~/lib/controle'
+import { naarDataUrl, verkleinFoto } from '~/utils/foto'
 
 // Dezelfde velden als de logboektriggers in de migratie.
 const PROJECT_VELDEN = ['fase', 'prio', 'nummer', 'afas_nummer', 'naam', 'adres', 'm2', 'soort', 'slagingskans', 'am', 'po', 'pm', 'opzichter',
@@ -19,7 +21,7 @@ function laad(opslag: string): DemoGegevens | null {
   try {
     const s = localStorage.getItem(opslag)
     const d = s ? JSON.parse(s) as DemoGegevens : null
-    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) ? d : null
+    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) ? d : null
   } catch {
     return null
   }
@@ -32,18 +34,32 @@ export function wisProefgegevens() {
   try { localStorage.removeItem(PROEF_OPSLAG) } catch { /* niets te wissen */ }
 }
 
+/** Gooit de gegevens van oudere versies weg: de foto's onder Controle hebben de ruimte nodig. */
+function ruimOudeVersiesOp() {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('projectkaart_proefgegevens_') && k !== PROEF_OPSLAG) localStorage.removeItem(k)
+  } catch { /* geen opslag */ }
+}
+
 /**
  * Voorbeeldgegevens in het geheugen. `gegevens` komen van de server (alleen met toegang).
  * Met `opslag` blijven de wijzigingen van een tester bewaard in zijn eigen browser
  * (localStorage); anderen zien ze niet. Zonder toegang: een lege bron.
  */
 export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: string, opslag?: string, gegevens: DemoGegevens | null }): Bron {
+  if (opslag) ruimOudeVersiesOp()
   const db = gegevens ? (opslag && laad(opslag)) || gegevens : LEGE_GEGEVENS()
   let teller = 0
   const nieuwId = (soort: string) => `${soort}-demo-${Date.now().toString(36)}-${++teller}`
-  function bewaar() {
-    if (!opslag) return
-    try { localStorage.setItem(opslag, JSON.stringify(db)) } catch { /* vol of geblokkeerd: dan alleen in het geheugen */ }
+  /** false: de opslag van de browser is vol of geblokkeerd; dan staat het alleen in het geheugen. */
+  function bewaar(): boolean {
+    if (!opslag) return true
+    try {
+      localStorage.setItem(opslag, JSON.stringify(db))
+      return true
+    } catch {
+      return false
+    }
   }
 
   function log(regel: Omit<LogRegel, 'id' | 'op' | 'door'>) {
@@ -163,6 +179,64 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       await wacht()
       const u = db.uitzonderingen.find(x => x.id === id)
       if (u) u.status = status
+      bewaar()
+    },
+
+    async leveranciers(projectId) {
+      return kopie(db.leveranciers.filter(l => l.project_id === projectId).sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
+    },
+    async voegLeverancierToe(projectId, invoer) {
+      await wacht()
+      const naam = invoer.naam.trim()
+      if (naam.length < 2) throw new BronFout('Geef de leverancier een naam van minstens twee letters.')
+      if (db.leveranciers.some(l => l.project_id === projectId && l.naam.toLowerCase() === naam.toLowerCase())) throw new BronFout(`${naam} staat al bij de leveranciers.`)
+      const l = { id: nieuwId('lev'), project_id: projectId, naam, vak: invoer.vak }
+      db.leveranciers.push(l)
+      bewaar()
+      return kopie(l)
+    },
+    async verwijderLeverancier(id) {
+      await wacht()
+      if (db.controlepunten.some(p => p.leverancier_id === id)) throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg.')
+      db.leveranciers = db.leveranciers.filter(l => l.id !== id)
+      bewaar()
+    },
+    async controlepunten(projectId) {
+      return kopie(db.controlepunten.filter(p => p.project_id === projectId))
+    },
+    async fotoUrls(paden) {
+      return Object.fromEntries(paden.filter(p => db.fotos[p]).map(p => [p, db.fotos[p]!]))
+    },
+    async voegControlepuntToe(projectId, invoer: NieuwControlepunt) {
+      if (!db.leveranciers.some(l => l.id === invoer.leverancierId && l.project_id === projectId)) throw new BronFout('Kies een leverancier van dit project.')
+      const id = nieuwId('c')
+      const foto = fotoPad(projectId, id)
+      // Kleiner dan in het echt: alles staat in de opslag van de browser, en die is maar een paar MB.
+      db.fotos[foto] = await naarDataUrl(await verkleinFoto(invoer.foto, 1024, 0.7))
+      const p: Controlepunt = {
+        id, project_id: projectId, leverancier_id: invoer.leverancierId, notitie: invoer.notitie, foto, opgelost: false,
+        opgelost_door: null, opgelost_op: null, aangemaakt_door: door, aangemaakt_op: new Date().toISOString(),
+      }
+      db.controlepunten.push(p)
+      if (!bewaar()) {
+        db.controlepunten.pop()
+        delete db.fotos[foto]
+        throw new BronFout('De opslag van deze browser is vol. Haal een paar aandachtspunten weg, of begin opnieuw met de voorbeeldgegevens.')
+      }
+      return kopie(p)
+    },
+    async zetOpgelost(id, opgelost) {
+      await wacht()
+      const p = db.controlepunten.find(x => x.id === id)
+      if (!p) throw new BronFout('Dit aandachtspunt bestaat niet (meer).')
+      if (opgelost !== p.opgelost) Object.assign(p, { opgelost, opgelost_door: opgelost ? door : null, opgelost_op: opgelost ? new Date().toISOString() : null })
+      bewaar()
+      return kopie(p)
+    },
+    async verwijderControlepunt(punt) {
+      await wacht()
+      db.controlepunten = db.controlepunten.filter(p => p.id !== punt.id)
+      delete db.fotos[punt.foto]
       bewaar()
     },
   }

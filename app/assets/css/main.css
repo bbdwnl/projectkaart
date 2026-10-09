@@ -467,6 +467,61 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .nieuwe-lead{grid-template-columns:1fr}
 }
 
+/* controle: aandachtspunten met een foto */
+.controle .blokkop .knop{flex:none}
+.controle .filters{margin-top:6px}
+.controlelijst{list-style:none;margin:0;padding:0;position:relative}
+.controlelijst .rij-hoofd{grid-template-columns:104px minmax(0,1fr) 100px auto;min-height:92px;padding-top:10px;padding-bottom:10px}
+.controlelijst .notitie,.fotovenster .notitie{white-space:pre-line}
+.duim{width:104px;height:78px;padding:0;border:var(--rand);border-radius:var(--radius-s);background:var(--grijs);overflow:hidden;cursor:zoom-in}
+.duim img{display:block;width:100%;height:100%;object-fit:cover}
+.controlelijst .acties,.leverancierlijst .acties{display:flex;align-items:center;gap:14px;justify-content:flex-end}
+.controlelijst .acties .link,.leverancierlijst .acties .link{font-size:14px}
+.link:disabled{opacity:.35;cursor:default}
+.controle-nieuw{display:grid;grid-template-columns:260px minmax(0,1fr);gap:22px;margin:0 0 28px;padding-top:28px}
+.foto-veld{display:grid;gap:8px;justify-items:start}
+.fotoknop{position:relative;display:grid;place-items:center;width:260px;aspect-ratio:4/3;border:2px dashed var(--zwart);border-radius:var(--radius);background:var(--grijs-2);font-weight:700;cursor:pointer;overflow:hidden;transition:background-color .2s}
+.fotoknop:hover{background:var(--grijs)}
+.fotoknop:focus-within{outline:3px solid var(--blauw);outline-offset:2px}
+.fotoknop.gevuld{border-style:solid}
+.fotoknop img{width:100%;height:100%;object-fit:cover}
+.foto-veld .link{font-size:14px}
+.controle-velden{display:grid;gap:14px;align-content:start}
+.controle-velden label{display:grid;gap:6px}
+.controle-velden .label{margin:0}
+.controle-velden .veld{width:100%}
+.controle-velden select.veld{height:38px}
+.controle-velden .knoppen{display:flex;align-items:center;gap:14px}
+.geen-leveranciers{margin:0;padding:10px 14px;border-radius:var(--radius-s);background:var(--grijs-2)}
+.geen-leveranciers .link{font-size:14px}
+.fotovenster{max-width:min(1100px,calc(100vw - 32px));max-height:calc(100vh - 32px);padding:16px;border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog)}
+.fotovenster::backdrop{background:rgba(17,17,17,.6)}
+.fotovenster figure{margin:0 0 12px}
+.fotovenster img{display:block;max-width:100%;max-height:calc(100vh - 190px);margin:0 auto;border-radius:var(--radius-s)}
+.fotovenster figcaption{margin-top:10px;font-size:15px;line-height:22px}
+.fotovenster figcaption small{display:block;color:var(--stil);font-size:13px}
+
+/* details: leveranciers */
+.leverancierlijst .kolkop,.leverancierlijst .rij-hoofd{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 200px 110px}
+.leverancierlijst .titel{font-weight:700}
+.leverancier-nieuw{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.leverancier-nieuw .veld{flex:1 1 220px;height:38px}
+
+@media (max-width:1100px){
+  .controlelijst .rij-hoofd{grid-template-columns:104px minmax(0,1fr);grid-template-areas:none;align-items:start}
+  .controlelijst .rij-hoofd>:nth-child(3),.controlelijst .rij-hoofd>:nth-child(4){grid-column:2}
+  .controlelijst .acties{justify-content:flex-start}
+  .leverancierlijst .rij-hoofd{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:none;gap:2px 12px;padding:10px 14px}
+  .leverancierlijst .rij-hoofd>:nth-child(2),.leverancierlijst .rij-hoofd>:nth-child(3){grid-column:1}
+  .leverancierlijst .acties{grid-column:2;grid-row:1}
+}
+@media (max-width:760px){
+  .controle-nieuw{grid-template-columns:1fr}
+  .fotoknop{width:100%}
+  .controlelijst .rij-hoofd{grid-template-columns:76px minmax(0,1fr)}
+  .duim{width:76px;height:57px}
+}
+
 /* inloggen */
 .login{min-height:100vh;display:grid;place-items:center;padding:24px}
 .login-kaart{max-width:520px;padding:40px 36px 34px}

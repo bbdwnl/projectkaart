@@ -22,6 +22,9 @@ de offerte "Van oud naar nieuw" (fase B) en [design-referentie.html](../design-r
 | 12 | Financiën | Alleen het MT, afgedwongen in de database. Velden zoals in het financieel overzicht van het prototype | Bedragen komen later via een import. |
 | 13 | Tekeningen | Op aanvraag; per project een tekstveld met de locatie op de server, met kopieerknop | Browsers openen geen serverpaden. |
 | 14 | Proefversie | Zolang Microsoft niet is gekoppeld: de inlogknop laat je zonder account binnen, voorbeeldgegevens, wijzigingen per tester in zijn eigen browser | Om de kaart te laten bekijken voordat de koppeling er is. Uit met `NUXT_PUBLIC_PROEFVERSIE=false`. |
+| 20 | Leads | **Eigen menu-item en lijst.** Een project in de fase lead staat onder Leads en niet meer onder Projecten. Filters op accountmanager, kans, prio en klaar voor overdracht, plus zoeken; ze staan in de adresbalk, zodat terug vanaf een lead dezelfde lijst geeft. Een nieuwe lead maak je vanaf de lijst (naam, plaats, AM, kans) | Verzoek opdrachtgever (09-10-2026). De app kon nog geen project aanmaken; zonder die knop bleef de lijst leeg. De slagingskans (0, 25, 50, 75 of 100%) staat nu onder Details en in het logboek. |
+| 21 | Controle | **Vierde tabblad, na Proces & Planning.** Een lijst met aandachtspunten; een punt heeft altijd een foto, een notitie en een leverancier. Open of opgelost; wie het punt maakte en wie het oploste vult de database in | Verzoek opdrachtgever (09-10-2026). De foto wordt in de browser verkleind tot 1600 px en staat in een besloten bucket in Supabase (`controle`), alleen voor medewerkers. Op een telefoon opent de knop meteen de camera. |
+| 22 | Leveranciers | Per project, onder Details. Een leverancier met aandachtspunten kan niet weg | Zo gevraagd. Alternatief: één centrale lijst die je per project aanvinkt (open vraag 6). |
 
 ## Techniek
 
@@ -88,6 +91,10 @@ leest de database, zodat Copilot kan antwoorden op "waar staat project X?".
 3. **AFAS:** is het AFAS-nummer hetzelfde als het projectnummer? Dan voegen we de velden samen.
 4. **Wie is MT** (financiën, catalogus beheren)? En zijn er naast `bbdw.nl` nog andere e-maildomeinen?
 5. **Externe partijen:** welke gegevens mogen op de publieke kaart, en hoe delen we grote tekeningen?
+6. **Leveranciers:** per project (nu) of één centrale lijst? Een centrale lijst scheelt typen als dezelfde
+   installateur op meer projecten werkt, en maakt "alle open punten van deze leverancier" over projecten heen mogelijk.
+7. **Controle naar de leverancier:** moet een leverancier zijn openstaande punten met foto kunnen ontvangen,
+   bijvoorbeeld als mail of als pdf? Nu deel je ze door de lijst op de leverancier te filteren.
 
 ## Volgende stappen
 

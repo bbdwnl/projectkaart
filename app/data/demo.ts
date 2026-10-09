@@ -2,7 +2,7 @@
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import type { Fase, Financien, LogRegel, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
+import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
@@ -26,7 +26,7 @@ export interface ProjectBasis {
   datum_oplevering: string | null
 }
 
-export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [] })
+export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], controlepunten: [], fotos: {} })
 
 export interface DemoGegevens {
   projecten: Project[]
@@ -34,6 +34,10 @@ export interface DemoGegevens {
   uitzonderingen: Uitzondering[]
   financien: Financien[]
   logboek: LogRegel[]
+  leveranciers: Leverancier[]
+  controlepunten: Controlepunt[]
+  /** De foto's van de aandachtspunten, als data-URL per pad. Alleen in de browser van de tester. */
+  fotos: Record<string, string>
 }
 
 /** Vaste "toeval" per sleutel, zodat de demo elke keer hetzelfde is. */
@@ -55,6 +59,15 @@ const LEADS: [string, string, string | null, number | null, boolean, Soort[], nu
   ['Kindergezondheidscentrum Het Anker', 'Harderwijk', 'Michiel', 50, false, ['adv'], 480, 20],
   ['Gezondheidshuis Molenwijk', 'Oss', null, 0, false, [], null, 90],
   ['Zorgplein Noord', 'Almere', 'Jeroen', 75, false, ['ont'], 1750, 6],
+]
+
+// Leveranciers voor de projecten in uitvoering en nazorg, en Apeldoorn Vlijtseweg (verzonnen).
+const LEVERANCIERS: [string, string][] = [
+  ['Bouwbedrijf Van Wijk', 'Aannemer casco'],
+  ['Klimaattechniek Oost', 'Installateur'],
+  ['Elektro Hendriks', 'Elektra'],
+  ['Interieurbouw De Lange', 'Afbouw en interieur'],
+  ['Schildersbedrijf Jansen', 'Schilderwerk'],
 ]
 
 const CATALOGUS: [string, string, Fase, number][] = [
@@ -224,5 +237,11 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
     log(moment(7, 10, 0), 'Benno', 'fase', 'haalbaarheid', 'ontwikkeling'),
   ]
 
-  return { projecten, taken, uitzonderingen, financien, logboek }
+  const leveranciers: Leverancier[] = projecten
+    .filter(p => p === vlijtseweg || faseIndex(p.fase) >= faseIndex('uitvoering'))
+    .flatMap(p => LEVERANCIERS.filter((_, i) => p === vlijtseweg || kans(p.slug + i) < 0.7)
+      .map(([naam, vak], i) => ({ id: `lev-${p.slug}-${i}`, project_id: p.id, naam, vak })))
+
+  // Geen voorbeeldpunten: een aandachtspunt hoort bij een echte foto.
+  return { projecten, taken, uitzonderingen, financien, logboek, leveranciers, controlepunten: [], fotos: {} }
 }

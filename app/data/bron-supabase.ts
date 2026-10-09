@@ -1,7 +1,8 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
-import type { Bron, NieuweUitzondering } from './bron'
+import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import type { Financien, LogRegel, Project, Taak, Uitzondering } from '~/lib/types'
+import type { Controlepunt, Financien, Leverancier, LogRegel, Project, Taak, Uitzondering } from '~/lib/types'
+import { fotoPad } from '~/lib/controle'
 
 function uitkomst<T>(res: { data: T | null, error: PostgrestError | null }, wat: string): T {
   if (res.error) {
@@ -13,6 +14,8 @@ function uitkomst<T>(res: { data: T | null, error: PostgrestError | null }, wat:
 }
 
 const UNIEK = '23505'
+const IN_GEBRUIK = '23503'
+const FOTOS = 'controle'
 
 /** De echte bron: Supabase in Frankfurt. Wat iemand mag, regelt RLS in de database. */
 export function maakSupabaseBron(sb: SupabaseClient): Bron {
@@ -88,6 +91,48 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     },
     async zetUitzonderingStatus(id, status) {
       uitkomst(await sb.from('uitzonderingen').update({ status }).eq('id', id).select().single(), 'de catalogus bijwerken')
+    },
+
+    async leveranciers(projectId) {
+      return uitkomst(await sb.from('leveranciers').select('*').eq('project_id', projectId).order('naam'), 'de leveranciers laden') as Leverancier[]
+    },
+    async voegLeverancierToe(projectId, invoer) {
+      const res = await sb.from('leveranciers').insert({ project_id: projectId, ...invoer }).select().single()
+      if (res.error?.code === UNIEK) throw new BronFout(`${invoer.naam} staat al bij de leveranciers.`)
+      return uitkomst(res, 'de leverancier toevoegen') as Leverancier
+    },
+    async verwijderLeverancier(id) {
+      const res = await sb.from('leveranciers').delete().eq('id', id)
+      if (res.error?.code === IN_GEBRUIK) throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg.')
+      if (res.error) uitkomst(res, 'de leverancier weghalen')
+    },
+    async controlepunten(projectId) {
+      return uitkomst(await sb.from('controlepunten').select('*').eq('project_id', projectId).order('aangemaakt_op', { ascending: false }), 'de aandachtspunten laden') as Controlepunt[]
+    },
+    async fotoUrls(paden) {
+      if (!paden.length) return {}
+      const res = await sb.storage.from(FOTOS).createSignedUrls(paden, 60 * 60)
+      if (res.error) throw new BronFout(`De foto's laden is niet gelukt. ${res.error.message}`)
+      const urls: Record<string, string> = {}
+      for (const f of res.data) if (f.path && f.signedUrl) urls[f.path] = f.signedUrl
+      return urls
+    },
+    async voegControlepuntToe(projectId, invoer: NieuwControlepunt) {
+      const pad = fotoPad(projectId, crypto.randomUUID())
+      const upload = await sb.storage.from(FOTOS).upload(pad, invoer.foto, { contentType: 'image/jpeg', upsert: false })
+      if (upload.error) throw new BronFout(`De foto opslaan is niet gelukt. ${upload.error.message}`)
+      const res = await sb.from('controlepunten')
+        .insert({ project_id: projectId, leverancier_id: invoer.leverancierId, notitie: invoer.notitie, foto: pad }).select().single()
+      if (res.error) await sb.storage.from(FOTOS).remove([pad])
+      return uitkomst(res, 'het aandachtspunt opslaan') as Controlepunt
+    },
+    async zetOpgelost(id, opgelost) {
+      return uitkomst(await sb.from('controlepunten').update({ opgelost }).eq('id', id).select().single(), 'opslaan') as Controlepunt
+    },
+    async verwijderControlepunt(punt) {
+      const res = await sb.from('controlepunten').delete().eq('id', punt.id)
+      if (res.error) uitkomst(res, 'het aandachtspunt weghalen')
+      await sb.storage.from(FOTOS).remove([punt.foto]) // lukt dit niet, dan blijft alleen een losse foto achter
     },
   }
 }

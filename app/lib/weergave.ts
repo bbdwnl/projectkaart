@@ -1,6 +1,6 @@
 /** Wat iemand op de projectkaart wil zien. Per apparaat bewaard in een cookie. */
 
-export const TABS = ['taken', 'proces', 'details'] as const
+export const TABS = ['taken', 'proces', 'controle', 'details'] as const
 export type Tab = typeof TABS[number]
 
 export interface Weergave {
@@ -12,7 +12,7 @@ export interface Weergave {
     kolommen: { eigenaar: boolean, deadline: boolean, akkoord: boolean, document: boolean }
   }
   proces: { flow: boolean, tijdlijn: boolean, datums: boolean }
-  details: { gegevens: boolean, geld: boolean, logboek: boolean }
+  details: { gegevens: boolean, leveranciers: boolean, geld: boolean, logboek: boolean }
 }
 
 export const WEERGAVE_STANDAARD: Weergave = {
@@ -20,7 +20,7 @@ export const WEERGAVE_STANDAARD: Weergave = {
   kop: { stoplicht: true, planningstrook: true },
   taken: { eerstDit: false, compact: false, kolommen: { eigenaar: true, deadline: true, akkoord: true, document: true } },
   proces: { flow: true, tijdlijn: true, datums: true },
-  details: { gegevens: true, geld: true, logboek: true },
+  details: { gegevens: true, leveranciers: true, geld: true, logboek: true },
 }
 
 const kopie = <T>(o: T): T => JSON.parse(JSON.stringify(o))

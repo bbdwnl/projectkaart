@@ -3,7 +3,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 // Draait de migraties en de seed op PGlite (Postgres in WASM), met een
-// minimale nabootsing van wat Supabase levert (auth.users, auth.jwt, rollen).
+// minimale nabootsing van wat Supabase levert (auth.users, auth.jwt, rollen, storage).
 const AUTH_STUB = `
   create schema auth;
   create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}');
@@ -13,6 +13,12 @@ const AUTH_STUB = `
   create role authenticated;
   create role anon;
   grant usage on schema auth to authenticated;
+  create schema storage;
+  create table storage.buckets (id text primary key, name text not null, public boolean not null default false, file_size_limit bigint, allowed_mime_types text[]);
+  create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id), name text, owner uuid);
+  alter table storage.objects enable row level security;
+  grant usage on schema storage to authenticated;
+  grant all on storage.objects to authenticated;
 `
 const map = new URL('../supabase/', import.meta.url)
 const migraties = readdirSync(new URL('migrations/', map)).sort().map(f => readFileSync(new URL(`migrations/${f}`, map), 'utf8'))
@@ -133,5 +139,57 @@ describe('aftekenen en logboek', () => {
     await expect(als(MICHIEL, `update public.projecten set slagingskans = 60 where id = $1`, [lead!.id])).rejects.toThrow()
     const log = await als<{ veld: string, oud: string, nieuw: string }>(MICHIEL, `select veld, oud, nieuw from public.logboek where project_id = $1`, [lead!.id])
     expect(log).toEqual([{ veld: 'slagingskans', oud: '50', nieuw: '75' }])
+  })
+})
+
+describe('controle', () => {
+  let leverancier: string
+  let punt: string
+
+  it('laat een medewerker leveranciers toevoegen, maar niet twee keer dezelfde', async () => {
+    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (project_id, naam, vak) values ($1, 'Klimaattechniek Oost', 'Installateur') returning id`, [projectId])
+    leverancier = l!.id
+    await expect(als(MICHIEL, `insert into public.leveranciers (project_id, naam) values ($1, ' klimaattechniek oost')`, [projectId])).rejects.toThrow()
+    expect(await als(VREEMD, `select id from public.leveranciers`)).toHaveLength(0)
+  })
+
+  it('vult wie het punt maakte en wie het oploste, en laat de foto en de maker vastliggen', async () => {
+    const [p] = await als<{ id: string, aangemaakt_door: string }>(MICHIEL,
+      `insert into public.controlepunten (project_id, leverancier_id, notitie, foto, aangemaakt_door) values ($1, $2, 'Kitnaad niet afgewerkt', $3, 'Vervalst') returning id, aangemaakt_door`,
+      [projectId, leverancier, `${projectId}/a.jpg`])
+    punt = p!.id
+    expect(p!.aangemaakt_door).toBe('Michiel')
+
+    const [op] = await als<{ opgelost_door: string, foto: string, aangemaakt_door: string }>(BENNO,
+      `update public.controlepunten set opgelost = true, foto = 'elders/b.jpg', aangemaakt_door = 'Benno' where id = $1 returning opgelost_door, foto, aangemaakt_door`, [punt])
+    expect(op).toEqual({ opgelost_door: 'Benno van Bergen', foto: `${projectId}/a.jpg`, aangemaakt_door: 'Michiel' })
+
+    const [weer] = await als<{ opgelost_door: string | null, opgelost_op: string | null }>(MICHIEL,
+      `update public.controlepunten set opgelost = false where id = $1 returning opgelost_door, opgelost_op`, [punt])
+    expect(weer).toEqual({ opgelost_door: null, opgelost_op: null })
+  })
+
+  it('weigert een punt zonder foto in de projectmap, zonder notitie, of met een leverancier van een ander project', async () => {
+    const insert = `insert into public.controlepunten (project_id, leverancier_id, notitie, foto) values ($1, $2, $3, $4)`
+    await expect(als(MICHIEL, insert, [projectId, leverancier, 'Notitie', 'ergens/a.jpg'])).rejects.toThrow()
+    await expect(als(MICHIEL, insert, [projectId, leverancier, ' ', `${projectId}/a.jpg`])).rejects.toThrow()
+    const [ander] = (await db.query<{ id: string }>(`select id from public.projecten where id <> $1 limit 1`, [projectId])).rows
+    await expect(als(MICHIEL, insert, [ander!.id, leverancier, 'Notitie', `${ander!.id}/a.jpg`])).rejects.toThrow()
+  })
+
+  it('laat een leverancier met aandachtspunten niet weghalen', async () => {
+    await expect(als(MICHIEL, `delete from public.leveranciers where id = $1`, [leverancier])).rejects.toThrow()
+    await als(MICHIEL, `delete from public.controlepunten where id = $1`, [punt])
+    await als(MICHIEL, `delete from public.leveranciers where id = $1`, [leverancier])
+    expect(await als(MICHIEL, `select id from public.leveranciers where id = $1`, [leverancier])).toHaveLength(0)
+  })
+
+  it('maakt een besloten bucket voor de foto\'s, alleen voor medewerkers', async () => {
+    const [b] = (await db.query<{ public: boolean }>(`select public from storage.buckets where id = 'controle'`)).rows
+    expect(b!.public).toBe(false)
+    await als(MICHIEL, `insert into storage.objects (bucket_id, name) values ('controle', $1)`, [`${projectId}/a.jpg`])
+    expect(await als(MICHIEL, `select name from storage.objects where bucket_id = 'controle'`)).toHaveLength(1)
+    expect(await als(VREEMD, `select name from storage.objects where bucket_id = 'controle'`)).toHaveLength(0)
+    await expect(als(VREEMD, `insert into storage.objects (bucket_id, name) values ('controle', 'x/b.jpg')`)).rejects.toThrow()
   })
 })

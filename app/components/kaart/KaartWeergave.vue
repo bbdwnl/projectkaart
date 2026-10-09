@@ -55,6 +55,7 @@ const KOLOMMEN = [['eigenaar', 'Eigenaar'], ['deadline', 'Deadline'], ['akkoord'
     <div class="wg-groep">
       <h4>Details</h4>
       <label class="schakel"><input v-model="weergave.details.gegevens" type="checkbox"><span />Projectgegevens</label>
+      <label class="schakel"><input v-model="weergave.details.leveranciers" type="checkbox"><span />Leveranciers</label>
       <label v-if="gebruiker?.isMt" class="schakel"><input v-model="weergave.details.geld" type="checkbox"><span />Financieel</label>
       <label class="schakel"><input v-model="weergave.details.logboek" type="checkbox"><span />Logboek</label>
     </div>
