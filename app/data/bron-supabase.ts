@@ -1,7 +1,7 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import type { Controlepunt, Financien, Leverancier, LogRegel, Project, Taak, Uitzondering } from '~/lib/types'
+import type { Controlepunt, Financien, Leverancier, LogRegel, Project, ProjectLeverancier, Taak, Uitzondering } from '~/lib/types'
 import { fotoPad } from '~/lib/controle'
 
 function uitkomst<T>(res: { data: T | null, error: PostgrestError | null }, wat: string): T {
@@ -104,10 +104,14 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     async globaleLeveranciers() {
       return uitkomst(await sb.from('leveranciers').select('*').eq('globaal', true).order('naam'), 'de globale lijst laden') as Leverancier[]
     },
+    async koppelingen() {
+      return uitkomst(await sb.from('project_leveranciers').select('project_id, leverancier_id'), 'de leveranciers laden') as ProjectLeverancier[]
+    },
     async nieuweLeverancier(projectId, invoer) {
       const res = await sb.from('leveranciers').insert(invoer).select().single()
       if (res.error?.code === UNIEK) throw new BronFout(`${invoer.naam} staat al in de globale lijst. Kies hem daar.`)
       const l = uitkomst(res, 'de leverancier toevoegen') as Leverancier
+      if (!projectId) return l
       const koppeling = await sb.from('project_leveranciers').insert({ project_id: projectId, leverancier_id: l.id })
       if (koppeling.error) {
         if (!l.globaal) await sb.from('leveranciers').delete().eq('id', l.id)
@@ -124,13 +128,21 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       const res = await sb.from('project_leveranciers').delete().eq('project_id', projectId).eq('leverancier_id', leverancier.id)
       if (res.error?.code === IN_GEBRUIK) throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg, of kies er een andere leverancier bij.')
       if (res.error) throw new BronFout(`De leverancier weghalen is niet gelukt. ${res.error.message}`)
-      // Alleen voor dit project aangemaakt: dan hoeft hij nergens meer te staan.
-      if (!leverancier.globaal) await sb.from('leveranciers').delete().eq('id', leverancier.id)
+      // Niet in de globale lijst en op geen project meer: dan hoeft hij nergens meer te staan.
+      if (!leverancier.globaal) {
+        const rest = await sb.from('project_leveranciers').select('project_id', { count: 'exact', head: true }).eq('leverancier_id', leverancier.id)
+        if (!rest.error && rest.count === 0) await sb.from('leveranciers').delete().eq('id', leverancier.id)
+      }
     },
-    async maakGlobaal(leverancierId) {
-      const res = await sb.from('leveranciers').update({ globaal: true }).eq('id', leverancierId).select().single()
-      if (res.error?.code === UNIEK) throw new BronFout('Er staat al een leverancier met deze naam in de globale lijst. Kies die daar.')
-      return uitkomst(res, 'de globale lijst bijwerken') as Leverancier
+    async wijzigLeverancier(id, wijziging) {
+      const res = await sb.from('leveranciers').update(wijziging).eq('id', id).select().single()
+      if (res.error?.code === UNIEK) throw new BronFout('Er staat al een leverancier met deze naam in de globale lijst.')
+      return uitkomst(res, 'de leverancier opslaan') as Leverancier
+    },
+    async verwijderLeverancier(id) {
+      const res = await sb.from('leveranciers').delete().eq('id', id)
+      if (res.error?.code === IN_GEBRUIK) throw new BronFout('Deze leverancier staat nog op een project. Haal hem alleen uit de globale lijst, of eerst van die projecten af.')
+      if (res.error) throw new BronFout(`De leverancier weghalen is niet gelukt. ${res.error.message}`)
     },
     async controlepunten(projectId) {
       return uitkomst(await sb.from('controlepunten').select('*').eq('project_id', projectId).order('aangemaakt_op', { ascending: false }), 'de aandachtspunten laden') as Controlepunt[]

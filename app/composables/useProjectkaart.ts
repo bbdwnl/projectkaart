@@ -224,7 +224,7 @@ function maakKaart(slug: string) {
 
   async function maakGlobaal(l: Leverancier) {
     try {
-      const nieuw = await bron.maakGlobaal(l.id)
+      const nieuw = await bron.wijzigLeverancier(l.id, { globaal: true })
       leveranciers.value = vervangIn(leveranciers.value, nieuw)
       globaleLeveranciers.value = opNaam([...globaleLeveranciers.value, nieuw])
       toon(`${l.naam} staat nu in de globale lijst`)

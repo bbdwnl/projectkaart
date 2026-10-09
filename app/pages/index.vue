@@ -42,7 +42,11 @@ const zichtbaar = computed(() => {
   return kaartjes.value.filter(k => (fase.value === 'alle' || k.p.fase === fase.value)
     && (!z || [k.p.naam, k.p.nummer, k.p.afas_nummer, k.p.plaats].filter(Boolean).join(' ').toLowerCase().includes(z)))
 })
-const perFase = computed(() => FASEN.map(f => ({ ...f, aantal: lopend.value.filter(p => p.fase === f.id).length })).filter(f => f.aantal))
+// Elke fase vanaf haalbaarheid als filter, ook als er nu geen project in staat (zoals nazorg).
+const perFase = computed(() => FASEN.filter(f => f.id !== 'lead').map(f => ({ ...f, aantal: lopend.value.filter(p => p.fase === f.id).length })))
+const leegTekst = computed(() => zoek.value.trim()
+  ? 'Geen project gevonden. Zoek op een deel van de naam of het nummer.'
+  : fase.value === 'alle' ? 'Nog geen lopende projecten.' : `Geen projecten in de fase ${faseInfo(fase.value).naam.toLowerCase()}.`)
 const zin = computed(() => {
   const laat = kaartjes.value.filter(k => k.t.telaat).length
   return `${kaartjes.value.length} lopende projecten. ${laat ? `${laat} ${laat === 1 ? 'heeft' : 'hebben'} taken die te laat zijn.` : 'Niets te laat.'}`
@@ -83,7 +87,7 @@ const mijlpaalTekst = (m: ReturnType<typeof volgendeMijlpaal>) => !m ? 'Geen mij
           <p class="mijlpaal">{{ mijlpaalTekst(k.mijlpaal) }}</p>
         </NuxtLink>
       </div>
-      <p v-if="!zichtbaar.length" class="leeg-staat">Geen project gevonden. Zoek op een deel van de naam of het nummer.</p>
+      <p v-if="!zichtbaar.length" class="leeg-staat">{{ leegTekst }}</p>
     </template>
     <footer>Projectkaart BbDW · het volledige overzicht met planning, kaart en financieel komt in de volgende fase.</footer>
   </main>

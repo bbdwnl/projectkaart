@@ -195,16 +195,17 @@ describe('controle', () => {
     await expect(als(MICHIEL, insert, [ander!.id, leverancier, 'Notitie', `${ander!.id}/a.jpg`])).rejects.toThrow()
   })
 
-  it('haalt een leverancier met aandachtspunten niet van het project, en een globale niet uit de lijst', async () => {
+  it('haalt een leverancier met aandachtspunten niet van het project, en een leverancier op een project niet weg', async () => {
     const ontkoppel = () => als(MICHIEL, `delete from public.project_leveranciers where project_id = $1 and leverancier_id = $2`, [projectId, leverancier])
+    const verwijder = () => als(MICHIEL, `delete from public.leveranciers where id = $1`, [leverancier])
     await expect(ontkoppel()).rejects.toThrow()
     await als(MICHIEL, `delete from public.controlepunten where id = $1`, [punt])
+    await expect(verwijder()).rejects.toThrow()
     await ontkoppel()
-    await als(MICHIEL, `delete from public.leveranciers where id = $1`, [leverancier])
-    expect(await als(MICHIEL, `select id from public.leveranciers where id = $1`, [leverancier])).toHaveLength(1)
-    const [eigen] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam) values ('Hoveniersbedrijf De Linde') returning id`)
-    await als(MICHIEL, `delete from public.leveranciers where id = $1`, [eigen!.id])
-    expect(await als(MICHIEL, `select id from public.leveranciers where id = $1`, [eigen!.id])).toHaveLength(0)
+    // Op geen project meer: dan mag hij weg, ook uit de globale lijst.
+    await verwijder()
+    expect(await als(MICHIEL, `select id from public.leveranciers where id = $1`, [leverancier])).toHaveLength(0)
+    expect(await als(VREEMD, `delete from public.leveranciers returning id`)).toHaveLength(0)
   })
 
   it('maakt een besloten bucket voor de foto\'s, alleen voor medewerkers', async () => {

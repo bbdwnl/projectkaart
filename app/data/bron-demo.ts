@@ -190,6 +190,9 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
     async globaleLeveranciers() {
       return kopie(db.leveranciers.filter(l => l.globaal).sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
     },
+    async koppelingen() {
+      return kopie(db.projectLeveranciers)
+    },
     async nieuweLeverancier(projectId, invoer) {
       await wacht()
       const naam = invoer.naam.trim()
@@ -197,7 +200,7 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       if (invoer.globaal && db.leveranciers.some(l => l.globaal && l.naam.toLowerCase() === naam.toLowerCase())) throw new BronFout(`${naam} staat al in de globale lijst. Kies hem daar.`)
       const l = { id: nieuwId('lev'), naam, vak: invoer.vak, globaal: invoer.globaal }
       db.leveranciers.push(l)
-      db.projectLeveranciers.push({ project_id: projectId, leverancier_id: l.id })
+      if (projectId) db.projectLeveranciers.push({ project_id: projectId, leverancier_id: l.id })
       bewaar()
       return kopie(l)
     },
@@ -213,17 +216,29 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
         throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg, of kies er een andere leverancier bij.')
       }
       db.projectLeveranciers = db.projectLeveranciers.filter(k => !(k.project_id === projectId && k.leverancier_id === leverancier.id))
-      if (!leverancier.globaal) db.leveranciers = db.leveranciers.filter(l => l.id !== leverancier.id)
+      if (!leverancier.globaal && !db.projectLeveranciers.some(k => k.leverancier_id === leverancier.id)) {
+        db.leveranciers = db.leveranciers.filter(l => l.id !== leverancier.id)
+      }
       bewaar()
     },
-    async maakGlobaal(leverancierId) {
+    async wijzigLeverancier(id, w) {
       await wacht()
-      const l = db.leveranciers.find(x => x.id === leverancierId)
+      const l = db.leveranciers.find(x => x.id === id)
       if (!l) throw new BronFout('Deze leverancier bestaat niet (meer).')
-      if (db.leveranciers.some(x => x !== l && x.globaal && x.naam.toLowerCase() === l.naam.toLowerCase())) throw new BronFout('Er staat al een leverancier met deze naam in de globale lijst. Kies die daar.')
-      l.globaal = true
+      const nieuw = { ...l, ...w }
+      if (nieuw.naam.trim().length < 2) throw new BronFout('Geef de leverancier een naam van minstens twee letters.')
+      if (nieuw.globaal && db.leveranciers.some(x => x !== l && x.globaal && x.naam.trim().toLowerCase() === nieuw.naam.trim().toLowerCase())) {
+        throw new BronFout('Er staat al een leverancier met deze naam in de globale lijst.')
+      }
+      Object.assign(l, w)
       bewaar()
       return kopie(l)
+    },
+    async verwijderLeverancier(id) {
+      await wacht()
+      if (db.projectLeveranciers.some(k => k.leverancier_id === id)) throw new BronFout('Deze leverancier staat nog op een project. Haal hem alleen uit de globale lijst, of eerst van die projecten af.')
+      db.leveranciers = db.leveranciers.filter(l => l.id !== id)
+      bewaar()
     },
     async controlepunten(projectId) {
       return kopie(db.controlepunten.filter(p => p.project_id === projectId))

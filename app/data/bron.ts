@@ -1,4 +1,4 @@
-import type { Controlepunt, ControlepuntWijziging, Fase, Financien, Leverancier, NieuweLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Controlepunt, ControlepuntWijziging, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, ProjectLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { NieuweLead } from '~/lib/leads'
 
 /**
@@ -29,14 +29,18 @@ export interface Bron {
   leveranciers(projectId: string): Promise<Leverancier[]>
   /** De globale lijst: te kiezen op elk project. */
   globaleLeveranciers(): Promise<Leverancier[]>
-  /** Maakt een leverancier en zet hem op dit project; met globaal ook in de globale lijst. */
-  nieuweLeverancier(projectId: string, invoer: NieuweLeverancier): Promise<Leverancier>
+  /** Welke leverancier op welk project werkt, over alle projecten. */
+  koppelingen(): Promise<ProjectLeverancier[]>
+  /** Maakt een leverancier en zet hem op dit project (of op geen, vanuit Instellingen); met globaal ook in de globale lijst. */
+  nieuweLeverancier(projectId: string | null, invoer: NieuweLeverancier): Promise<Leverancier>
   /** Zet een leverancier uit de globale lijst op dit project. */
   koppelLeverancier(projectId: string, leverancierId: string): Promise<void>
-  /** Haalt hem van dit project; een leverancier van alleen dit project is daarna weg. Lukt niet zolang er aandachtspunten naar verwijzen. */
+  /** Haalt hem van dit project; een leverancier buiten de globale lijst die nergens meer staat, is daarna weg. Lukt niet zolang er aandachtspunten naar verwijzen. */
   ontkoppelLeverancier(projectId: string, leverancier: Leverancier): Promise<void>
-  /** Zet een leverancier van één project ook in de globale lijst. */
-  maakGlobaal(leverancierId: string): Promise<Leverancier>
+  /** Naam, vak, of in/uit de globale lijst. */
+  wijzigLeverancier(id: string, wijziging: LeverancierWijziging): Promise<Leverancier>
+  /** Helemaal weg; lukt alleen als hij op geen enkel project staat. */
+  verwijderLeverancier(id: string): Promise<void>
   controlepunten(projectId: string): Promise<Controlepunt[]>
   /** Adressen waarop de browser de foto's kan tonen, per pad. Tijdelijk geldig. */
   fotoUrls(paden: string[]): Promise<Record<string, string>>

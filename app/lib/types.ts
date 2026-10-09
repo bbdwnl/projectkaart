@@ -133,6 +133,7 @@ export interface ProjectLeverancier {
 }
 
 export type NieuweLeverancier = Pick<Leverancier, 'naam' | 'vak' | 'globaal'>
+export type LeverancierWijziging = Partial<NieuweLeverancier>
 
 /** Een aandachtspunt onder Controle: altijd een foto en een notitie, eventueel een leverancier. */
 export interface Controlepunt {

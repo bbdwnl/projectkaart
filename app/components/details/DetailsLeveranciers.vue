@@ -43,7 +43,7 @@ async function maak() {
 async function weg(l: Leverancier) {
   const vraag = l.globaal
     ? `${l.naam} weghalen bij dit project? Hij blijft in de globale lijst staan.`
-    : `${l.naam} weghalen? Hij staat alleen bij dit project en is daarna helemaal weg.`
+    : `${l.naam} weghalen bij dit project? Hij staat niet in de globale lijst; staat hij ook op geen ander project, dan is hij daarna helemaal weg.`
   if (confirm(vraag)) await ontkoppelLeverancier(l)
 }
 </script>
@@ -53,16 +53,16 @@ async function weg(l: Leverancier) {
     <div class="blokkop">
       <div>
         <h2>Leveranciers</h2>
-        <p class="klein">Wie op dit project levert of bouwt. Kies uit de globale lijst, of maak er een alleen voor dit project. Onder Controle koppel je een aandachtspunt aan de leverancier die het oplost.</p>
+        <p class="klein">Wie op dit project levert of bouwt. Kies uit de globale lijst, of maak er een alleen voor dit project. Onder Controle koppel je een aandachtspunt aan de leverancier die het oplost. De globale lijst beheer je onder <NuxtLink to="/instellingen#leveranciers">Instellingen</NuxtLink>.</p>
       </div>
     </div>
     <div v-if="leveranciers.length" class="lijst leverancierlijst">
-      <div class="kolkop"><span>Leverancier</span><span>Wat ze doen</span><span>Lijst</span><span>Aandachtspunten</span><span /></div>
+      <div class="kolkop"><span>Leverancier</span><span>Wat ze doen</span><span>Globale lijst</span><span>Aandachtspunten</span><span /></div>
       <div v-for="l in leveranciers" :key="l.id" class="rij">
         <div class="rij-hoofd">
           <span class="titel">{{ l.naam }}</span>
           <span>{{ l.vak ?? '—' }}</span>
-          <span class="klein">{{ l.globaal ? 'Globaal' : 'Alleen dit project' }}</span>
+          <span class="klein">{{ l.globaal ? 'Ja' : 'Nee' }}</span>
           <span class="klein">{{ puntenTekst(l.id) }}</span>
           <span class="acties">
             <button v-if="!l.globaal" type="button" class="link" @click="maakGlobaal(l)">Ook globaal</button>

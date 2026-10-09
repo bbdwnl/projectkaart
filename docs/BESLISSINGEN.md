@@ -24,7 +24,7 @@ de offerte "Van oud naar nieuw" (fase B) en [design-referentie.html](../design-r
 | 14 | Proefversie | Zolang Microsoft niet is gekoppeld: de inlogknop laat je zonder account binnen, voorbeeldgegevens, wijzigingen per tester in zijn eigen browser. Optioneel een tijdelijk wachtwoord (`NUXT_PROEF_WACHTWOORD`), gecontroleerd op de server; de voorbeeldgegevens komen pas na het wachtwoord van de server, zodat de projectnamen niet in de JavaScript staan | Om de kaart te laten bekijken voordat de koppeling er is, zonder Vercel-login voor iedere tester. Uit met `NUXT_PUBLIC_PROEFVERSIE=false`. |
 | 20 | Leads | **Eigen menu-item en lijst.** Een project in de fase lead staat onder Leads en niet meer onder Projecten. Filters op accountmanager, kans, prio en klaar voor overdracht, plus zoeken; ze staan in de adresbalk, zodat terug vanaf een lead dezelfde lijst geeft. Een nieuwe lead maak je vanaf de lijst (naam, plaats, AM, kans) | Verzoek opdrachtgever (09-10-2026). De app kon nog geen project aanmaken; zonder die knop bleef de lijst leeg. De slagingskans (0, 25, 50, 75 of 100%) staat nu onder Details en in het logboek. |
 | 21 | Controle | **Vierde tabblad, na Proces & Planning.** Een lijst met aandachtspunten; een punt heeft altijd een foto en een notitie. De leverancier is optioneel en kies je ook later in de lijst. Open of opgelost; wie het punt maakte en wie het oploste vult de database in | Verzoek opdrachtgever (09-10-2026). De foto wordt in de browser verkleind tot 1600 px en staat in een besloten bucket in Supabase (`controle`), alleen voor medewerkers. Op een telefoon opent de knop meteen de camera. |
-| 22 | Leveranciers | **Een globale lijst, en per project een keuze daaruit.** Onder Details kies je uit de globale lijst, of maak je een leverancier alleen voor dit project, met de optie om hem ook in de globale lijst te zetten (ook achteraf). Een leverancier met aandachtspunten kan niet van het project af | Verzoek opdrachtgever (09-10-2026). Uit de globale lijst haal je in de app niets weg; daarvoor komt een beheerscherm als dat nodig blijkt (open vraag 6). |
+| 22 | Leveranciers | **Een globale lijst, en per project een keuze daaruit.** Onder Details kies je uit de globale lijst, of maak je een leverancier alleen voor dit project, met de optie om hem ook in de globale lijst te zetten (ook achteraf). De globale lijst beheer je onder Instellingen (in het menu rechtsboven): toevoegen, naam en vak wijzigen, uit de lijst halen. Wat nog op een project staat, blijft daar staan; een leverancier met aandachtspunten kan niet van het project af | Verzoek opdrachtgever (09-10-2026). Iedere medewerker mag de lijst beheren, net als de rest van de kaart; alleen de catalogus van uitzonderingen is voor het MT. |
 
 ## Techniek
 
@@ -91,8 +91,8 @@ leest de database, zodat Copilot kan antwoorden op "waar staat project X?".
 3. **AFAS:** is het AFAS-nummer hetzelfde als het projectnummer? Dan voegen we de velden samen.
 4. **Wie is MT** (financiën, catalogus beheren)? En zijn er naast `bbdw.nl` nog andere e-maildomeinen?
 5. **Externe partijen:** welke gegevens mogen op de publieke kaart, en hoe delen we grote tekeningen?
-6. **Beheer van de globale leveranciers:** wie mag namen wijzigen of leveranciers uit de globale lijst halen,
-   en is een overzicht "alle open punten van deze leverancier" over projecten heen gewenst?
+6. **Leveranciers over projecten heen:** is een overzicht "alle open aandachtspunten van deze leverancier"
+   gewenst, en moet het beheer van de globale lijst alleen voor het MT zijn?
 7. **Controle naar de leverancier:** moet een leverancier zijn openstaande punten met foto kunnen ontvangen,
    bijvoorbeeld als mail of als pdf? Nu deel je ze door de lijst op de leverancier te filteren.
 

@@ -409,6 +409,28 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .avatar{border:0;cursor:pointer}
 .menu-paneel{position:absolute;right:0;top:calc(100% + 10px);z-index:40;min-width:240px;display:grid;gap:4px;background:var(--wit);border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog);padding:14px 16px;transform-origin:top right}
 .menu-paneel .link{justify-self:start;margin-top:6px}
+.menu-paneel a.link{text-decoration:underline}
+
+/* mobiel: één menu achter de hamburger (pagina's, weergave van de kaart, account) */
+.mobiel-menu{display:none}
+.hamburger{width:40px;height:40px;padding:0;border:var(--rand);border-radius:50%;background:var(--wit);display:grid;place-content:center;gap:4px;cursor:pointer}
+.hamburger i{display:block;width:16px;height:2px;border-radius:2px;background:var(--zwart);transition:transform .3s var(--uit),opacity .2s}
+.hamburger.open i:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.hamburger.open i:nth-child(2){opacity:0}
+.hamburger.open i:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.mobiel-paneel{position:fixed;left:0;right:0;top:64px;z-index:40;max-height:calc(100dvh - 64px);overflow:auto;overscroll-behavior:contain;background:var(--wit);border-bottom:var(--rand);box-shadow:var(--zacht-hoog);padding:6px 16px 22px;transform-origin:top center}
+.mm-nav{display:grid;padding:4px 0 12px}
+.mm-nav a{font-weight:900;font-size:26px;line-height:1.1;letter-spacing:-.03em;text-decoration:none;padding:9px 0}
+.mm-nav a[aria-current="page"]{text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:5px}
+.mm-kruimel{margin:0 0 6px 2px;padding:2px 0 2px 14px;border-left:2px solid var(--zwart);font-size:15px;font-weight:700}
+.mm-groep{border-top:var(--rand);padding:14px 0 6px}
+.mm-account{display:grid;gap:4px}
+.mm-account .link{justify-self:start;margin-top:8px}
+@media (max-width:760px){
+  .alleen-breed{display:none}
+  .mobiel-menu{display:block}
+  .tabbalk .weergave-knop{display:none}
+}
 
 /* planningstrook: uitlijning van de labels */
 .strook-as .t.begin{transform:translateX(-14px)}
@@ -423,6 +445,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 /* projectenoverzicht */
 .projectfilters{margin-top:34px}
 .seg button .n{font-size:11px;opacity:.7;margin-left:4px}
+.projectfilters .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.projectfilters .seg button{flex:none;white-space:nowrap}
 .zoekveld{width:min(380px,100%);height:38px;border-radius:var(--rond);padding:0 16px}
 .projectgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:28px 18px;padding-top:22px}
 .projectkaartje{display:flex;flex-direction:column;gap:6px;text-decoration:none;padding:26px 18px 16px;animation:binnen-zacht .5s var(--uit) both;animation-delay:calc(var(--i,0)*35ms)}
@@ -502,6 +526,21 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .fotovenster img{display:block;max-width:100%;max-height:calc(100vh - 190px);margin:0 auto;border-radius:var(--radius-s)}
 .fotovenster figcaption{margin-top:10px;font-size:15px;line-height:22px}
 .fotovenster figcaption small{display:block;color:var(--stil);font-size:13px}
+
+/* instellingen: de globale lijst met leveranciers */
+.globale-lijst .kolkop,.globale-lijst .rij-hoofd{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 170px 120px}
+.globale-lijst .veld{width:100%;border-color:transparent;background:transparent;font-size:15px}
+.globale-lijst .veld:hover,.globale-lijst .veld:focus{border-color:var(--zwart);background:var(--wit)}
+.globale-lijst .rij-hoofd>:first-child{font-weight:700}
+.globale-lijst .acties{display:flex;justify-content:flex-end}
+.globale-lijst .acties .link{font-size:14px}
+.globale-nieuw{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin-top:34px;padding-top:26px}
+.globale-nieuw .veld{flex:1 1 220px;height:38px}
+@media (max-width:1100px){
+  .globale-lijst .rij-hoofd{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:none;gap:4px 12px;padding:10px 14px}
+  .globale-lijst .rij-hoofd>:nth-child(2),.globale-lijst .rij-hoofd>:nth-child(3){grid-column:1}
+  .globale-lijst .acties{grid-column:2;grid-row:1}
+}
 
 /* details: leveranciers */
 .leverancierlijst .kolkop,.leverancierlijst .rij-hoofd{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 140px 170px 190px}

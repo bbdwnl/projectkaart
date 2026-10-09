@@ -49,7 +49,7 @@ function toets(e: KeyboardEvent) {
       </button>
       <span class="tab-indicator" :style="{ width: `${indicator.w}px`, transform: `translateX(${indicator.x}px)` }" />
     </div>
-    <button type="button" class="knop klein" :aria-expanded="weergaveOpen" aria-controls="weergave" @click.stop="weergaveOpen = !weergaveOpen">Weergave aanpassen</button>
+    <button type="button" class="knop klein weergave-knop" :aria-expanded="weergaveOpen" aria-controls="weergave" @click.stop="weergaveOpen = !weergaveOpen">Weergave aanpassen</button>
     <Transition name="pop">
       <KaartWeergave v-if="weergaveOpen" id="weergave" @sluit="weergaveOpen = false" />
     </Transition>
