@@ -295,6 +295,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .tabrij button[aria-selected="true"]{color:var(--zwart)}
 .tabrij button .tab{height:20px;font-size:9.5px}
 .tab-indicator{position:absolute;bottom:0;left:0;height:6px;background:var(--zwart);border-radius:6px 6px 0 0;transition:transform .55s var(--veer),width .55s var(--veer)}
+.tab-indicator.direct{transition:none}
 .paneel section.blok{padding-top:40px}
 .paneel-leeg{margin-top:40px}
 
