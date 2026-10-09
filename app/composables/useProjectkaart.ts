@@ -35,7 +35,7 @@ function maakKaart(slug: string) {
   // Blijft staan als je van tabblad wisselt.
   const tabFase = ref<Fase>('lead')
   const filter = ref<Filter>('open')
-  /** De taak waar net naartoe is gesprongen: die klapt open en licht even op. */
+  /** De taak waar net naartoe is gesprongen: die komt in beeld en licht even op. */
   const nadruk = ref<string | null>(null)
 
   async function laad() {
