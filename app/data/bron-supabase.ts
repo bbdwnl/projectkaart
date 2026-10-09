@@ -98,6 +98,7 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     },
 
     async leveranciers(projectId) {
+      if (!projectId) return uitkomst(await sb.from('leveranciers').select('*').order('naam'), 'de leveranciers laden') as Leverancier[]
       const rijen = uitkomst(await sb.from('project_leveranciers').select('leverancier:leveranciers(*)').eq('project_id', projectId), 'de leveranciers laden')
       return (rijen as unknown as { leverancier: Leverancier }[]).map(r => r.leverancier).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
     },
@@ -145,7 +146,9 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       if (res.error) throw new BronFout(`De leverancier weghalen is niet gelukt. ${res.error.message}`)
     },
     async controlepunten(projectId) {
-      return uitkomst(await sb.from('controlepunten').select('*').eq('project_id', projectId).order('aangemaakt_op', { ascending: false }), 'de aandachtspunten laden') as Controlepunt[]
+      let q = sb.from('controlepunten').select('*').order('aangemaakt_op', { ascending: false })
+      if (projectId) q = q.eq('project_id', projectId)
+      return uitkomst(await q, 'de aandachtspunten laden') as Controlepunt[]
     },
     async fotoUrls(paden) {
       if (!paden.length) return {}

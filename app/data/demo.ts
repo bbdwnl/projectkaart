@@ -37,7 +37,7 @@ export interface DemoGegevens {
   leveranciers: Leverancier[]
   projectLeveranciers: ProjectLeverancier[]
   controlepunten: Controlepunt[]
-  /** De foto's van de aandachtspunten, als data-URL per pad. Alleen in de browser van de tester. */
+  /** De foto's van de aandachtspunten per pad: een data-URL (alleen in de browser van de tester) of de voorbeeldfoto. */
   fotos: Record<string, string>
 }
 
@@ -74,6 +74,24 @@ const LEVERANCIERS: [string, string][] = [
   ['Glaszetterij Veenstra', 'Glas'],
   ['Liftservice Brabant', 'Liften'],
 ]
+
+// Voorbeeldaandachtspunten. Ze delen één foto (public/voorbeeld-aandachtspunt.jpg), zodat de opslag van de browser klein blijft.
+export const VOORBEELDFOTO = 'voorbeeld/aandachtspunt.jpg'
+const NOTITIES = [
+  'Kitnaad bij kozijn spreekkamer 2 niet afgewerkt.',
+  'Plafondplaat in de gang beschadigd.',
+  'Deur behandelkamer 3 klemt.',
+  'Verf op het glas van de wachtkamerpui.',
+  'Wandcontactdoos bij de balie zit los.',
+  'Rookmelder in de personeelsruimte ontbreekt.',
+  'Invalidentoilet: voeg in het tegelwerk ontbreekt.',
+  'Plint in de wachtkamer laat los.',
+  'Ventilatierooster spreekkamer 1 vervuild.',
+  'Drempel bij de entree te hoog voor een rolstoel.',
+  'Vochtplek onder de dakdoorvoer boven de apotheek.',
+  'Lichtschakelaar behandelkamer 2 werkt niet.',
+]
+const MELDERS = ['Carlo', 'Heino', 'Hugo', 'Michiel']
 
 const CATALOGUS: [string, string, Fase, number][] = [
   ['u-netcongestie', 'Nutsaansluiting verzwaren (netcongestie)', 'ontwikkeling', 7],
@@ -251,6 +269,35 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
   leveranciers.push({ id: 'lev-vlijtseweg-hovenier', naam: 'Hoveniersbedrijf De Linde', vak: 'Terrein', globaal: false })
   projectLeveranciers.push({ project_id: vlijtseweg.id, leverancier_id: 'lev-vlijtseweg-hovenier' })
 
-  // Geen voorbeeldpunten: een aandachtspunt hoort bij een echte foto.
-  return { projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten: [], fotos: {} }
+  // Aandachtspunten op Vlijtseweg en de projecten in uitvoering en nazorg; een paar nog zonder leverancier, een paar opgelost.
+  const opMoment = (dagenTerug: number, sleutel: string) => {
+    const d = plusDagen(nu, -dagenTerug)
+    d.setHours(8 + Math.floor(kans(sleutel) * 8), Math.floor(kans(sleutel + 'm') * 60))
+    return d.toISOString()
+  }
+  const controlepunten: Controlepunt[] = []
+  for (const p of projecten.filter(p => p === vlijtseweg || faseIndex(p.fase) >= faseIndex('uitvoering'))) {
+    const eigen = projectLeveranciers.filter(k => k.project_id === p.id).map(k => k.leverancier_id)
+    const aantal = p === vlijtseweg ? 6 : 1 + Math.floor(kans(p.slug + 'cp') * 4)
+    const begin = Math.floor(kans(p.slug + 'nt') * NOTITIES.length)
+    for (let i = 0; i < aantal; i++) {
+      const r = kans(`${p.slug}cp${i}`)
+      const dagenTerug = 1 + Math.floor(r * 40)
+      const opgelost = r > 0.7
+      controlepunten.push({
+        id: `c-${p.slug}-${i}`,
+        project_id: p.id,
+        leverancier_id: r < 0.12 || !eigen.length ? null : kies(eigen, `${p.slug}lv${i}`),
+        notitie: NOTITIES[(begin + i) % NOTITIES.length]!,
+        foto: VOORBEELDFOTO,
+        opgelost,
+        opgelost_door: opgelost ? kies(MELDERS, `${p.slug}op${i}`) : null,
+        opgelost_op: opgelost ? opMoment(Math.floor(dagenTerug / 2), `${p.slug}o${i}`) : null,
+        aangemaakt_door: kies(MELDERS, `${p.slug}md${i}`),
+        aangemaakt_op: opMoment(dagenTerug, `${p.slug}a${i}`),
+      })
+    }
+  }
+
+  return { projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, fotos: { [VOORBEELDFOTO]: '/voorbeeld-aandachtspunt.jpg' } }
 }

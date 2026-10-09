@@ -48,6 +48,7 @@ function opnieuw() {
         <span v-if="opKaart && !kruimel!.lead" class="kruimel" aria-current="page">{{ kruimel!.naam }}</span>
         <NuxtLink to="/leads">Leads</NuxtLink>
         <span v-if="opKaart && kruimel!.lead" class="kruimel" aria-current="page">{{ kruimel!.naam }}</span>
+        <NuxtLink to="/controle">Controle</NuxtLink>
         <NuxtLink to="/uitzonderingen">Uitzonderingen</NuxtLink>
       </nav>
       <div class="rechts">
@@ -76,6 +77,7 @@ function opnieuw() {
                 <span v-if="opKaart && !kruimel!.lead" class="mm-kruimel" aria-current="page">{{ kruimel!.naam }}</span>
                 <NuxtLink to="/leads">Leads</NuxtLink>
                 <span v-if="opKaart && kruimel!.lead" class="mm-kruimel" aria-current="page">{{ kruimel!.naam }}</span>
+                <NuxtLink to="/controle">Controle</NuxtLink>
                 <NuxtLink to="/uitzonderingen">Uitzonderingen</NuxtLink>
                 <NuxtLink to="/instellingen">Instellingen</NuxtLink>
               </nav>

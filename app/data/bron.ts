@@ -25,8 +25,8 @@ export interface Bron {
   verwijderTaak(taakId: string): Promise<void>
   zetUitzonderingStatus(id: string, status: UitzonderingStatus): Promise<void>
 
-  /** De leveranciers die op dit project werken. */
-  leveranciers(projectId: string): Promise<Leverancier[]>
+  /** De leveranciers die op dit project werken; zonder project: alle leveranciers. */
+  leveranciers(projectId?: string): Promise<Leverancier[]>
   /** De globale lijst: te kiezen op elk project. */
   globaleLeveranciers(): Promise<Leverancier[]>
   /** Welke leverancier op welk project werkt, over alle projecten. */
@@ -41,7 +41,8 @@ export interface Bron {
   wijzigLeverancier(id: string, wijziging: LeverancierWijziging): Promise<Leverancier>
   /** Helemaal weg; lukt alleen als hij op geen enkel project staat. */
   verwijderLeverancier(id: string): Promise<void>
-  controlepunten(projectId: string): Promise<Controlepunt[]>
+  /** De aandachtspunten van één project, of van alle projecten. */
+  controlepunten(projectId?: string): Promise<Controlepunt[]>
   /** Adressen waarop de browser de foto's kan tonen, per pad. Tijdelijk geldig. */
   fotoUrls(paden: string[]): Promise<Record<string, string>>
   voegControlepuntToe(projectId: string, invoer: NieuwControlepunt): Promise<Controlepunt>

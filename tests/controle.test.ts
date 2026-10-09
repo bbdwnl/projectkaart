@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fotoPad, pastPunt, sorteerPunten } from '~/lib/controle'
+import { fotoPad, groepeerPunten, pastPunt, pdfNaam, sorteerPunten, telPunten } from '~/lib/controle'
 import type { Controlepunt } from '~/lib/types'
 
 const punt = (id: string, extra: Partial<Controlepunt> = {}): Controlepunt => ({
@@ -28,5 +28,24 @@ describe('controle', () => {
   })
   it('zet de foto in de map van het project', () => {
     expect(fotoPad('p1', 'abc')).toBe('p1/abc.jpg')
+  })
+
+  it('groepeert per leverancier, op naam, met "zonder leverancier" achteraan', () => {
+    const namen: Record<string, string> = { 'lev-1': 'Klimaattechniek Oost', 'lev-2': 'Bouwbedrijf Van Wijk', geen: 'Zonder leverancier' }
+    const groepen = groepeerPunten(punten, 'leverancier', s => namen[s]!)
+    expect(groepen.map(g => [g.titel, g.punten.map(p => p.id)])).toEqual([
+      ['Bouwbedrijf Van Wijk', ['nieuw-open', 'opgelost']],
+      ['Klimaattechniek Oost', ['oud-open']],
+      ['Zonder leverancier', ['zonder']],
+    ])
+  })
+  it('groepeert per project en telt open en totaal', () => {
+    const ander = punt('elders', { project_id: 'p2', foto: fotoPad('p2', 'elders') })
+    expect(groepeerPunten([...punten, ander], 'project', s => (s === 'p1' ? 'Vlijtseweg' : 'Apeldoorn')).map(g => [g.sleutel, g.punten.length])).toEqual([['p2', 1], ['p1', 4]])
+    expect(Object.fromEntries(telPunten([...punten, ander], 'project'))).toEqual({ p1: { open: 3, totaal: 4 }, p2: { open: 1, totaal: 1 } })
+    expect(telPunten(punten, 'leverancier').get('geen')).toEqual({ open: 1, totaal: 1 })
+  })
+  it('maakt een nette bestandsnaam voor de pdf', () => {
+    expect(pdfNaam(['Apeldoorn Vlijtseweg', 'Glas/Kozijn: "Oost"'], '09-10-2026')).toBe('Controle - Apeldoorn Vlijtseweg - Glas Kozijn Oost - 09-10-2026.pdf')
   })
 })

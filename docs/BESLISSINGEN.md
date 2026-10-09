@@ -25,6 +25,7 @@ de offerte "Van oud naar nieuw" (fase B) en [design-referentie.html](../design-r
 | 20 | Leads | **Eigen menu-item en lijst.** Een project in de fase lead staat onder Leads en niet meer onder Projecten. Filters op accountmanager, kans, prio en klaar voor overdracht, plus zoeken; ze staan in de adresbalk, zodat terug vanaf een lead dezelfde lijst geeft. Een nieuwe lead maak je vanaf de lijst (naam, plaats, AM, kans) | Verzoek opdrachtgever (09-10-2026). De app kon nog geen project aanmaken; zonder die knop bleef de lijst leeg. De slagingskans (0, 25, 50, 75 of 100%) staat nu onder Details en in het logboek. |
 | 21 | Controle | **Vierde tabblad, na Proces & Planning.** Een lijst met aandachtspunten; een punt heeft altijd een foto en een notitie. De leverancier is optioneel en kies je ook later in de lijst. Open of opgelost; wie het punt maakte en wie het oploste vult de database in | Verzoek opdrachtgever (09-10-2026). De foto wordt in de browser verkleind tot 1600 px en staat in een besloten bucket in Supabase (`controle`), alleen voor medewerkers. Op een telefoon opent de knop meteen de camera. |
 | 22 | Leveranciers | **Een globale lijst, en per project een keuze daaruit.** Onder Details kies je uit de globale lijst, of maak je een leverancier alleen voor dit project, met de optie om hem ook in de globale lijst te zetten (ook achteraf). De globale lijst beheer je onder Instellingen (in het menu rechtsboven): toevoegen, naam en vak wijzigen, uit de lijst halen. Wat nog op een project staat, blijft daar staan; een leverancier met aandachtspunten kan niet van het project af | Verzoek opdrachtgever (09-10-2026). Iedere medewerker mag de lijst beheren, net als de rest van de kaart; alleen de catalogus van uitzonderingen is voor het MT. |
+| 23 | Controle-overzicht | **Eigen menu-item Controle**, over alle projecten: per project (alle leveranciers of één) of per leverancier over alle projecten, filter open/opgelost/alles. Van wat je ziet maak je een pdf (A4, met foto's), om bijvoorbeeld naar een leverancier te sturen. De keuze staat in de adresbalk | Verzoek opdrachtgever (09-10-2026). De pdf wordt in de browser gemaakt (jsPDF, pas geladen bij de knop); foto's worden daarvoor verkleind tot 1000 px, zodat de pdf te mailen blijft. Versturen vanuit de app zelf kan later (open vraag 7). |
 
 ## Techniek
 
@@ -93,8 +94,8 @@ leest de database, zodat Copilot kan antwoorden op "waar staat project X?".
 5. **Externe partijen:** welke gegevens mogen op de publieke kaart, en hoe delen we grote tekeningen?
 6. **Leveranciers over projecten heen:** is een overzicht "alle open aandachtspunten van deze leverancier"
    gewenst, en moet het beheer van de globale lijst alleen voor het MT zijn?
-7. **Controle naar de leverancier:** moet een leverancier zijn openstaande punten met foto kunnen ontvangen,
-   bijvoorbeeld als mail of als pdf? Nu deel je ze door de lijst op de leverancier te filteren.
+7. **Controle naar de leverancier:** de pdf is er. Moet de app hem ook zelf mailen, en wil de leverancier
+   zijn punten kunnen afmelden (bijvoorbeeld via een link zonder account)?
 
 ## Volgende stappen
 

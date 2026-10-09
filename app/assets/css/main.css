@@ -528,6 +528,43 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .fotovenster figcaption{margin-top:10px;font-size:15px;line-height:22px}
 .fotovenster figcaption small{display:block;color:var(--stil);font-size:13px}
 
+/* controle: het overzicht over alle projecten */
+.controle-filters,.controle-leeg{margin-top:34px}
+.controle-filters .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.controle-filters .seg button{flex:none;white-space:nowrap}
+.controle-overzicht{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start;margin-top:10px}
+.keuzelijst{display:grid;position:sticky;top:84px;max-height:calc(100vh - 110px);overflow:auto}
+.keuze{display:grid;gap:2px;text-align:left;padding:12px 14px;border:0;border-bottom:var(--lijn-dun);background:none;cursor:pointer;transition:background-color .2s}
+.keuze:last-child{border-bottom:0}
+.keuze:hover{background:#fafaf8}
+.keuze b{font-weight:700;font-size:15px;line-height:20px}
+.keuze small{font-size:12.5px;color:var(--stil)}
+.keuze[aria-current]{background:var(--grijs-2);box-shadow:inset 4px 0 0 var(--zwart)}
+.overzicht-kop{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 20px;flex-wrap:wrap;margin-bottom:8px}
+.overzicht-kop .label{margin:0 0 8px}
+.overzicht-kop p.klein{margin:8px 0 0}
+.overzicht-acties{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.overzicht-acties select.veld.pil{height:38px;max-width:280px}
+.puntgroep{margin-top:26px}
+.puntgroep h3{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 10px;font-weight:900;font-size:20px;letter-spacing:-.02em}
+.puntgroep h3 a{text-decoration:none}
+.puntgroep h3 a:hover{text-decoration:underline}
+.puntgroep h3 .klein{font-weight:400;letter-spacing:0}
+.puntlijst{list-style:none;margin:0;padding:0}
+.puntlijst .rij-hoofd{grid-template-columns:104px minmax(0,1fr) 100px;min-height:92px;padding-top:10px;padding-bottom:10px}
+.puntlijst .duim{display:block;cursor:default}
+.puntlijst .notitie{white-space:pre-line}
+@media (max-width:1100px){
+  .controle-overzicht{grid-template-columns:1fr}
+  .keuzelijst{position:static;max-height:280px}
+  .puntlijst .rij-hoofd{grid-template-columns:104px minmax(0,1fr);grid-template-areas:none;align-items:start}
+  .puntlijst .rij-hoofd>:nth-child(3){grid-column:2}
+}
+@media (max-width:760px){
+  .puntlijst .rij-hoofd{grid-template-columns:76px minmax(0,1fr)}
+  .puntlijst .duim{width:76px;height:57px}
+}
+
 /* instellingen: de globale lijst met leveranciers */
 .globale-lijst .kolkop,.globale-lijst .rij-hoofd{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 170px 120px}
 .globale-lijst .veld{width:100%;border-color:transparent;background:transparent;font-size:15px}

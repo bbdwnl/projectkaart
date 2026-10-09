@@ -14,6 +14,14 @@ describe('voorbeeldgegevens van de proefversie', () => {
     expect(g.projecten.filter(x => x.fase === 'lead')).toHaveLength(8)
     expect(new Set(g.projecten.map(x => x.slug)).size).toBe(g.projecten.length)
   })
+  it('maakt aandachtspunten met een leverancier van hun eigen project (of nog geen), en één gedeelde foto', () => {
+    expect(g.controlepunten.length).toBeGreaterThan(10)
+    for (const c of g.controlepunten) {
+      if (c.leverancier_id) expect(g.projectLeveranciers.some(k => k.project_id === c.project_id && k.leverancier_id === c.leverancier_id), c.id).toBe(true)
+      expect(g.fotos[c.foto], c.id).toBe('/voorbeeld-aandachtspunt.jpg')
+    }
+    expect(g.controlepunten.some(c => c.opgelost) && g.controlepunten.some(c => !c.leverancier_id)).toBe(true)
+  })
   it('laat Apeldoorn Vlijtseweg zien zoals in design-referentie.html', () => {
     const regels = takenVan('ontwikkeling', p, g.taken.filter(t => t.project_id === p.id), g.uitzonderingen, nu)
     const t = telling(regels)

@@ -28,7 +28,7 @@ function laad(opslag: string): DemoGegevens | null {
 }
 
 /** Waar de proefversie de gegevens van een tester bewaart. Verhoog de versie als de vorm verandert. */
-export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v3'
+export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v4'
 
 export function wisProefgegevens() {
   try { localStorage.removeItem(PROEF_OPSLAG) } catch { /* niets te wissen */ }
@@ -184,8 +184,10 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
     },
 
     async leveranciers(projectId) {
+      const opNaam = (ls: typeof db.leveranciers) => kopie(ls).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+      if (!projectId) return opNaam(db.leveranciers)
       const ids = new Set(db.projectLeveranciers.filter(k => k.project_id === projectId).map(k => k.leverancier_id))
-      return kopie(db.leveranciers.filter(l => ids.has(l.id)).sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
+      return opNaam(db.leveranciers.filter(l => ids.has(l.id)))
     },
     async globaleLeveranciers() {
       return kopie(db.leveranciers.filter(l => l.globaal).sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
@@ -241,7 +243,7 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       bewaar()
     },
     async controlepunten(projectId) {
-      return kopie(db.controlepunten.filter(p => p.project_id === projectId))
+      return kopie(projectId ? db.controlepunten.filter(p => p.project_id === projectId) : db.controlepunten)
     },
     async fotoUrls(paden) {
       return Object.fromEntries(paden.filter(p => db.fotos[p]).map(p => [p, db.fotos[p]!]))
@@ -279,7 +281,8 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
     async verwijderControlepunt(punt) {
       await wacht()
       db.controlepunten = db.controlepunten.filter(p => p.id !== punt.id)
-      delete db.fotos[punt.foto]
+      // De voorbeeldpunten delen één foto: die blijft zolang een ander punt hem nog gebruikt.
+      if (!db.controlepunten.some(p => p.foto === punt.foto)) delete db.fotos[punt.foto]
       bewaar()
     },
   }
