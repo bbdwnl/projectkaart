@@ -116,6 +116,7 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
     async nieuweLead(invoer) {
       await wacht()
       if (db.projecten.some(p => p.slug === invoer.slug)) throw new BronFout('Er bestaat al een project met deze naam. Kies een andere naam.')
+      if (invoer.afas_nummer && db.projecten.some(p => p.afas_nummer === invoer.afas_nummer)) throw new BronFout(`Er is al een project met AFAS-nummer ${invoer.afas_nummer}.`)
       const p = leegProject({ ...invoer, id: nieuwId('p'), fase: 'lead', gewijzigd_op: new Date().toISOString() })
       db.projecten.push(p)
       bewaar()

@@ -52,7 +52,11 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     },
     async nieuweLead(invoer) {
       const res = await sb.from('projecten').insert({ ...invoer, fase: 'lead' }).select().single()
-      if (res.error?.code === UNIEK) throw new BronFout('Er bestaat al een project met deze naam. Kies een andere naam.')
+      if (res.error?.code === UNIEK) {
+        throw new BronFout(res.error.message.includes('afas_nummer')
+          ? `Er is al een project met AFAS-nummer ${invoer.afas_nummer}.`
+          : 'Er bestaat al een project met deze naam. Kies een andere naam.')
+      }
       return uitkomst(res, 'de lead opslaan') as Project
     },
     async bewaarStandaardtaak(projectId, lijst, sleutel, wijziging) {

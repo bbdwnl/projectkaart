@@ -35,15 +35,16 @@ describe('leadsVan', () => {
 
 describe('filteren', () => {
   const leads = [
-    lead('De Brink', { am: 'Jeroen', slagingskans: 75, prio: true, plaats: 'Zwolle' }, 'klaar'),
+    lead('De Brink', { am: 'Jeroen', slagingskans: 75, prio: true, plaats: 'Zwolle', afas_nummer: '26014' }, 'klaar'),
     lead('Het Anker', { am: 'Peter', slagingskans: 50 }),
     lead('Molenwijk', { slagingskans: null }),
   ]
   const namen = (f: Partial<typeof GEEN_FILTER>) => leads.filter(l => past(l, { ...GEEN_FILTER, ...f })).map(l => l.p.naam)
 
   it('laat zonder filter alles zien', () => expect(namen({})).toHaveLength(3))
-  it('zoekt in naam en plaats, zonder op hoofdletters te letten', () => {
+  it('zoekt in naam, plaats en AFAS-nummer, zonder op hoofdletters te letten', () => {
     expect(namen({ zoek: ' zwolle ' })).toEqual(['De Brink'])
+    expect(namen({ zoek: '26014' })).toEqual(['De Brink'])
     expect(namen({ zoek: 'ANKER' })).toEqual(['Het Anker'])
   })
   it('filtert op accountmanager, ook op leads zonder', () => {

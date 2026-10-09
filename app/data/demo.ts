@@ -50,16 +50,17 @@ function kans(sleutel: string): number {
 const kies = <T>(lijst: T[], sleutel: string): T => lijst[Math.floor(kans(sleutel) * lijst.length)]!
 
 
-// Het prototype had geen leads: deze zijn verzonnen. Naam, plaats, AM, kans, prio, soort, m², dagen sinds de laatste wijziging.
-const LEADS: [string, string, string | null, number | null, boolean, Soort[], number | null, number][] = [
-  ['Gezondheidscentrum De Brink', 'Zwolle', 'Jeroen', 75, true, ['ont', 'tk'], 1400, 3],
-  ['Huisartsenpost Rivierenland', 'Tiel', 'Peter', 50, false, ['ont'], 620, 12],
-  ['Fysio en tandarts Kloosterhof', 'Veghel', 'Jeroen', 25, false, [], null, 40],
-  ['Medisch centrum Stationsplein', 'Ede', 'Benno', 100, true, ['tk'], 2100, 1],
-  ['Apotheek en huisartsen Oosterpark', 'Groningen', 'Peter', null, false, [], null, 65],
-  ['Kindergezondheidscentrum Het Anker', 'Harderwijk', 'Michiel', 50, false, ['adv'], 480, 20],
-  ['Gezondheidshuis Molenwijk', 'Oss', null, 0, false, [], null, 90],
-  ['Zorgplein Noord', 'Almere', 'Jeroen', 75, false, ['ont'], 1750, 6],
+// Het prototype had geen leads: deze zijn verzonnen.
+// Naam, plaats, AFAS-nummer, AM, kans, prio, soort, m², dagen sinds de laatste wijziging.
+const LEADS: [string, string, string | null, string | null, number | null, boolean, Soort[], number | null, number][] = [
+  ['Gezondheidscentrum De Brink', 'Zwolle', '26014', 'Jeroen', 75, true, ['ont', 'tk'], 1400, 3],
+  ['Huisartsenpost Rivierenland', 'Tiel', null, 'Peter', 50, false, ['ont'], 620, 12],
+  ['Fysio en tandarts Kloosterhof', 'Veghel', null, 'Jeroen', 25, false, [], null, 40],
+  ['Medisch centrum Stationsplein', 'Ede', '26009', 'Benno', 100, true, ['tk'], 2100, 1],
+  ['Apotheek en huisartsen Oosterpark', 'Groningen', null, 'Peter', null, false, [], null, 65],
+  ['Kindergezondheidscentrum Het Anker', 'Harderwijk', '26021', 'Michiel', 50, false, ['adv'], 480, 20],
+  ['Gezondheidshuis Molenwijk', 'Oss', null, null, 0, false, [], null, 90],
+  ['Zorgplein Noord', 'Almere', null, 'Jeroen', 75, false, ['ont'], 1750, 6],
 ]
 
 // De globale lijst met leveranciers (verzonnen). De eerste vijf werken op de projecten in uitvoering en nazorg
@@ -151,9 +152,9 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
     }
     return p
   })
-  for (const [naam, plaats, am, slagingskans, prio, soort, m2, dagenGeleden] of LEADS) {
+  for (const [naam, plaats, afas_nummer, am, slagingskans, prio, soort, m2, dagenGeleden] of LEADS) {
     const slug = maakSlug(naam, projecten.map(p => p.slug))
-    projecten.push(leegProject({ id: `p-${slug}`, slug, naam, plaats, am, slagingskans, prio, soort, m2, gewijzigd_op: plusDagen(nu, -dagenGeleden).toISOString() }))
+    projecten.push(leegProject({ id: `p-${slug}`, slug, naam, plaats, afas_nummer, am, slagingskans, prio, soort, m2, gewijzigd_op: plusDagen(nu, -dagenGeleden).toISOString() }))
   }
 
   const taken: Taak[] = []

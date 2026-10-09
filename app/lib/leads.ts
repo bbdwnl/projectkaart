@@ -142,7 +142,7 @@ export function maakSlug(naam: string, bestaand: string[]): string {
   return slug
 }
 
-export type NieuweLead = Pick<Project, 'slug' | 'naam' | 'plaats' | 'am' | 'slagingskans'>
+export type NieuweLead = Pick<Project, 'slug' | 'naam' | 'plaats' | 'afas_nummer' | 'am' | 'slagingskans'>
 
 /** Een volledig project in de fase lead, voor de proefversie. */
 export function leegProject(extra: Partial<Project> & Pick<Project, 'id' | 'slug' | 'naam'>): Project {

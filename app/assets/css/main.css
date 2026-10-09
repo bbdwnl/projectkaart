@@ -436,7 +436,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 
 /* leads */
 .leadkop{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
-.nieuwe-lead{margin-top:34px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) auto;gap:14px;align-items:end;padding-top:26px}
+.nieuwe-lead{margin-top:34px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.1fr) minmax(0,.9fr) minmax(0,1fr) minmax(0,.8fr) auto;gap:14px;align-items:end;padding-top:26px}
 .nieuwe-lead label{display:grid;gap:6px}
 .nieuwe-lead .label{margin:0}
 .nieuwe-lead .veld{width:100%;height:38px}
@@ -450,7 +450,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .filtergroep .schakel small{margin-left:-6px;font-size:11px;font-weight:700;opacity:.7}
 .telregel{display:flex;align-items:center;gap:16px;margin:6px 0 12px}
 .telregel .link{font-size:14px}
-.leadlijst .kolkop,.leadlijst .rij-hoofd{grid-template-columns:86px minmax(0,1fr) 120px 96px minmax(0,150px) 92px 150px}
+.leadlijst .kolkop,.leadlijst .rij-hoofd{grid-template-columns:86px minmax(0,1fr) 92px 120px 96px minmax(0,150px) 92px 150px}
 .kolkop .sorteer{border:0;background:none;padding:0;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left;cursor:pointer}
 .kolkop .sorteer[aria-pressed="true"]{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
 .leadrij{display:block;text-decoration:none}

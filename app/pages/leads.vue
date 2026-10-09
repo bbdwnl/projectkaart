@@ -93,12 +93,12 @@ const overdracht = (l: Lead) => l.licht === 'klaar' ? 'Klaar voor de overdracht'
 const soortTekst = (p: Project) => SOORTEN.filter(s => p.soort.includes(s.id)).map(s => s.naam).join(', ') || '—'
 const m2Tekst = (p: Project) => p.m2 ? `${p.m2.toLocaleString('nl-NL')} m²` : '—'
 const kansTekst = (p: Project) => p.slagingskans === null ? 'Kans onbekend' : `${p.slagingskans}%`
-const mobiel = (l: Lead) => [kansTekst(l.p), l.p.am ?? 'Zonder AM', l.laatst && geleden(l.laatst, nu)].filter(Boolean).join(' · ')
+const mobiel = (l: Lead) => [l.p.afas_nummer && `AFAS ${l.p.afas_nummer}`, kansTekst(l.p), l.p.am ?? 'Zonder AM', l.laatst && geleden(l.laatst, nu)].filter(Boolean).join(' · ')
 
 // Nieuwe lead: de minste gegevens om hem in beeld te hebben. De rest vul je op de kaart in.
 const nieuwOpen = ref(false)
 const bezig = ref(false)
-const nieuw = reactive({ naam: '', plaats: '', am: '', kans: '' })
+const nieuw = reactive({ naam: '', plaats: '', afas: '', am: '', kans: '' })
 async function maakLead() {
   const naam = nieuw.naam.trim()
   if (naam.length < 2) return toon('Geef de lead een naam van minstens twee letters.', 'fout')
@@ -108,6 +108,7 @@ async function maakLead() {
       slug: maakSlug(naam, projecten.value.map(x => x.slug)),
       naam,
       plaats: nieuw.plaats.trim() || null,
+      afas_nummer: nieuw.afas.trim() || null,
       am: nieuw.am || null,
       slagingskans: nieuw.kans === '' ? null : Number(nieuw.kans),
     })
@@ -138,6 +139,7 @@ async function maakLead() {
         <span class="tab nu">Nieuwe lead</span>
         <label><span class="label">Naam</span><input v-model="nieuw.naam" class="veld" required minlength="2" placeholder="Bijvoorbeeld Gezondheidscentrum De Brink"></label>
         <label><span class="label">Plaats</span><input v-model="nieuw.plaats" class="veld" placeholder="Plaats"></label>
+        <label><span class="label">AFAS-nummer</span><input v-model="nieuw.afas" class="veld" placeholder="Als het er al is"></label>
         <label><span class="label">Accountmanager</span>
           <select v-model="nieuw.am" class="veld"><option value="">nog niet gekozen</option><option v-for="m in MENSEN.am" :key="m" :value="m">{{ m }}</option></select>
         </label>
@@ -163,7 +165,7 @@ async function maakLead() {
             <button v-for="a in ams" :key="a.id" type="button" :aria-pressed="filter.am === a.id" @click="filter.am = a.id">{{ a.naam }} <span class="n">{{ a.aantal }}</span></button>
           </div>
         </div>
-        <input v-model="filter.zoek" class="veld zoekveld" type="search" placeholder="Zoek op naam, plaats of nummer" aria-label="Zoek een lead">
+        <input v-model="filter.zoek" class="veld zoekveld" type="search" placeholder="Zoek op naam, plaats of AFAS-nummer" aria-label="Zoek een lead">
       </div>
       <div class="filters">
         <div class="filtergroep">
@@ -187,6 +189,7 @@ async function maakLead() {
         <div class="kolkop">
           <span>Overdracht</span>
           <button type="button" class="sorteer" :aria-pressed="sortering.kolom === 'naam'" @click="sorteerOp('naam')">Lead{{ pijl('naam') }}</button>
+          <span>AFAS</span>
           <button type="button" class="sorteer" :aria-pressed="sortering.kolom === 'kans'" @click="sorteerOp('kans')">Kans{{ pijl('kans') }}</button>
           <button type="button" class="sorteer" :aria-pressed="sortering.kolom === 'am'" @click="sorteerOp('am')">AM{{ pijl('am') }}</button>
           <span>Soort</span>
@@ -202,6 +205,7 @@ async function maakLead() {
                 <small>{{ [l.p.nummer, l.p.plaats].filter(Boolean).join(' · ') || 'Nog geen plaats' }} · {{ overdracht(l) }}</small>
                 <small class="mobiel">{{ mobiel(l) }}</small>
               </span>
+              <span class="n">{{ l.p.afas_nummer ?? '—' }}</span>
               <span class="n kans">{{ l.p.slagingskans === null ? '—' : `${l.p.slagingskans}%` }}<span v-if="l.p.slagingskans !== null" class="voortgang"><i :style="{ width: `${l.p.slagingskans}%` }" /></span></span>
               <span>{{ l.p.am ?? '—' }}</span>
               <span class="klein">{{ soortTekst(l.p) }}</span>
