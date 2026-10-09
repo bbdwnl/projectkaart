@@ -21,7 +21,7 @@ de offerte "Van oud naar nieuw" (fase B) en [design-referentie.html](../design-r
 | 11 | AFAS | Elk project heeft een eigen veld **AFAS-nummer** (uniek), te zien in de kop en te wijzigen onder Details | De sleutel voor een latere koppeling. Als het projectnummer (P20038) hetzelfde is als het AFAS-nummer, voegen we de velden samen. |
 | 12 | Financiën | Alleen het MT, afgedwongen in de database. Velden zoals in het financieel overzicht van het prototype | Bedragen komen later via een import. |
 | 13 | Tekeningen | Op aanvraag; per project een tekstveld met de locatie op de server, met kopieerknop | Browsers openen geen serverpaden. |
-| 14 | Proefversie | Zolang Microsoft niet is gekoppeld: de inlogknop laat je zonder account binnen, voorbeeldgegevens, wijzigingen per tester in zijn eigen browser | Om de kaart te laten bekijken voordat de koppeling er is. Uit met `NUXT_PUBLIC_PROEFVERSIE=false`. |
+| 14 | Proefversie | Zolang Microsoft niet is gekoppeld: de inlogknop laat je zonder account binnen, voorbeeldgegevens, wijzigingen per tester in zijn eigen browser. Optioneel een tijdelijk wachtwoord (`NUXT_PROEF_WACHTWOORD`), gecontroleerd op de server; de voorbeeldgegevens komen pas na het wachtwoord van de server, zodat de projectnamen niet in de JavaScript staan | Om de kaart te laten bekijken voordat de koppeling er is, zonder Vercel-login voor iedere tester. Uit met `NUXT_PUBLIC_PROEFVERSIE=false`. |
 
 ## Techniek
 

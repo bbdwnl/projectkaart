@@ -20,6 +20,11 @@ en alles draait op voorbeeldgegevens (de 27 lopende projecten en hun datums uit 
 met verzonnen statussen). Wat een tester verandert, blijft in zijn eigen browser bewaard; via het
 menu rechtsboven begin je opnieuw.
 
+**Tijdelijk wachtwoord.** Zet `NUXT_PROEF_WACHTWOORD` (in Vercel of `.env`) en de inlogpagina vraagt
+eerst dat wachtwoord. De server controleert het en zet een cookie voor 30 dagen; pas dan komen de
+voorbeeldgegevens mee (de projectnamen zitten niet in de JavaScript). Een nieuw wachtwoord sluit
+iedereen weer buiten. Leeg = geen wachtwoord.
+
 ## Controles
 
 ```bash
