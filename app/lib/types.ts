@@ -115,20 +115,31 @@ export interface Gebruiker {
   isMt: boolean
 }
 
-/** Een leverancier op één project; in te stellen onder Details. */
+/**
+ * Een leverancier. Globaal: in de lijst die je op elk project kunt kiezen. Anders alleen voor het project
+ * waarvoor hij is aangemaakt. Welke leveranciers op een project werken, staat in ProjectLeverancier.
+ */
 export interface Leverancier {
   id: string
-  project_id: string
   naam: string
   /** Wat ze doen, bijvoorbeeld "Installateur". */
   vak: string | null
+  globaal: boolean
 }
 
-/** Een aandachtspunt onder Controle: altijd een foto, een notitie en een leverancier. */
+export interface ProjectLeverancier {
+  project_id: string
+  leverancier_id: string
+}
+
+export type NieuweLeverancier = Pick<Leverancier, 'naam' | 'vak' | 'globaal'>
+
+/** Een aandachtspunt onder Controle: altijd een foto en een notitie, eventueel een leverancier. */
 export interface Controlepunt {
   id: string
   project_id: string
-  leverancier_id: string
+  /** null: nog geen leverancier gekozen. */
+  leverancier_id: string | null
   notitie: string
   /** Pad in de opslag: '<project_id>/<naam>.jpg'. */
   foto: string
@@ -138,3 +149,4 @@ export interface Controlepunt {
   aangemaakt_door: string | null
   aangemaakt_op: string
 }
+export type ControlepuntWijziging = Partial<Pick<Controlepunt, 'opgelost' | 'leverancier_id'>>

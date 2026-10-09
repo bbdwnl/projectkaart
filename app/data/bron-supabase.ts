@@ -94,17 +94,39 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     },
 
     async leveranciers(projectId) {
-      return uitkomst(await sb.from('leveranciers').select('*').eq('project_id', projectId).order('naam'), 'de leveranciers laden') as Leverancier[]
+      const rijen = uitkomst(await sb.from('project_leveranciers').select('leverancier:leveranciers(*)').eq('project_id', projectId), 'de leveranciers laden')
+      return (rijen as unknown as { leverancier: Leverancier }[]).map(r => r.leverancier).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
     },
-    async voegLeverancierToe(projectId, invoer) {
-      const res = await sb.from('leveranciers').insert({ project_id: projectId, ...invoer }).select().single()
-      if (res.error?.code === UNIEK) throw new BronFout(`${invoer.naam} staat al bij de leveranciers.`)
-      return uitkomst(res, 'de leverancier toevoegen') as Leverancier
+    async globaleLeveranciers() {
+      return uitkomst(await sb.from('leveranciers').select('*').eq('globaal', true).order('naam'), 'de globale lijst laden') as Leverancier[]
     },
-    async verwijderLeverancier(id) {
-      const res = await sb.from('leveranciers').delete().eq('id', id)
-      if (res.error?.code === IN_GEBRUIK) throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg.')
-      if (res.error) uitkomst(res, 'de leverancier weghalen')
+    async nieuweLeverancier(projectId, invoer) {
+      const res = await sb.from('leveranciers').insert(invoer).select().single()
+      if (res.error?.code === UNIEK) throw new BronFout(`${invoer.naam} staat al in de globale lijst. Kies hem daar.`)
+      const l = uitkomst(res, 'de leverancier toevoegen') as Leverancier
+      const koppeling = await sb.from('project_leveranciers').insert({ project_id: projectId, leverancier_id: l.id })
+      if (koppeling.error) {
+        if (!l.globaal) await sb.from('leveranciers').delete().eq('id', l.id)
+        throw new BronFout(`De leverancier toevoegen is niet gelukt. ${koppeling.error.message}`)
+      }
+      return l
+    },
+    async koppelLeverancier(projectId, leverancierId) {
+      const res = await sb.from('project_leveranciers').insert({ project_id: projectId, leverancier_id: leverancierId })
+      if (res.error?.code === UNIEK) throw new BronFout('Deze leverancier staat al bij dit project.')
+      if (res.error) throw new BronFout(`De leverancier toevoegen is niet gelukt. ${res.error.message}`)
+    },
+    async ontkoppelLeverancier(projectId, leverancier) {
+      const res = await sb.from('project_leveranciers').delete().eq('project_id', projectId).eq('leverancier_id', leverancier.id)
+      if (res.error?.code === IN_GEBRUIK) throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg, of kies er een andere leverancier bij.')
+      if (res.error) throw new BronFout(`De leverancier weghalen is niet gelukt. ${res.error.message}`)
+      // Alleen voor dit project aangemaakt: dan hoeft hij nergens meer te staan.
+      if (!leverancier.globaal) await sb.from('leveranciers').delete().eq('id', leverancier.id)
+    },
+    async maakGlobaal(leverancierId) {
+      const res = await sb.from('leveranciers').update({ globaal: true }).eq('id', leverancierId).select().single()
+      if (res.error?.code === UNIEK) throw new BronFout('Er staat al een leverancier met deze naam in de globale lijst. Kies die daar.')
+      return uitkomst(res, 'de globale lijst bijwerken') as Leverancier
     },
     async controlepunten(projectId) {
       return uitkomst(await sb.from('controlepunten').select('*').eq('project_id', projectId).order('aangemaakt_op', { ascending: false }), 'de aandachtspunten laden') as Controlepunt[]
@@ -126,8 +148,8 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       if (res.error) await sb.storage.from(FOTOS).remove([pad])
       return uitkomst(res, 'het aandachtspunt opslaan') as Controlepunt
     },
-    async zetOpgelost(id, opgelost) {
-      return uitkomst(await sb.from('controlepunten').update({ opgelost }).eq('id', id).select().single(), 'opslaan') as Controlepunt
+    async bewaarControlepunt(id, wijziging) {
+      return uitkomst(await sb.from('controlepunten').update(wijziging).eq('id', id).select().single(), 'opslaan') as Controlepunt
     },
     async verwijderControlepunt(punt) {
       const res = await sb.from('controlepunten').delete().eq('id', punt.id)

@@ -2,7 +2,7 @@
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
+import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, ProjectLeverancier, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
@@ -26,7 +26,7 @@ export interface ProjectBasis {
   datum_oplevering: string | null
 }
 
-export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], controlepunten: [], fotos: {} })
+export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {} })
 
 export interface DemoGegevens {
   projecten: Project[]
@@ -35,6 +35,7 @@ export interface DemoGegevens {
   financien: Financien[]
   logboek: LogRegel[]
   leveranciers: Leverancier[]
+  projectLeveranciers: ProjectLeverancier[]
   controlepunten: Controlepunt[]
   /** De foto's van de aandachtspunten, als data-URL per pad. Alleen in de browser van de tester. */
   fotos: Record<string, string>
@@ -61,13 +62,16 @@ const LEADS: [string, string, string | null, number | null, boolean, Soort[], nu
   ['Zorgplein Noord', 'Almere', 'Jeroen', 75, false, ['ont'], 1750, 6],
 ]
 
-// Leveranciers voor de projecten in uitvoering en nazorg, en Apeldoorn Vlijtseweg (verzonnen).
+// De globale lijst met leveranciers (verzonnen). De eerste vijf werken op de projecten in uitvoering en nazorg
+// en op Apeldoorn Vlijtseweg; de laatste twee staan alleen in de lijst, om uit te kiezen.
 const LEVERANCIERS: [string, string][] = [
   ['Bouwbedrijf Van Wijk', 'Aannemer casco'],
   ['Klimaattechniek Oost', 'Installateur'],
   ['Elektro Hendriks', 'Elektra'],
   ['Interieurbouw De Lange', 'Afbouw en interieur'],
   ['Schildersbedrijf Jansen', 'Schilderwerk'],
+  ['Glaszetterij Veenstra', 'Glas'],
+  ['Liftservice Brabant', 'Liften'],
 ]
 
 const CATALOGUS: [string, string, Fase, number][] = [
@@ -237,11 +241,15 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
     log(moment(7, 10, 0), 'Benno', 'fase', 'haalbaarheid', 'ontwikkeling'),
   ]
 
-  const leveranciers: Leverancier[] = projecten
+  const leveranciers: Leverancier[] = LEVERANCIERS.map(([naam, vak], i) => ({ id: `lev-${i + 1}`, naam, vak, globaal: true }))
+  const projectLeveranciers: ProjectLeverancier[] = projecten
     .filter(p => p === vlijtseweg || faseIndex(p.fase) >= faseIndex('uitvoering'))
-    .flatMap(p => LEVERANCIERS.filter((_, i) => p === vlijtseweg || kans(p.slug + i) < 0.7)
-      .map(([naam, vak], i) => ({ id: `lev-${p.slug}-${i}`, project_id: p.id, naam, vak })))
+    .flatMap(p => leveranciers.slice(0, 5).filter((_, i) => p === vlijtseweg || kans(p.slug + i) < 0.7)
+      .map(l => ({ project_id: p.id, leverancier_id: l.id })))
+  // Eén die alleen voor Vlijtseweg is aangemaakt.
+  leveranciers.push({ id: 'lev-vlijtseweg-hovenier', naam: 'Hoveniersbedrijf De Linde', vak: 'Terrein', globaal: false })
+  projectLeveranciers.push({ project_id: vlijtseweg.id, leverancier_id: 'lev-vlijtseweg-hovenier' })
 
   // Geen voorbeeldpunten: een aandachtspunt hoort bij een echte foto.
-  return { projecten, taken, uitzonderingen, financien, logboek, leveranciers, controlepunten: [], fotos: {} }
+  return { projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten: [], fotos: {} }
 }

@@ -1,6 +1,6 @@
 import type { InjectionKey } from 'vue'
 import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
-import type { Controlepunt, Fase, Financien, Leverancier, Licht, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
+import type { Controlepunt, ControlepuntWijziging, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
 import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, type TaakRegel } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
@@ -26,7 +26,9 @@ function maakKaart(slug: string) {
   const projecten = ref<Pick<Project, 'id' | 'fase'>[]>([])
   const financien = ref<Financien | null>(null)
   const logboek = ref<LogRegel[]>([])
+  /** De leveranciers op dit project, en de globale lijst om uit te kiezen. */
   const leveranciers = ref<Leverancier[]>([])
+  const globaleLeveranciers = ref<Leverancier[]>([])
   const controlepunten = ref<Controlepunt[]>([])
   const stand = ref<'laden' | 'klaar' | 'niet-gevonden' | 'fout'>('laden')
   const fout = ref('')
@@ -44,9 +46,9 @@ function maakKaart(slug: string) {
         stand.value = 'niet-gevonden'
         return
       }
-      const [t, c, f, l, alle, ps, lev, cp] = await Promise.all([
+      const [t, c, f, l, alle, ps, lev, glob, cp] = await Promise.all([
         bron.taken(p.id), bron.uitzonderingen(), bron.financien(p.id), bron.logboek(p.id), bron.taken(), bron.projecten(),
-        bron.leveranciers(p.id), bron.controlepunten(p.id),
+        bron.leveranciers(p.id), bron.globaleLeveranciers(), bron.controlepunten(p.id),
       ])
       project.value = p
       taken.value = t
@@ -54,6 +56,7 @@ function maakKaart(slug: string) {
       financien.value = f
       logboek.value = l
       leveranciers.value = lev
+      globaleLeveranciers.value = glob
       controlepunten.value = cp
       gebruik.value = aantalPerUitzondering(alle)
       projecten.value = ps.map(x => ({ id: x.id, fase: x.fase }))
@@ -172,12 +175,21 @@ function maakKaart(slug: string) {
   // ---------- Controle: leveranciers en aandachtspunten ----------
   const openPunten = computed(() => controlepunten.value.filter(p => !p.opgelost).length)
 
-  async function voegLeverancierToe(invoer: Pick<Leverancier, 'naam' | 'vak'>): Promise<boolean> {
+  const opNaam = (ls: Leverancier[]) => [...ls].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+  const vervangIn = (ls: Leverancier[], l: Leverancier) => ls.map(x => (x.id === l.id ? l : x))
+
+  /** Een nieuwe leverancier op dit project; met globaal ook in de globale lijst. */
+  async function nieuweLeverancier(invoer: NieuweLeverancier): Promise<boolean> {
     if (!project.value) return false
+    if (leveranciers.value.some(l => l.naam.trim().toLowerCase() === invoer.naam.trim().toLowerCase())) {
+      toon(`${invoer.naam} staat al bij dit project.`, 'fout')
+      return false
+    }
     try {
-      const l = await bron.voegLeverancierToe(project.value.id, invoer)
-      leveranciers.value = [...leveranciers.value, l].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
-      toon(`${l.naam} staat bij de leveranciers`)
+      const l = await bron.nieuweLeverancier(project.value.id, invoer)
+      leveranciers.value = opNaam([...leveranciers.value, l])
+      if (l.globaal) globaleLeveranciers.value = opNaam([...globaleLeveranciers.value, l])
+      toon(l.globaal ? `${l.naam} staat bij dit project en in de globale lijst` : `${l.naam} staat bij dit project`)
       return true
     } catch (e) {
       toon(foutTekst(e), 'fout')
@@ -185,11 +197,37 @@ function maakKaart(slug: string) {
     }
   }
 
-  async function verwijderLeverancier(l: Leverancier) {
+  /** Een leverancier uit de globale lijst op dit project zetten. */
+  async function koppelLeverancier(l: Leverancier): Promise<boolean> {
+    if (!project.value) return false
     try {
-      await bron.verwijderLeverancier(l.id)
+      await bron.koppelLeverancier(project.value.id, l.id)
+      leveranciers.value = opNaam([...leveranciers.value, l])
+      toon(`${l.naam} staat bij dit project`)
+      return true
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+      return false
+    }
+  }
+
+  async function ontkoppelLeverancier(l: Leverancier) {
+    if (!project.value) return
+    try {
+      await bron.ontkoppelLeverancier(project.value.id, l)
       leveranciers.value = leveranciers.value.filter(x => x.id !== l.id)
-      toon(`${l.naam} weggehaald`)
+      toon(l.globaal ? `${l.naam} weggehaald bij dit project · staat nog in de globale lijst` : `${l.naam} weggehaald`)
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+    }
+  }
+
+  async function maakGlobaal(l: Leverancier) {
+    try {
+      const nieuw = await bron.maakGlobaal(l.id)
+      leveranciers.value = vervangIn(leveranciers.value, nieuw)
+      globaleLeveranciers.value = opNaam([...globaleLeveranciers.value, nieuw])
+      toon(`${l.naam} staat nu in de globale lijst`)
     } catch (e) {
       toon(foutTekst(e), 'fout')
     }
@@ -208,19 +246,22 @@ function maakKaart(slug: string) {
   }
 
   /** Meteen op het scherm; bij een fout terug. */
-  async function zetOpgelost(punt: Controlepunt, opgelost: boolean) {
+  async function wijzigPunt(punt: Controlepunt, w: ControlepuntWijziging, melding: string) {
     const vorige = kopie(punt)
     const i = controlepunten.value.findIndex(p => p.id === punt.id)
     if (i < 0) return
-    controlepunten.value[i] = { ...punt, opgelost }
+    controlepunten.value[i] = { ...punt, ...w }
     try {
-      controlepunten.value[i] = await bron.zetOpgelost(punt.id, opgelost)
-      toon(opgelost ? 'Opgelost' : 'Weer open')
+      controlepunten.value[i] = await bron.bewaarControlepunt(punt.id, w)
+      toon(melding)
     } catch (e) {
       controlepunten.value[i] = vorige
       toon(foutTekst(e), 'fout')
     }
   }
+  const zetOpgelost = (punt: Controlepunt, opgelost: boolean) => wijzigPunt(punt, { opgelost }, opgelost ? 'Opgelost' : 'Weer open')
+  const kiesLeverancier = (punt: Controlepunt, id: string | null) =>
+    wijzigPunt(punt, { leverancier_id: id }, id ? `Leverancier: ${leveranciers.value.find(l => l.id === id)?.naam ?? 'gekozen'}` : 'Leverancier weggehaald')
 
   async function verwijderControlepunt(punt: Controlepunt) {
     try {
@@ -233,10 +274,10 @@ function maakKaart(slug: string) {
   }
 
   return {
-    project, taken, catalogus, gebruik, financien, logboek, leveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
+    project, taken, catalogus, gebruik, financien, logboek, leveranciers, globaleLeveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
     regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
     laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering,
-    voegLeverancierToe, verwijderLeverancier, voegControlepuntToe, zetOpgelost, verwijderControlepunt,
+    nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, kiesLeverancier, verwijderControlepunt,
   }
 }
 

@@ -473,6 +473,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .controlelijst{list-style:none;margin:0;padding:0;position:relative}
 .controlelijst .rij-hoofd{grid-template-columns:104px minmax(0,1fr) 100px auto;min-height:92px;padding-top:10px;padding-bottom:10px}
 .controlelijst .notitie,.fotovenster .notitie{white-space:pre-line}
+.leverancier-kies{max-width:100%;border:0;border-bottom:1px dashed currentColor;background:transparent;padding:0 2px;font:inherit;font-weight:700;color:var(--zwart);cursor:pointer}
+.leverancier-kies.leeg{font-weight:400;color:var(--stil)}
 .duim{width:104px;height:78px;padding:0;border:var(--rand);border-radius:var(--radius-s);background:var(--grijs);overflow:hidden;cursor:zoom-in}
 .duim img{display:block;width:100%;height:100%;object-fit:cover}
 .controlelijst .acties,.leverancierlijst .acties{display:flex;align-items:center;gap:14px;justify-content:flex-end}
@@ -502,17 +504,20 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .fotovenster figcaption small{display:block;color:var(--stil);font-size:13px}
 
 /* details: leveranciers */
-.leverancierlijst .kolkop,.leverancierlijst .rij-hoofd{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 200px 110px}
+.leverancierlijst .kolkop,.leverancierlijst .rij-hoofd{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 140px 170px 190px}
 .leverancierlijst .titel{font-weight:700}
-.leverancier-nieuw{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-.leverancier-nieuw .veld{flex:1 1 220px;height:38px}
+.leverancier-toevoegen{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr);gap:18px;margin-top:34px}
+.leverancier-toevoegen form{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding-top:26px}
+.leverancier-toevoegen .veld{flex:1 1 200px;height:38px}
+.leverancier-toevoegen .schakel{font-size:14px}
 
 @media (max-width:1100px){
   .controlelijst .rij-hoofd{grid-template-columns:104px minmax(0,1fr);grid-template-areas:none;align-items:start}
   .controlelijst .rij-hoofd>:nth-child(3),.controlelijst .rij-hoofd>:nth-child(4){grid-column:2}
   .controlelijst .acties{justify-content:flex-start}
   .leverancierlijst .rij-hoofd{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:none;gap:2px 12px;padding:10px 14px}
-  .leverancierlijst .rij-hoofd>:nth-child(2),.leverancierlijst .rij-hoofd>:nth-child(3){grid-column:1}
+  .leverancierlijst .rij-hoofd>:nth-child(2),.leverancierlijst .rij-hoofd>:nth-child(3),.leverancierlijst .rij-hoofd>:nth-child(4){grid-column:1}
+  .leverancier-toevoegen{grid-template-columns:1fr}
   .leverancierlijst .acties{grid-column:2;grid-row:1}
 }
 @media (max-width:760px){

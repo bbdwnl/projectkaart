@@ -12,14 +12,16 @@ describe('controle', () => {
     punt('oud-open', { aangemaakt_op: '2026-09-01T09:00:00Z' }),
     punt('opgelost', { opgelost: true, aangemaakt_op: '2026-10-05T09:00:00Z', leverancier_id: 'lev-2' }),
     punt('nieuw-open', { aangemaakt_op: '2026-10-08T09:00:00Z', leverancier_id: 'lev-2' }),
+    punt('zonder', { aangemaakt_op: '2026-09-20T09:00:00Z', leverancier_id: null }),
   ]
 
   it('zet open punten bovenaan, het nieuwste eerst', () => {
-    expect(sorteerPunten(punten).map(p => p.id)).toEqual(['nieuw-open', 'oud-open', 'opgelost'])
+    expect(sorteerPunten(punten).map(p => p.id)).toEqual(['nieuw-open', 'zonder', 'oud-open', 'opgelost'])
   })
-  it('filtert op open, opgelost en leverancier', () => {
+  it('filtert op open, opgelost en leverancier, ook op punten zonder leverancier', () => {
     const ids = (f: Parameters<typeof pastPunt>[1], lev = 'alle') => punten.filter(p => pastPunt(p, f, lev)).map(p => p.id)
-    expect(ids('open')).toEqual(['oud-open', 'nieuw-open'])
+    expect(ids('open')).toEqual(['oud-open', 'nieuw-open', 'zonder'])
+    expect(ids('alles', 'geen')).toEqual(['zonder'])
     expect(ids('opgelost')).toEqual(['opgelost'])
     expect(ids('alles', 'lev-2')).toEqual(['opgelost', 'nieuw-open'])
     expect(ids('open', 'lev-2')).toEqual(['nieuw-open'])

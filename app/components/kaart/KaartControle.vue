@@ -3,8 +3,9 @@ import type { Controlepunt } from '~/lib/types'
 import { pastPunt, sorteerPunten, type ControleFilter } from '~/lib/controle'
 import { fmtMoment } from '~/lib/datum'
 
-// Aandachtspunten: wat opvalt op de bouw of bij de oplevering. Elk punt heeft een foto, een notitie en een leverancier.
-const { controlepunten, leveranciers, nu, openPunten, zetOpgelost, verwijderControlepunt } = useKaart()
+// Aandachtspunten: wat opvalt op de bouw of bij de oplevering. Elk punt heeft een foto en een notitie;
+// de leverancier die het oplost kies je meteen of later in de lijst.
+const { controlepunten, leveranciers, nu, openPunten, zetOpgelost, kiesLeverancier, verwijderControlepunt } = useKaart()
 const bron = useBron()
 const filter = ref<ControleFilter>('open')
 const leverancier = ref('alle')
@@ -28,7 +29,10 @@ function fotoFout(pad: string) {
   haalFotos([pad])
 }
 
-const naam = (id: string) => leveranciers.value.find(l => l.id === id)?.naam ?? 'Onbekende leverancier'
+const naam = (id: string | null) => !id || id === 'geen' ? 'Geen leverancier' : leveranciers.value.find(l => l.id === id)?.naam ?? 'Onbekende leverancier'
+const zonderLeverancier = computed(() => controlepunten.value.some(p => !p.leverancier_id))
+const selectieTekst = computed(() => leverancier.value === 'alle' ? '' : leverancier.value === 'geen' ? ' zonder leverancier' : ` voor ${naam(leverancier.value)}`)
+const kies = (p: Controlepunt, e: Event) => kiesLeverancier(p, (e.target as HTMLSelectElement).value || null)
 const zichtbaar = computed(() => sorteerPunten(controlepunten.value.filter(p => pastPunt(p, filter.value, leverancier.value))))
 const aantal = (f: ControleFilter) => controlepunten.value.filter(p => pastPunt(p, f, leverancier.value)).length
 const kop = computed(() => !controlepunten.value.length
@@ -50,7 +54,7 @@ async function weg(p: Controlepunt) {
       <div class="blokkop">
         <div>
           <h2>{{ kop }}</h2>
-          <p class="klein">Zie je op de bouw of bij de oplevering iets wat niet klopt? Maak een foto, schrijf erbij wat er mis is en kies de leverancier die het oplost.</p>
+          <p class="klein">Zie je op de bouw of bij de oplevering iets wat niet klopt? Maak een foto, schrijf erbij wat er mis is en kies, als je het weet, de leverancier die het oplost.</p>
         </div>
         <button type="button" class="knop zwart" :aria-expanded="nieuwOpen" aria-controls="controle-nieuw" @click="nieuwOpen = !nieuwOpen">Aandachtspunt toevoegen</button>
       </div>
@@ -69,6 +73,7 @@ async function weg(p: Controlepunt) {
           <select v-model="leverancier" class="veld pil" aria-label="Leverancier">
             <option value="alle">Alle leveranciers</option>
             <option v-for="l in leveranciers" :key="l.id" :value="l.id">{{ l.naam }}</option>
+            <option v-if="zonderLeverancier || leverancier === 'geen'" value="geen">Zonder leverancier</option>
           </select>
         </div>
         <TransitionGroup v-if="zichtbaar.length" tag="ol" name="rij" class="lijst controlelijst">
@@ -79,7 +84,14 @@ async function weg(p: Controlepunt) {
               </button>
               <div class="titel">
                 <span class="notitie">{{ p.notitie }}</span>
-                <small><b>{{ naam(p.leverancier_id) }}</b> · {{ p.aangemaakt_door ?? 'Onbekend' }} · {{ fmtMoment(p.aangemaakt_op, nu) }}</small>
+                <small>
+                  <select v-if="leveranciers.length" class="leverancier-kies" :class="{ leeg: !p.leverancier_id }" :value="p.leverancier_id ?? ''" :aria-label="`Leverancier bij: ${p.notitie}`" @change="kies(p, $event)">
+                    <option value="">Geen leverancier</option>
+                    <option v-for="l in leveranciers" :key="l.id" :value="l.id">{{ l.naam }}</option>
+                  </select>
+                  <template v-else>Geen leverancier</template>
+                  · {{ p.aangemaakt_door ?? 'Onbekend' }} · {{ fmtMoment(p.aangemaakt_op, nu) }}
+                </small>
                 <small v-if="p.opgelost && p.opgelost_op">Opgelost door {{ p.opgelost_door ?? 'onbekend' }} · {{ fmtMoment(p.opgelost_op, nu) }}</small>
               </div>
               <span><StatusTab :licht="p.opgelost ? 'klaar' : 'letop'" :woord="p.opgelost ? 'Opgelost' : 'Open'" /></span>
@@ -91,7 +103,7 @@ async function weg(p: Controlepunt) {
             </div>
           </li>
         </TransitionGroup>
-        <div v-else class="leeg-staat">{{ filter === 'open' ? 'Niets open' : 'Niets' }}{{ leverancier !== 'alle' ? ` voor ${naam(leverancier)}` : '' }}.</div>
+        <div v-else class="leeg-staat">{{ filter === 'open' ? 'Niets open' : 'Niets' }}{{ selectieTekst }}.</div>
       </template>
       <div v-else-if="!nieuwOpen" class="leeg-staat">Hier komen de aandachtspunten van dit project, met de foto erbij. Begin met Aandachtspunt toevoegen.</div>
     </section>

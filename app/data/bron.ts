@@ -1,4 +1,4 @@
-import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Controlepunt, ControlepuntWijziging, Fase, Financien, Leverancier, NieuweLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { NieuweLead } from '~/lib/leads'
 
 /**
@@ -25,20 +25,30 @@ export interface Bron {
   verwijderTaak(taakId: string): Promise<void>
   zetUitzonderingStatus(id: string, status: UitzonderingStatus): Promise<void>
 
+  /** De leveranciers die op dit project werken. */
   leveranciers(projectId: string): Promise<Leverancier[]>
-  voegLeverancierToe(projectId: string, invoer: Pick<Leverancier, 'naam' | 'vak'>): Promise<Leverancier>
-  /** Lukt niet zolang de leverancier aandachtspunten heeft. */
-  verwijderLeverancier(id: string): Promise<void>
+  /** De globale lijst: te kiezen op elk project. */
+  globaleLeveranciers(): Promise<Leverancier[]>
+  /** Maakt een leverancier en zet hem op dit project; met globaal ook in de globale lijst. */
+  nieuweLeverancier(projectId: string, invoer: NieuweLeverancier): Promise<Leverancier>
+  /** Zet een leverancier uit de globale lijst op dit project. */
+  koppelLeverancier(projectId: string, leverancierId: string): Promise<void>
+  /** Haalt hem van dit project; een leverancier van alleen dit project is daarna weg. Lukt niet zolang er aandachtspunten naar verwijzen. */
+  ontkoppelLeverancier(projectId: string, leverancier: Leverancier): Promise<void>
+  /** Zet een leverancier van één project ook in de globale lijst. */
+  maakGlobaal(leverancierId: string): Promise<Leverancier>
   controlepunten(projectId: string): Promise<Controlepunt[]>
   /** Adressen waarop de browser de foto's kan tonen, per pad. Tijdelijk geldig. */
   fotoUrls(paden: string[]): Promise<Record<string, string>>
   voegControlepuntToe(projectId: string, invoer: NieuwControlepunt): Promise<Controlepunt>
-  zetOpgelost(id: string, opgelost: boolean): Promise<Controlepunt>
+  /** Opgelost of weer open, of een (andere) leverancier. */
+  bewaarControlepunt(id: string, wijziging: ControlepuntWijziging): Promise<Controlepunt>
   verwijderControlepunt(punt: Controlepunt): Promise<void>
 }
 
 export interface NieuwControlepunt {
-  leverancierId: string
+  /** Optioneel: kan ook later in de lijst. */
+  leverancierId: string | null
   notitie: string
   /** Al verkleind tot een jpg (utils/foto.ts). */
   foto: Blob

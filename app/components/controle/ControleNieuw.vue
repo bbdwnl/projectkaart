@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Een nieuw aandachtspunt: foto, notitie en leverancier zijn alle drie verplicht.
+// Een nieuw aandachtspunt: foto en notitie zijn verplicht, de leverancier niet (die kan later in de lijst).
 const emit = defineEmits<{ klaar: [] }>()
 const { leveranciers, voegControlepuntToe } = useKaart()
 const { weergave } = useWeergave()
@@ -8,7 +8,7 @@ const invoer = ref<HTMLInputElement>()
 const foto = ref<Blob | null>(null)
 const voorbeeld = ref<string | null>(null)
 const notitie = ref('')
-const leverancierId = ref(leveranciers.value.length === 1 ? leveranciers.value[0]!.id : '')
+const leverancierId = ref('')
 const verwerken = ref(false)
 const bezig = ref(false)
 
@@ -34,9 +34,8 @@ onBeforeUnmount(() => { if (voorbeeld.value) URL.revokeObjectURL(voorbeeld.value
 async function bewaar() {
   if (!foto.value) return toon('Maak eerst een foto.', 'fout')
   if (notitie.value.trim().length < 2) return toon('Schrijf erbij wat er aan de hand is.', 'fout')
-  if (!leverancierId.value) return toon('Kies de leverancier die het oplost.', 'fout')
   bezig.value = true
-  const gelukt = await voegControlepuntToe({ leverancierId: leverancierId.value, notitie: notitie.value.trim(), foto: foto.value })
+  const gelukt = await voegControlepuntToe({ leverancierId: leverancierId.value || null, notitie: notitie.value.trim(), foto: foto.value })
   bezig.value = false
   if (gelukt) emit('klaar')
 }
@@ -64,13 +63,13 @@ function naarLeveranciers() {
       <label><span class="label">Notitie</span>
         <textarea v-model="notitie" class="veld" rows="3" placeholder="Wat is er mis, en waar? Bijvoorbeeld: kitnaad bij kozijn spreekkamer 2 niet afgewerkt." />
       </label>
-      <label v-if="leveranciers.length"><span class="label">Leverancier</span>
+      <label v-if="leveranciers.length"><span class="label">Leverancier (optioneel)</span>
         <select v-model="leverancierId" class="veld">
-          <option value="" disabled>Kies de leverancier die het oplost</option>
+          <option value="">Nog geen leverancier</option>
           <option v-for="l in leveranciers" :key="l.id" :value="l.id">{{ l.naam }}{{ l.vak ? ` · ${l.vak}` : '' }}</option>
         </select>
       </label>
-      <p v-else class="geen-leveranciers klein">Dit project heeft nog geen leveranciers. <button type="button" class="link" @click="naarLeveranciers">Stel ze in bij Details</button></p>
+      <p v-else class="geen-leveranciers klein">Dit project heeft nog geen leveranciers. Dat hoeft niet: je kiest er later een in de lijst. <button type="button" class="link" @click="naarLeveranciers">Leveranciers instellen bij Details</button></p>
       <div class="knoppen">
         <button type="submit" class="knop zwart" :disabled="bezig || verwerken">{{ bezig ? 'Opslaan…' : 'Opslaan' }}</button>
         <button type="button" class="link" @click="emit('klaar')">Annuleren</button>

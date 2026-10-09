@@ -21,14 +21,14 @@ function laad(opslag: string): DemoGegevens | null {
   try {
     const s = localStorage.getItem(opslag)
     const d = s ? JSON.parse(s) as DemoGegevens : null
-    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) ? d : null
+    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) && Array.isArray(d.projectLeveranciers) ? d : null
   } catch {
     return null
   }
 }
 
 /** Waar de proefversie de gegevens van een tester bewaart. Verhoog de versie als de vorm verandert. */
-export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v2'
+export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v3'
 
 export function wisProefgegevens() {
   try { localStorage.removeItem(PROEF_OPSLAG) } catch { /* niets te wissen */ }
@@ -183,23 +183,46 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
     },
 
     async leveranciers(projectId) {
-      return kopie(db.leveranciers.filter(l => l.project_id === projectId).sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
+      const ids = new Set(db.projectLeveranciers.filter(k => k.project_id === projectId).map(k => k.leverancier_id))
+      return kopie(db.leveranciers.filter(l => ids.has(l.id)).sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
     },
-    async voegLeverancierToe(projectId, invoer) {
+    async globaleLeveranciers() {
+      return kopie(db.leveranciers.filter(l => l.globaal).sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
+    },
+    async nieuweLeverancier(projectId, invoer) {
       await wacht()
       const naam = invoer.naam.trim()
       if (naam.length < 2) throw new BronFout('Geef de leverancier een naam van minstens twee letters.')
-      if (db.leveranciers.some(l => l.project_id === projectId && l.naam.toLowerCase() === naam.toLowerCase())) throw new BronFout(`${naam} staat al bij de leveranciers.`)
-      const l = { id: nieuwId('lev'), project_id: projectId, naam, vak: invoer.vak }
+      if (invoer.globaal && db.leveranciers.some(l => l.globaal && l.naam.toLowerCase() === naam.toLowerCase())) throw new BronFout(`${naam} staat al in de globale lijst. Kies hem daar.`)
+      const l = { id: nieuwId('lev'), naam, vak: invoer.vak, globaal: invoer.globaal }
       db.leveranciers.push(l)
+      db.projectLeveranciers.push({ project_id: projectId, leverancier_id: l.id })
       bewaar()
       return kopie(l)
     },
-    async verwijderLeverancier(id) {
+    async koppelLeverancier(projectId, leverancierId) {
       await wacht()
-      if (db.controlepunten.some(p => p.leverancier_id === id)) throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg.')
-      db.leveranciers = db.leveranciers.filter(l => l.id !== id)
+      if (db.projectLeveranciers.some(k => k.project_id === projectId && k.leverancier_id === leverancierId)) throw new BronFout('Deze leverancier staat al bij dit project.')
+      db.projectLeveranciers.push({ project_id: projectId, leverancier_id: leverancierId })
       bewaar()
+    },
+    async ontkoppelLeverancier(projectId, leverancier) {
+      await wacht()
+      if (db.controlepunten.some(p => p.project_id === projectId && p.leverancier_id === leverancier.id)) {
+        throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg, of kies er een andere leverancier bij.')
+      }
+      db.projectLeveranciers = db.projectLeveranciers.filter(k => !(k.project_id === projectId && k.leverancier_id === leverancier.id))
+      if (!leverancier.globaal) db.leveranciers = db.leveranciers.filter(l => l.id !== leverancier.id)
+      bewaar()
+    },
+    async maakGlobaal(leverancierId) {
+      await wacht()
+      const l = db.leveranciers.find(x => x.id === leverancierId)
+      if (!l) throw new BronFout('Deze leverancier bestaat niet (meer).')
+      if (db.leveranciers.some(x => x !== l && x.globaal && x.naam.toLowerCase() === l.naam.toLowerCase())) throw new BronFout('Er staat al een leverancier met deze naam in de globale lijst. Kies die daar.')
+      l.globaal = true
+      bewaar()
+      return kopie(l)
     },
     async controlepunten(projectId) {
       return kopie(db.controlepunten.filter(p => p.project_id === projectId))
@@ -208,7 +231,7 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       return Object.fromEntries(paden.filter(p => db.fotos[p]).map(p => [p, db.fotos[p]!]))
     },
     async voegControlepuntToe(projectId, invoer: NieuwControlepunt) {
-      if (!db.leveranciers.some(l => l.id === invoer.leverancierId && l.project_id === projectId)) throw new BronFout('Kies een leverancier van dit project.')
+      if (invoer.leverancierId && !db.projectLeveranciers.some(k => k.project_id === projectId && k.leverancier_id === invoer.leverancierId)) throw new BronFout('Kies een leverancier van dit project.')
       const id = nieuwId('c')
       const foto = fotoPad(projectId, id)
       // Kleiner dan in het echt: alles staat in de opslag van de browser, en die is maar een paar MB.
@@ -225,11 +248,15 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       }
       return kopie(p)
     },
-    async zetOpgelost(id, opgelost) {
+    async bewaarControlepunt(id, w) {
       await wacht()
       const p = db.controlepunten.find(x => x.id === id)
       if (!p) throw new BronFout('Dit aandachtspunt bestaat niet (meer).')
-      if (opgelost !== p.opgelost) Object.assign(p, { opgelost, opgelost_door: opgelost ? door : null, opgelost_op: opgelost ? new Date().toISOString() : null })
+      if (w.leverancier_id && !db.projectLeveranciers.some(k => k.project_id === p.project_id && k.leverancier_id === w.leverancier_id)) throw new BronFout('Kies een leverancier van dit project.')
+      if (w.leverancier_id !== undefined) p.leverancier_id = w.leverancier_id
+      if (w.opgelost !== undefined && w.opgelost !== p.opgelost) {
+        Object.assign(p, { opgelost: w.opgelost, opgelost_door: w.opgelost ? door : null, opgelost_op: w.opgelost ? new Date().toISOString() : null })
+      }
       bewaar()
       return kopie(p)
     },

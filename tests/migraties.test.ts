@@ -145,12 +145,18 @@ describe('aftekenen en logboek', () => {
 describe('controle', () => {
   let leverancier: string
   let punt: string
+  const koppel = (pid: string, lid: string) => als(MICHIEL, `insert into public.project_leveranciers (project_id, leverancier_id) values ($1, $2)`, [pid, lid])
 
-  it('laat een medewerker leveranciers toevoegen, maar niet twee keer dezelfde', async () => {
-    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (project_id, naam, vak) values ($1, 'Klimaattechniek Oost', 'Installateur') returning id`, [projectId])
+  it('kent een globale lijst zonder dubbele namen, en leveranciers voor één project', async () => {
+    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam, vak, globaal) values ('Klimaattechniek Oost', 'Installateur', true) returning id`)
     leverancier = l!.id
-    await expect(als(MICHIEL, `insert into public.leveranciers (project_id, naam) values ($1, ' klimaattechniek oost')`, [projectId])).rejects.toThrow()
+    await koppel(projectId, leverancier)
+    await expect(koppel(projectId, leverancier)).rejects.toThrow()
+    await expect(als(MICHIEL, `insert into public.leveranciers (naam, globaal) values (' klimaattechniek oost', true)`)).rejects.toThrow()
+    // Alleen voor één project mag dezelfde naam wel.
+    expect(await als(MICHIEL, `insert into public.leveranciers (naam) values ('Klimaattechniek Oost') returning id`)).toHaveLength(1)
     expect(await als(VREEMD, `select id from public.leveranciers`)).toHaveLength(0)
+    expect(await als(VREEMD, `select project_id from public.project_leveranciers`)).toHaveLength(0)
   })
 
   it('vult wie het punt maakte en wie het oploste, en laat de foto en de maker vastliggen', async () => {
@@ -169,6 +175,18 @@ describe('controle', () => {
     expect(weer).toEqual({ opgelost_door: null, opgelost_op: null })
   })
 
+  it('staat een punt zonder leverancier toe, en een leverancier kiezen achteraf, alleen een van het project', async () => {
+    const [p] = await als<{ id: string, leverancier_id: string | null }>(MICHIEL,
+      `insert into public.controlepunten (project_id, notitie, foto) values ($1, 'Plafondplaat gang beschadigd', $2) returning id, leverancier_id`,
+      [projectId, `${projectId}/c.jpg`])
+    expect(p!.leverancier_id).toBeNull()
+    const [na] = await als<{ leverancier_id: string }>(MICHIEL, `update public.controlepunten set leverancier_id = $2 where id = $1 returning leverancier_id`, [p!.id, leverancier])
+    expect(na!.leverancier_id).toBe(leverancier)
+    const [los] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam, globaal) values ('Liftservice Brabant', true) returning id`)
+    await expect(als(MICHIEL, `update public.controlepunten set leverancier_id = $2 where id = $1`, [p!.id, los!.id])).rejects.toThrow()
+    await als(MICHIEL, `delete from public.controlepunten where id = $1`, [p!.id])
+  })
+
   it('weigert een punt zonder foto in de projectmap, zonder notitie, of met een leverancier van een ander project', async () => {
     const insert = `insert into public.controlepunten (project_id, leverancier_id, notitie, foto) values ($1, $2, $3, $4)`
     await expect(als(MICHIEL, insert, [projectId, leverancier, 'Notitie', 'ergens/a.jpg'])).rejects.toThrow()
@@ -177,11 +195,16 @@ describe('controle', () => {
     await expect(als(MICHIEL, insert, [ander!.id, leverancier, 'Notitie', `${ander!.id}/a.jpg`])).rejects.toThrow()
   })
 
-  it('laat een leverancier met aandachtspunten niet weghalen', async () => {
-    await expect(als(MICHIEL, `delete from public.leveranciers where id = $1`, [leverancier])).rejects.toThrow()
+  it('haalt een leverancier met aandachtspunten niet van het project, en een globale niet uit de lijst', async () => {
+    const ontkoppel = () => als(MICHIEL, `delete from public.project_leveranciers where project_id = $1 and leverancier_id = $2`, [projectId, leverancier])
+    await expect(ontkoppel()).rejects.toThrow()
     await als(MICHIEL, `delete from public.controlepunten where id = $1`, [punt])
+    await ontkoppel()
     await als(MICHIEL, `delete from public.leveranciers where id = $1`, [leverancier])
-    expect(await als(MICHIEL, `select id from public.leveranciers where id = $1`, [leverancier])).toHaveLength(0)
+    expect(await als(MICHIEL, `select id from public.leveranciers where id = $1`, [leverancier])).toHaveLength(1)
+    const [eigen] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam) values ('Hoveniersbedrijf De Linde') returning id`)
+    await als(MICHIEL, `delete from public.leveranciers where id = $1`, [eigen!.id])
+    expect(await als(MICHIEL, `select id from public.leveranciers where id = $1`, [eigen!.id])).toHaveLength(0)
   })
 
   it('maakt een besloten bucket voor de foto\'s, alleen voor medewerkers', async () => {

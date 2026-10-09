@@ -4,8 +4,9 @@ import type { Controlepunt } from './types'
 
 export type ControleFilter = 'open' | 'opgelost' | 'alles'
 
+/** leverancier: een id, 'geen' (nog zonder leverancier) of 'alle'. */
 export function pastPunt(p: Controlepunt, filter: ControleFilter, leverancier: string): boolean {
-  if (leverancier !== 'alle' && p.leverancier_id !== leverancier) return false
+  if (leverancier !== 'alle' && (p.leverancier_id ?? 'geen') !== leverancier) return false
   return filter === 'alles' || (filter === 'open') === !p.opgelost
 }
 
