@@ -4,7 +4,8 @@ import { balkTekst } from '~/lib/overzicht'
 import { ROLLEN } from '~/lib/fasen'
 import { fmt, naarDatum } from '~/lib/datum'
 
-// Een project in een overzicht: alleen het nummer, de naam, de kleurenbalk van de taken en wie verantwoordelijk is.
+// Een project in een overzicht: alleen het nummer, de naam, de kleurenbalk van de taken en wie verantwoordelijk is
+// (als chip, zoals op de kaart zelf; een stippelrand als er nog niemand is gekozen).
 // De balk zegt zijn stand in woorden in de tooltip en voor schermlezers.
 defineProps<{
   k: Kaartje
@@ -22,7 +23,9 @@ defineProps<{
       <span class="seg-telaat" :style="{ flexGrow: k.t.telaat }" /><span class="seg-letop" :style="{ flexGrow: k.t.letop }" />
       <span class="seg-klaar" :style="{ flexGrow: k.t.klaar }" /><span class="seg-open" :style="{ flexGrow: k.t.open }" />
     </span>
-    <p class="wie" :class="{ leeg: !k.wie }" :title="ROLLEN[k.rol].naam">{{ k.wie ?? `Geen ${ROLLEN[k.rol].kort}` }}</p>
+    <span class="chip wie" :class="{ leeg: !k.wie }" :title="ROLLEN[k.rol].naam">
+      <span class="label">{{ ROLLEN[k.rol].kort }}</span><b v-if="k.wie">{{ k.wie }}</b><template v-else>nog niet gekozen</template>
+    </span>
     <p v-if="datum" class="kaartje-datum klein">{{ datum.naam }}: {{ datum.waarde ? fmt(naarDatum(datum.waarde)) : 'geen datum' }}</p>
   </NuxtLink>
 </template>

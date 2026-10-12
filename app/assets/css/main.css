@@ -462,8 +462,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .projectkaartje{display:flex;flex-direction:column;gap:6px;text-decoration:none;padding:18px 18px 16px;animation:binnen-zacht .5s var(--uit) both;animation-delay:calc(var(--i,0)*35ms)}
 .projectkaartje .label{margin:0}
 .projectkaartje h3{font-weight:900;font-size:22px;line-height:1.05;letter-spacing:-.02em}
-.projectkaartje .wie{margin:2px 0 0;font-size:15px;font-weight:700}
-.projectkaartje .wie.leeg{color:var(--stil);font-weight:500}
+.projectkaartje .chip.wie{align-self:flex-start;margin-top:4px;font-size:15px}
+.projectkaartje .chip.wie .label{font-size:9.5px}
 .projectkaartje .kaartje-datum{margin:0}
 .mini-balk{display:flex;height:6px;border-radius:6px;overflow:hidden;background:var(--grijs);margin:6px 0 2px}
 .projectkaartje .mini-balk{height:12px;border-radius:7px;margin:8px 0 4px}

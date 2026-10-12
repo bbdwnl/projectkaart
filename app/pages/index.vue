@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Project, Taak, Uitzondering } from '~/lib/types'
 import { faseInfo, ROLLEN } from '~/lib/fasen'
-import { kaartjesVan, KOLOMMEN, leesSortering, sorteerKaartjes, SORTERINGEN, vindt } from '~/lib/overzicht'
+import { kaartjesVan, KOLOMMEN, pastWie, personen, sorteerKaartjes, SORTERINGEN, vindt } from '~/lib/overzicht'
 import { vandaag } from '~/lib/datum'
 
 // De lopende projecten in drie kolommen: ontwikkeling, uitvoering en nazorg. Per kolom het dringendste bovenaan.
@@ -16,14 +16,7 @@ const projecten = ref<Project[]>([])
 const taken = ref<Taak[]>([])
 const catalogus = ref<Uitzondering[]>([])
 const zoek = ref('')
-// De sortering staat in de adresbalk: terug vanaf een kaart geeft dezelfde volgorde.
-const route = useRoute()
-const router = useRouter()
-const sortering = ref(leesSortering(route.query.sort))
-watch(sortering, s => router.replace({ query: s === 'telaat' ? {} : { sort: s } }))
-watch(() => route.query.sort, (s) => {
-  if (route.path === '/') sortering.value = leesSortering(s)
-})
+const { sortering, wie } = useOverzichtKeuze('/')
 const datumBij = (p: Project) => (sortering.value === 'inkoop' ? { naam: 'Inkoop gereed', waarde: p.datum_inkoop } : null)
 
 async function laad() {
@@ -39,9 +32,13 @@ async function laad() {
 onMounted(laad)
 
 const kaartjes = computed(() => sorteerKaartjes(kaartjesVan(projecten.value.filter(p => KOLOMMEN.includes(p.fase)), taken.value, catalogus.value, nu), sortering.value))
+/** Wat past bij het zoeken; daaruit tellen de knoppen van de verantwoordelijke. */
+const gezocht = computed(() => kaartjes.value.filter(k => vindt(k, zoek.value)))
+const mensen = computed(() => personen(gezocht.value, wie.value))
+const gefilterd = computed(() => !!zoek.value.trim() || wie.value !== 'alle')
 const kolommen = computed(() => KOLOMMEN.map((f) => {
   const inFase = kaartjes.value.filter(k => k.p.fase === f)
-  return { fase: f, naam: faseInfo(f).naam, rol: ROLLEN[faseInfo(f).rol].kort, totaal: inFase.length, kaartjes: inFase.filter(k => vindt(k, zoek.value)) }
+  return { fase: f, naam: faseInfo(f).naam, rol: ROLLEN[faseInfo(f).rol].kort, totaal: inFase.length, kaartjes: gezocht.value.filter(k => k.p.fase === f && pastWie(k, wie.value)) }
 }))
 const zin = computed(() => {
   const laat = kaartjes.value.filter(k => k.t.telaat).length
@@ -70,16 +67,25 @@ const zin = computed(() => {
           </div>
         </div>
       </div>
+      <div class="filters">
+        <div class="filtergroep">
+          <span class="label">Verantwoordelijke</span>
+          <div class="seg" role="group" aria-label="Verantwoordelijke">
+            <button type="button" :aria-pressed="wie === 'alle'" @click="wie = 'alle'">Iedereen <span class="n">{{ gezocht.length }}</span></button>
+            <button v-for="m in mensen" :key="m.id" type="button" :aria-pressed="wie === m.id" @click="wie = m.id">{{ m.id === 'geen' ? 'Zonder' : m.id }} <span class="n">{{ m.aantal }}</span></button>
+          </div>
+        </div>
+      </div>
       <div class="kolommen">
         <section v-for="k in kolommen" :key="k.fase" class="kolom" :aria-labelledby="`kolom-${k.fase}`">
           <header class="kolom-kop">
             <h2 :id="`kolom-${k.fase}`">{{ k.naam }}</h2>
-            <span class="klein n">{{ zoek.trim() ? `${k.kaartjes.length} van ${k.totaal}` : k.totaal }} · {{ k.rol }}</span>
+            <span class="klein n">{{ gefilterd ? `${k.kaartjes.length} van ${k.totaal}` : k.totaal }} · {{ k.rol }}</span>
           </header>
           <div class="kolom-lijst">
             <ProjectKaartje v-for="(kaartje, i) in k.kaartjes" :key="kaartje.p.id" :k="kaartje" :volgorde="i" :datum="datumBij(kaartje.p)" />
           </div>
-          <p v-if="!k.kaartjes.length" class="leeg-staat klein">{{ zoek.trim() ? 'Niets gevonden.' : `Geen projecten in ${k.naam.toLowerCase()}.` }}</p>
+          <p v-if="!k.kaartjes.length" class="leeg-staat klein">{{ gefilterd ? 'Niets in deze selectie.' : `Geen projecten in ${k.naam.toLowerCase()}.` }}</p>
         </section>
       </div>
     </template>

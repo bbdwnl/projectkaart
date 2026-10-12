@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import projecten from '~/data/projecten.json'
 import { maakDemoGegevens } from '~/data/demo'
-import { balkTekst, kaartjesVan, KOLOMMEN, leesSortering, sorteerKaartjes, vindt, voornaam } from '~/lib/overzicht'
+import { balkTekst, kaartjesVan, KOLOMMEN, leesSortering, pastWie, personen, sorteerKaartjes, vindt, voornaam } from '~/lib/overzicht'
 import { ORDE } from '~/lib/stoplicht'
 
 describe('projectenoverzicht', () => {
@@ -41,6 +41,19 @@ describe('projectenoverzicht', () => {
     expect(vindt(k, k.p.nummer!.toLowerCase())).toBe(true)
     expect(vindt(k, k.wie!)).toBe(true)
     expect(vindt(k, 'zzz-bestaat-niet')).toBe(false)
+  })
+  it('filtert op wie verantwoordelijk is, ook op projecten zonder', () => {
+    const zonder = { ...kaartjes[0]!, wie: null }
+    const lijst = [...kaartjes, zonder]
+    const mensen = personen(lijst, 'alle')
+    expect(mensen.at(-1)).toEqual({ id: 'geen', aantal: lijst.filter(k => !k.wie).length })
+    expect(mensen.reduce((n, m) => n + m.aantal, 0)).toBe(lijst.length)
+    const naam = mensen[0]!.id
+    expect(lijst.filter(k => pastWie(k, naam)).every(k => k.wie === naam)).toBe(true)
+    expect(lijst.filter(k => pastWie(k, 'geen'))).toEqual(lijst.filter(k => !k.wie))
+    expect(lijst.filter(k => pastWie(k, 'alle'))).toHaveLength(lijst.length)
+    // Een gekozen naam zonder projecten blijft als knop staan, met 0.
+    expect(personen(lijst, 'Iemand')).toContainEqual({ id: 'Iemand', aantal: 0 })
   })
   it('zegt de kleurenbalk ook in woorden', () => {
     expect(balkTekst({ telaat: 2, letop: 0, open: 3, klaar: 5, later: 0 })).toBe('Taken: 2 te laat, 5 klaar, 3 open')

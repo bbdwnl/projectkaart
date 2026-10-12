@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Project, Taak, Uitzondering } from '~/lib/types'
-import { kaartjesVan, leesSortering, sorteerKaartjes, SORTERINGEN, vindt } from '~/lib/overzicht'
+import { kaartjesVan, pastWie, personen, sorteerKaartjes, SORTERINGEN, vindt } from '~/lib/overzicht'
 import { vandaag } from '~/lib/datum'
 
 // De projecten in haalbaarheid: na de lead, voor de ontwikkeling. Dezelfde kaartjes als op Projecten.
@@ -14,14 +14,7 @@ const projecten = ref<Project[]>([])
 const taken = ref<Taak[]>([])
 const catalogus = ref<Uitzondering[]>([])
 const zoek = ref('')
-// De sortering staat in de adresbalk: terug vanaf een kaart geeft dezelfde volgorde.
-const route = useRoute()
-const router = useRouter()
-const sortering = ref(leesSortering(route.query.sort))
-watch(sortering, s => router.replace({ query: s === 'telaat' ? {} : { sort: s } }))
-watch(() => route.query.sort, (s) => {
-  if (route.path === '/haalbaarheid') sortering.value = leesSortering(s)
-})
+const { sortering, wie } = useOverzichtKeuze('/haalbaarheid')
 const datumBij = (p: Project) => (sortering.value === 'inkoop' ? { naam: 'Inkoop gereed', waarde: p.datum_inkoop } : null)
 
 async function laad() {
@@ -37,7 +30,10 @@ async function laad() {
 onMounted(laad)
 
 const kaartjes = computed(() => sorteerKaartjes(kaartjesVan(projecten.value.filter(p => p.fase === 'haalbaarheid'), taken.value, catalogus.value, nu), sortering.value))
-const zichtbaar = computed(() => kaartjes.value.filter(k => vindt(k, zoek.value)))
+/** Wat past bij het zoeken; daaruit tellen de knoppen van de verantwoordelijke. */
+const gezocht = computed(() => kaartjes.value.filter(k => vindt(k, zoek.value)))
+const mensen = computed(() => personen(gezocht.value, wie.value))
+const zichtbaar = computed(() => gezocht.value.filter(k => pastWie(k, wie.value)))
 const zin = computed(() => {
   const n = kaartjes.value.length
   if (!n) return 'Geen projecten in haalbaarheid.'
@@ -67,10 +63,19 @@ const zin = computed(() => {
           </div>
         </div>
       </div>
+      <div class="filters">
+        <div class="filtergroep">
+          <span class="label">Verantwoordelijke</span>
+          <div class="seg" role="group" aria-label="Verantwoordelijke">
+            <button type="button" :aria-pressed="wie === 'alle'" @click="wie = 'alle'">Iedereen <span class="n">{{ gezocht.length }}</span></button>
+            <button v-for="m in mensen" :key="m.id" type="button" :aria-pressed="wie === m.id" @click="wie = m.id">{{ m.id === 'geen' ? 'Zonder' : m.id }} <span class="n">{{ m.aantal }}</span></button>
+          </div>
+        </div>
+      </div>
       <div class="projectgrid">
         <ProjectKaartje v-for="(k, i) in zichtbaar" :key="k.p.id" :k="k" :volgorde="i" :datum="datumBij(k.p)" />
       </div>
-      <p v-if="!zichtbaar.length" class="leeg-staat">Geen project gevonden. Zoek op een deel van de naam of het nummer.</p>
+      <p v-if="!zichtbaar.length" class="leeg-staat">Geen project in deze selectie.</p>
     </template>
     <p v-else class="leeg-staat projectfilters">Nog geen projecten in haalbaarheid. Een lead komt hier zodra je op de kaart de fase op Haalbaarheid zet.</p>
     <footer>Projectkaart BbDW · een project gaat naar Projecten zodra je op de kaart de fase op Ontwikkeling zet.</footer>

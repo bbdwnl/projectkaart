@@ -51,6 +51,18 @@ export function sorteerKaartjes(kaartjes: Kaartje[], op: Sortering): Kaartje[] {
   return [...kaartjes].sort((a, b) => inkoop(a).localeCompare(inkoop(b)) || naam(a, b))
 }
 
+/** Filter op wie verantwoordelijk is: een voornaam, 'geen' (nog niemand gekozen) of 'alle'. */
+export const pastWie = (k: Kaartje, wie: string) => wie === 'alle' || (k.wie ?? 'geen') === wie
+
+/** De mensen om op te filteren, op naam, met hoeveel projecten; "zonder" achteraan. De gekozen naam staat er altijd bij. */
+export function personen(kaartjes: Kaartje[], gekozen: string): { id: string, aantal: number }[] {
+  const namen = new Set(kaartjes.map(k => k.wie ?? 'geen'))
+  if (gekozen !== 'alle') namen.add(gekozen)
+  return [...namen]
+    .sort((a, b) => Number(a === 'geen') - Number(b === 'geen') || a.localeCompare(b, 'nl'))
+    .map(id => ({ id, aantal: kaartjes.filter(k => (k.wie ?? 'geen') === id).length }))
+}
+
 /** Zoeken op naam, nummer, AFAS-nummer, plaats of wie verantwoordelijk is. */
 export function vindt(k: Kaartje, zoek: string): boolean {
   const z = zoek.trim().toLowerCase()
