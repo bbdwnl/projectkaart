@@ -1,8 +1,9 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import type { Controlepunt, Financien, Leverancier, LogRegel, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
+import type { Controlepunt, Deellink, Financien, Leverancier, LogRegel, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
 import { fotoPad } from '~/lib/controle'
+import type { ExternAntwoord } from '~/lib/deellink'
 
 function uitkomst<T>(res: { data: T | null, error: PostgrestError | null }, wat: string): T {
   if (res.error) {
@@ -15,8 +16,21 @@ function uitkomst<T>(res: { data: T | null, error: PostgrestError | null }, wat:
 
 const UNIEK = '23505'
 const IN_GEBRUIK = '23503'
+const ZELF_GEMELD = 'P0001' // raise exception in een trigger: de melding is voor de gebruiker
 const FOTOS = 'controle'
 const TEKENINGEN = 'tekeningen'
+
+/** De pagina van de leverancier praat met de server (server/api/punten), niet met de database. */
+async function viaServer<T>(pad: string, code: string): Promise<T> {
+  try {
+    return await ($fetch(pad, { method: 'POST', body: { code } }) as Promise<T>)
+  } catch (e) {
+    const status = (e as { statusCode?: number }).statusCode
+    throw new BronFout(status === 503
+      ? 'Delen met leveranciers is nog niet ingesteld op de server.'
+      : status === 403 || status === 404 ? 'Deze tekening hoort niet (meer) bij deze link.' : 'De gegevens zijn nu niet bereikbaar. Probeer het straks opnieuw.')
+  }
+}
 
 /** De echte bron: Supabase in Frankfurt. Wat iemand mag, regelt RLS in de database. */
 export function maakSupabaseBron(sb: SupabaseClient): Bron {
@@ -203,6 +217,25 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       const res = await sb.from('controlepunten').delete().eq('id', punt.id)
       if (res.error) uitkomst(res, 'het aandachtspunt weghalen')
       await sb.storage.from(FOTOS).remove([punt.foto]) // lukt dit niet, dan blijft alleen een losse foto achter
+    },
+
+    async deellinks() {
+      return uitkomst(await sb.from('deellinks').select('*').order('aangemaakt_op', { ascending: false }), 'de links laden') as Deellink[]
+    },
+    async maakDeellink(leverancierId) {
+      // Token, code en einddatum vult de database in.
+      const res = await sb.from('deellinks').insert({ leverancier_id: leverancierId }).select().single()
+      if (res.error?.code === ZELF_GEMELD) throw new BronFout(res.error.message)
+      return uitkomst(res, 'de link maken') as Deellink
+    },
+    async trekDeellinkIn(id) {
+      return uitkomst(await sb.from('deellinks').update({ gesloten_reden: 'ingetrokken' }).eq('id', id).select().single(), 'de link intrekken') as Deellink
+    },
+    async externeInhoud(token, code) {
+      return viaServer<ExternAntwoord>(`/api/punten/${encodeURIComponent(token)}`, code)
+    },
+    async externeTekeningUrl(token, code, tekeningId) {
+      return (await viaServer<{ url: string }>(`/api/punten/${encodeURIComponent(token)}/tekening/${encodeURIComponent(tekeningId)}`, code)).url
     },
   }
 }

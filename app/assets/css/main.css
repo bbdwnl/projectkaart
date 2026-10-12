@@ -228,7 +228,9 @@ section.blok{padding:58px 0 0}
 .notitie-paneel .spoor-regel{margin:0;font-size:12.5px;line-height:18px}
 .notitie-knoppen{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .notitie-knoppen .link{font-size:14px}
-.uitz-balk{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:var(--lijn-dun);background:var(--grijs-2);position:relative}
+.uitz-balk{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:var(--lijn-dun);background:var(--grijs-2);position:relative;border-radius:0 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px)}
+/* De lijst knipt af voor de ronde hoeken; zolang de suggesties open zijn mogen die eronder uitsteken. */
+.lijst:has(.suggesties){overflow:visible}
 .uitz-balk input{flex:1;max-width:420px}
 .suggesties{position:absolute;left:14px;top:calc(100% - 6px);width:520px;max-width:calc(100% - 28px);background:var(--wit);border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog);z-index:20;padding:6px;transform-origin:top left;animation:open .25s var(--uit)}
 @keyframes open{from{opacity:0;transform:translateY(-6px) scale(.98)}}
@@ -746,3 +748,86 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .wachtwoord{display:grid;gap:6px;margin:0 0 16px;max-width:320px}
 .wachtwoord label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
 .wachtwoord .veld{height:42px;font-size:15px}
+
+/* controle: delen met extern (de pdf, en een link voor een leverancier) */
+.delen{width:min(620px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:0;border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog);background:var(--wit);color:var(--zwart);overscroll-behavior:contain}
+.delen::backdrop{background:rgba(17,17,17,.6)}
+.delen-in{padding:22px 22px 24px}
+.delen-kop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.delen-kop .label{margin:0 0 6px}
+.sluit-knop{flex:none;width:38px;height:38px;padding:0;border:var(--rand);border-radius:50%;background:var(--wit);display:grid;place-items:center;cursor:pointer}
+.sluit-knop:hover{background:var(--grijs)}
+.delen-deel{display:grid;gap:12px;margin-top:20px;padding-top:20px;border-top:var(--lijn-dun)}
+.delen-deel h3{font-weight:900;font-size:20px;letter-spacing:-.02em}
+.delen-deel>p.klein{margin:-4px 0 0}
+.delen-deel .melding{padding:0}
+.delen-veld{display:grid;gap:6px}
+.delen-veld .label{margin:0}
+.delen-veld .veld{width:100%;height:40px}
+.deellink{display:grid;gap:12px;padding:16px;border-radius:var(--radius);background:var(--grijs-2)}
+.deellink p.klein{margin:0}
+.deellink-stand{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0}
+.deellink-rij{display:flex;gap:8px;align-items:center}
+.deellink-rij .veld{flex:1;min-width:0;height:38px}
+.deellink-code{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap}
+.deellink-code .label{margin:0}
+.code-cijfers{font-weight:900;font-size:30px;line-height:1;letter-spacing:.3em}
+.delen-knoppen{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px}
+a.knop{text-decoration:none}
+.gedeeld-link{font-size:inherit}
+@media (max-width:760px){
+  .delen{width:100%;max-height:92dvh;margin:auto 0 0;border-radius:var(--radius) var(--radius) 0 0;border-bottom:0}
+  .delen-in{padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
+  .delen-knoppen .knop{flex:1 1 auto;justify-content:center}
+}
+
+/* de pagina van een leverancier (/punten/<token>): de code, of wat er open staat */
+.poort{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+.poort-kaart{width:100%;max-width:520px;padding:40px 36px 34px}
+.poort-kaart .label{margin:0 0 10px}
+.poort-kaart h1{font-size:clamp(34px,5vw,52px)}
+.poort-kaart .lead{margin:18px 0 26px}
+.poort-kaart .laden-regel{margin-top:14px}
+.code-veld{display:grid;gap:8px;margin:0 0 18px}
+.code-veld .label{margin:0}
+.code-invoer{width:min(100%,250px);height:62px;padding:0 0 0 .55em;border-radius:var(--radius);font-size:34px;font-weight:900;letter-spacing:.5em}
+.extern .wrap{max-width:calc(980px + 2*40px)}
+.extern-kop{padding:28px 0 8px}
+.extern-balk{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:44px}
+.extern-logo{display:block;width:130px;height:auto}
+.extern-kop .melding{padding:0 0 14px}
+.extern-kop .label{margin:0 0 14px}
+.extern-zin{min-height:0;margin-top:18px}
+.extern-uitleg{margin:12px 0 0;max-width:36em;color:#3d3d3d}
+.extern-acties{display:flex;align-items:center;flex-wrap:wrap;gap:12px 14px;margin-top:28px}
+.extern-filter{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.extern-filter button{flex:none;white-space:nowrap}
+.extern-lijst{display:grid;gap:34px;padding-top:38px}
+.extern-project{padding:26px 22px 4px}
+.extern-project-kop{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;padding-bottom:18px}
+.extern-project-kop h2{font-size:26px}
+.extern-project-kop p.klein{margin:6px 0 0}
+.extern-punten{list-style:none;margin:0 -22px;padding:0}
+.extern-punt{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:start;padding:16px 22px;border-top:var(--lijn-dun)}
+.extern-punt .duim{width:120px;height:90px}
+.extern-punt .duim:disabled{cursor:default}
+.extern-punt-tekst{display:grid;gap:4px;justify-items:start}
+.extern-punt-tekst .notitie{margin:0;font-size:17px;line-height:24px;white-space:pre-line}
+.extern-punt-tekst small{font-size:13px;line-height:19px;color:var(--stil)}
+.extern-plek{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:6px 12px;border:var(--rand);border-radius:var(--rond);background:var(--wit);font-size:13px;font-weight:700;line-height:18px;white-space:nowrap;cursor:pointer}
+.extern-plek svg{flex:none}
+.extern-plek:hover{background:var(--grijs)}
+.code-invoer::placeholder{color:#d2d2cc}
+.extern-voet{display:grid;gap:10px;justify-items:start;padding:30px 0 60px;font-size:14px;line-height:21px}
+.extern-voet p{margin:0;max-width:44em}
+.extern-voet .link{font-size:13px;color:var(--stil)}
+@media (max-width:760px){
+  .extern .wrap{padding:0 16px}
+  .extern-balk{margin-bottom:30px}
+  .extern-project{padding:24px 16px 4px}
+  .extern-punten{margin:0 -16px}
+  .extern-punt{grid-template-columns:88px minmax(0,1fr);gap:12px;padding:14px 16px}
+  .extern-punt .duim{width:88px;height:66px}
+  .extern-project-kop .knop,.extern-acties>.knop{width:100%;justify-content:center}
+  .poort-kaart{padding:34px 22px 28px}
+}

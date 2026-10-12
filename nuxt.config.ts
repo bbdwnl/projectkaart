@@ -49,6 +49,9 @@ export default defineNuxtConfig({
     // Tijdelijk: wachtwoord voor de proefversie (NUXT_PROEF_WACHTWOORD). Leeg = geen wachtwoord.
     // Wordt op de server gecontroleerd; komt nooit in de browser.
     proefWachtwoord: '',
+    // De service-sleutel van Supabase (NUXT_SUPABASE_SERVICE_KEY), alleen op de server: daarmee leest
+    // server/api/punten de open punten voor de pagina van een leverancier. Leeg = delen werkt nog niet.
+    supabaseServiceKey: '',
     public: {
       // Proefversie: Microsoft is nog niet gekoppeld. De inlogknop laat je zonder account
       // binnen en alles draait op voorbeeldgegevens in de browser van de tester.

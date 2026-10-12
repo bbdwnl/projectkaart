@@ -2,7 +2,7 @@
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import type { Controlepunt, Fase, Financien, Leverancier, LogRegel, ProjectLeverancier, Tekening, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
+import type { Controlepunt, Deellink, Fase, Financien, Leverancier, LogRegel, ProjectLeverancier, Tekening, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
@@ -26,7 +26,7 @@ export interface ProjectBasis {
   datum_oplevering: string | null
 }
 
-export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {}, tekeningen: [] })
+export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {}, tekeningen: [], deellinks: [] })
 
 export interface DemoGegevens {
   projecten: Project[]
@@ -41,6 +41,10 @@ export interface DemoGegevens {
   fotos: Record<string, string>
   /** De pdf's zelf staan in IndexedDB (demo-bestanden.ts), behalve de voorbeeldtekening (public/). */
   tekeningen: Tekening[]
+  /** Links voor leveranciers. Een kopie staat op de server, zodat ze ook op een ander apparaat werken. */
+  deellinks: Deellink[]
+  /** Welke eigen tekeningen van de tester al bij een link op de server staan: '<token>/<tekening-id>'. */
+  proefUploads?: string[]
 }
 
 /** Vaste "toeval" per sleutel, zodat de demo elke keer hetzelfde is. */
@@ -330,7 +334,7 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
   }]
 
   return {
-    projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, tekeningen,
+    projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, tekeningen, deellinks: [],
     fotos: { [VOORBEELDFOTO]: '/voorbeeld-aandachtspunt.jpg' },
   }
 }

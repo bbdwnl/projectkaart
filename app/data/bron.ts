@@ -1,5 +1,6 @@
-import type { Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, ProjectLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, ProjectLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { NieuweLead } from '~/lib/leads'
+import type { ExternAntwoord } from '~/lib/deellink'
 
 /**
  * Waar de gegevens vandaan komen. Twee uitvoeringen: Supabase (echt) en demo
@@ -58,6 +59,17 @@ export interface Bron {
   /** Opgelost of weer open, of een (andere) leverancier. */
   bewaarControlepunt(id: string, wijziging: ControlepuntWijziging): Promise<Controlepunt>
   verwijderControlepunt(punt: Controlepunt): Promise<void>
+
+  /** De links voor leveranciers, nieuwste eerst. */
+  deellinks(): Promise<Deellink[]>
+  /** Een nieuwe link voor deze leverancier: een maand geldig, met een code van vijf cijfers. Alleen met open punten. */
+  maakDeellink(leverancierId: string): Promise<Deellink>
+  /** De link gaat meteen dicht. */
+  trekDeellinkIn(id: string): Promise<Deellink>
+  /** De pagina van de leverancier, zonder account: wat er open staat, alleen met de juiste code. */
+  externeInhoud(token: string, code: string): Promise<ExternAntwoord>
+  /** Een tijdelijk adres van een tekening op die pagina (met de juiste code). */
+  externeTekeningUrl(token: string, code: string, tekeningId: string): Promise<string>
 }
 
 export interface NieuwControlepunt {

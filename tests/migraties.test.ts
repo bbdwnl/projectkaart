@@ -12,6 +12,7 @@ const AUTH_STUB = `
   create function auth.uid() returns uuid language sql stable as $$ select nullif(auth.jwt() ->> 'sub', '')::uuid $$;
   create role authenticated;
   create role anon;
+  create role service_role bypassrls;
   grant usage on schema auth to authenticated;
   create schema storage;
   create table storage.buckets (id text primary key, name text not null, public boolean not null default false, file_size_limit bigint, allowed_mime_types text[]);
@@ -31,9 +32,9 @@ const WACHTWOORD = { ...MICHIEL, sub: '00000000-0000-0000-0000-000000000004', ap
 let db: PGlite
 let projectId: string
 
-/** Voert sql uit als ingelogde gebruiker (rol authenticated, met deze claims). */
-async function als<T = Record<string, unknown>>(claims: object, query: string, params: unknown[] = []) {
-  await db.exec(`set role authenticated; select set_config('request.jwt.claims', '${JSON.stringify(claims)}', false);`)
+/** Voert sql uit als ingelogde gebruiker (rol authenticated, met deze claims), of in een andere rol. */
+async function als<T = Record<string, unknown>>(claims: object, query: string, params: unknown[] = [], rol = 'authenticated') {
+  await db.exec(`set role ${rol}; select set_config('request.jwt.claims', '${JSON.stringify(claims)}', false);`)
   try {
     return (await db.query<T>(query, params)).rows
   } finally {
@@ -46,7 +47,8 @@ beforeAll(async () => {
   await db.exec(AUTH_STUB)
   for (const m of migraties) await db.exec(m)
   await db.exec(readFileSync(new URL('seed.sql', map), 'utf8'))
-  await db.exec(`grant usage on schema public to authenticated, anon; grant all on all tables in schema public to authenticated, anon;
+  await db.exec(`grant usage on schema public to authenticated, anon; grant all on all tables in schema public to authenticated, anon, service_role;
+    grant usage on schema public to service_role;
     revoke update on public.profielen from authenticated; grant update (naam) on public.profielen to authenticated;`)
   await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, '{"full_name":"Michiel"}'), ($3, $4, '{"full_name":"Benno van Bergen"}')`,
     [MICHIEL.sub, MICHIEL.email, BENNO.sub, BENNO.email])
@@ -248,5 +250,113 @@ describe('tekeningen', () => {
     expect(b).toEqual({ public: false, allowed_mime_types: ['application/pdf'] })
     await als(MICHIEL, `insert into storage.objects (bucket_id, name) values ('tekeningen', $1)`, [`${projectId}/bg.pdf`])
     expect(await als(VREEMD, `select name from storage.objects where bucket_id = 'tekeningen'`)).toHaveLength(0)
+  })
+})
+
+describe('deellinks', () => {
+  const SERVER = { role: 'service_role' }
+  const ANONIEM = { role: 'anon' }
+  let leverancier: string
+  let punt: string
+  const maak = () => als<{ id: string, token: string, code: string, maand: boolean, aangemaakt_door: string }>(MICHIEL,
+    `insert into public.deellinks (leverancier_id) values ($1) returning id, token, code, geldig_tot = aangemaakt_op + interval '1 month' as maand, aangemaakt_door`, [leverancier])
+  const link = (id: string) => db.query<{ gesloten_reden: string | null, gesloten_door: string | null, gesloten_op: string | null, foute_pogingen: number, bekeken_op: string | null }>(
+    `select gesloten_reden, gesloten_door, gesloten_op, foute_pogingen, bekeken_op from public.deellinks where id = $1`, [id]).then(r => r.rows[0]!)
+
+  it('maakt een link alleen voor een leverancier met open punten', async () => {
+    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam, globaal) values ('Elektro Hendriks', true) returning id`)
+    leverancier = l!.id
+    await als(MICHIEL, `insert into public.project_leveranciers (project_id, leverancier_id) values ($1, $2)`, [projectId, leverancier])
+    await expect(maak()).rejects.toThrow(/geen open aandachtspunten/)
+    const [p] = await als<{ id: string }>(MICHIEL,
+      `insert into public.controlepunten (project_id, leverancier_id, notitie, foto) values ($1, $2, 'Wandcontactdoos bij de balie zit los', $3) returning id`,
+      [projectId, leverancier, `${projectId}/w.jpg`])
+    punt = p!.id
+  })
+
+  it('zet token, code (alleen 2 tot 9) en een maand geldig zelf, wat de browser ook meestuurt', async () => {
+    const [d] = await als<{ token: string, code: string, maand: boolean, aangemaakt_door: string }>(MICHIEL,
+      `insert into public.deellinks (leverancier_id, token, code, geldig_tot) values ($1, $2, '22222', now() + interval '1 year')
+       returning token, code, geldig_tot = aangemaakt_op + interval '1 month' as maand, aangemaakt_door`, [leverancier, 'a'.repeat(64)])
+    expect(d!.token).toMatch(/^[0-9a-f]{64}$/)
+    expect(d!.token).not.toBe('a'.repeat(64))
+    expect(d!).toMatchObject({ maand: true, aangemaakt_door: 'Michiel' })
+    const codes = []
+    for (let i = 0; i < 40; i++) codes.push((await maak())[0]!.code)
+    expect(codes.every(c => /^[2-9]{5}$/.test(c))).toBe(true)
+    expect(new Set(codes.join(''))).toEqual(new Set('23456789'))
+  })
+
+  it('is alleen voor medewerkers te lezen, niet voor anonieme bezoekers of andere accounts', async () => {
+    expect((await als(MICHIEL, `select id from public.deellinks`)).length).toBeGreaterThan(0)
+    expect(await als(VREEMD, `select id from public.deellinks`)).toHaveLength(0)
+    expect(await als(ANONIEM, `select id from public.deellinks`, [], 'anon')).toHaveLength(0)
+    await expect(als(ANONIEM, `insert into public.deellinks (leverancier_id) values ($1)`, [leverancier], 'anon')).rejects.toThrow()
+    await expect(als(MICHIEL, `delete from public.deellinks returning id`)).resolves.toHaveLength(0)
+  })
+
+  it('laat de code, de einddatum en wat de server bijhoudt niet aanpassen door medewerkers', async () => {
+    const [d] = await maak()
+    await als(MICHIEL, `update public.deellinks set code = '22222', geldig_tot = now() + interval '1 year', foute_pogingen = 0, bekeken_op = now() where id = $1`, [d!.id])
+    const [na] = await als<{ code: string, maand: boolean }>(MICHIEL, `select code, geldig_tot = aangemaakt_op + interval '1 month' as maand from public.deellinks where id = $1`, [d!.id])
+    expect(na).toEqual({ code: d!.code, maand: true })
+    expect(await link(d!.id)).toMatchObject({ bekeken_op: null, foute_pogingen: 0 })
+    // De server wel: een verkeerde code, en daarna bekeken.
+    await als(SERVER, `update public.deellinks set foute_pogingen = 3 where id = $1`, [d!.id], 'service_role')
+    expect((await link(d!.id)).foute_pogingen).toBe(3)
+    await als(SERVER, `update public.deellinks set foute_pogingen = 0, bekeken_op = now() where id = $1`, [d!.id], 'service_role')
+    const bekeken = await link(d!.id)
+    expect(bekeken.foute_pogingen).toBe(0)
+    expect(bekeken.bekeken_op).not.toBeNull()
+  })
+
+  it('trekt een link in, met wie en wanneer; dicht blijft dicht', async () => {
+    const [d] = await maak()
+    await als(BENNO, `update public.deellinks set gesloten_reden = 'ingetrokken', gesloten_door = 'Iemand anders' where id = $1`, [d!.id])
+    expect(await link(d!.id)).toMatchObject({ gesloten_reden: 'ingetrokken', gesloten_door: 'Benno van Bergen' })
+    await als(MICHIEL, `update public.deellinks set gesloten_reden = null, gesloten_op = null where id = $1`, [d!.id])
+    expect((await link(d!.id)).gesloten_reden).toBe('ingetrokken')
+  })
+
+  it('gaat dicht zodra het laatste open punt van de leverancier is opgelost, en gaat niet vanzelf weer open', async () => {
+    const [d] = await maak()
+    await als(BENNO, `update public.controlepunten set opgelost = true where id = $1`, [punt])
+    expect(await link(d!.id)).toMatchObject({ gesloten_reden: 'opgelost', gesloten_door: 'Benno van Bergen' })
+    // De eerder ingetrokken link houdt zijn reden.
+    expect((await als<{ gesloten_reden: string }>(MICHIEL, `select gesloten_reden from public.deellinks where gesloten_reden = 'ingetrokken'`)).length).toBeGreaterThan(0)
+    await als(MICHIEL, `update public.controlepunten set opgelost = false where id = $1`, [punt])
+    expect((await link(d!.id)).gesloten_reden).toBe('opgelost')
+    expect(await als(MICHIEL, `select id from public.deellinks where gesloten_reden is null`)).toHaveLength(0)
+  })
+
+  it('sluit ook als het laatste punt naar een andere leverancier gaat of wordt weggehaald', async () => {
+    const [d] = await maak()
+    await als(MICHIEL, `update public.controlepunten set leverancier_id = null where id = $1`, [punt])
+    expect((await link(d!.id)).gesloten_reden).toBe('opgelost')
+    await als(MICHIEL, `update public.controlepunten set leverancier_id = $2 where id = $1`, [punt, leverancier])
+    const [d2] = await maak()
+    await als(MICHIEL, `delete from public.controlepunten where id = $1`, [punt])
+    expect((await link(d2!.id)).gesloten_reden).toBe('opgelost')
+  })
+})
+
+describe('proefversie: kopie van een deellink', () => {
+  const SERVER = { role: 'service_role' }
+  const insert = `insert into public.proef_deellinks (token, code, geldig_tot, inhoud) values ($1, '23456', now() + $2::interval, '{"punten":[]}') returning token`
+
+  it('is alleen voor de server: medewerkers en anonieme bezoekers kunnen er niet bij', async () => {
+    expect(await als(SERVER, insert, ['d'.repeat(64), '1 month'], 'service_role')).toHaveLength(1)
+    expect(await als(MICHIEL, `select token from public.proef_deellinks`)).toHaveLength(0)
+    expect(await als({ role: 'anon' }, `select token from public.proef_deellinks`, [], 'anon')).toHaveLength(0)
+    await expect(als(MICHIEL, insert, ['e'.repeat(64), '1 day'])).rejects.toThrow()
+  })
+  it('is ook in de proefversie hooguit een maand geldig, met een code van 2 tot 9', async () => {
+    await expect(als(SERVER, insert, ['f'.repeat(64), '3 months'], 'service_role')).rejects.toThrow()
+    await expect(als(SERVER, `insert into public.proef_deellinks (token, code, geldig_tot, inhoud) values ($1, '10234', now(), '{}')`, ['0'.repeat(64)], 'service_role')).rejects.toThrow()
+  })
+  it('heeft een besloten bucket voor de tekeningen van testers', async () => {
+    const [b] = (await db.query<{ public: boolean, allowed_mime_types: string[] }>(`select public, allowed_mime_types from storage.buckets where id = 'proef'`)).rows
+    expect(b).toEqual({ public: false, allowed_mime_types: ['application/pdf'] })
+    await expect(als(MICHIEL, `insert into storage.objects (bucket_id, name) values ('proef', 'x/y.pdf')`)).rejects.toThrow()
   })
 })

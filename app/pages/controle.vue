@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { Controlepunt, Leverancier, Project, Tekening } from '~/lib/types'
+import type { Controlepunt, Deellink, Leverancier, Project, Tekening } from '~/lib/types'
 import { groepeerPunten, nummerPerProject, pastPunt, pdfNaam, telPunten, type ControleFilter, type Indeling } from '~/lib/controle'
+import { actieveLink } from '~/lib/deellink'
 import { pinsVan } from '~/lib/tekening'
 import { fmt, fmtMoment, vandaag } from '~/lib/datum'
 
 // Alle aandachtspunten over alle projecten. Per project (eventueel één leverancier) of per leverancier
 // over alle projecten, en daarvan een pdf om te versturen. De keuze staat in de adresbalk.
+// Delen: de pdf via de telefoon, of een link voor een leverancier naar een eigen pagina (ControleDelen).
 useHead({ title: 'Controle · Projectkaart' })
 const bron = useBron()
 const { modus } = useGebruiker()
@@ -20,11 +22,15 @@ const leveranciers = ref<Leverancier[]>([])
 const punten = ref<Controlepunt[]>([])
 const fotos = ref<Record<string, string>>({})
 const tekeningen = ref<Tekening[]>([])
+const links = ref<Deellink[]>([])
 
 async function laad() {
   stand.value = 'laden'
   try {
-    ;[projecten.value, leveranciers.value, punten.value, tekeningen.value] = await Promise.all([bron.projecten(), bron.leveranciers(), bron.controlepunten(), bron.tekeningen()])
+    // Zonder de links werkt de rest gewoon (bijvoorbeeld als de migratie er nog niet op staat).
+    ;[projecten.value, leveranciers.value, punten.value, tekeningen.value, links.value] = await Promise.all([
+      bron.projecten(), bron.leveranciers(), bron.controlepunten(), bron.tekeningen(), bron.deellinks().catch(() => []),
+    ])
     stand.value = 'klaar'
   } catch (e) {
     fout.value = foutTekst(e)
@@ -132,33 +138,37 @@ const tekeningTekst = (p: Controlepunt) => {
 
 // ---------- pdf ----------
 const bezig = ref(false)
+async function maakPdf(): Promise<{ blob: Blob, naam: string }> {
+  const paden = [...new Set(zichtbaar.value.map(p => p.foto))]
+  const urls = await bron.fotoUrls(paden).catch(() => ({} as Record<string, string>))
+  // Per tekening één adres, voor de uitsneden met de plek.
+  const tekeningUrls = new Map<string, string | null>()
+  for (const id of new Set(zichtbaar.value.map(p => p.tekening_id).filter((t): t is string => !!t))) {
+    const t = tekeningen.value.find(x => x.id === id)
+    tekeningUrls.set(id, t ? await bron.tekeningUrl(t).catch(() => null) : null)
+  }
+  const plekVan = (p: Controlepunt) => {
+    const url = p.tekening_id ? tekeningUrls.get(p.tekening_id) : null
+    return url ? { url, blad: p.tekening_blad!, x: p.tekening_x!, y: p.tekening_y!, tekst: tekeningTekst(p) } : null
+  }
+  const blob = await maakControlePdf({
+    titel: titel.value,
+    ondertitel: ondertitel.value,
+    selectie: STATUS_TEKST.value.selectie,
+    bijLabel: anders.value === 'project' ? 'Project' : 'Leverancier',
+    groepen: groepen.value.map(g => ({
+      titel: g.titel,
+      punten: g.punten.map(p => ({ punt: p, nummer: nummers.value.get(p.id), fotoUrl: urls[p.foto] ?? null, bij: g.titel, plek: plekVan(p) })),
+    })),
+  })
+  return { blob, naam: pdfNaam([titel.value, ondertitel.value], fmt(nu)) }
+}
 async function pdf() {
   if (!zichtbaar.value.length) return
   bezig.value = true
   try {
-    const paden = [...new Set(zichtbaar.value.map(p => p.foto))]
-    const urls = await bron.fotoUrls(paden).catch(() => ({} as Record<string, string>))
-    // Per tekening één adres, voor de uitsneden met de plek.
-    const tekeningUrls = new Map<string, string | null>()
-    for (const id of new Set(zichtbaar.value.map(p => p.tekening_id).filter((t): t is string => !!t))) {
-      const t = tekeningen.value.find(x => x.id === id)
-      tekeningUrls.set(id, t ? await bron.tekeningUrl(t).catch(() => null) : null)
-    }
-    const plekVan = (p: Controlepunt) => {
-      const url = p.tekening_id ? tekeningUrls.get(p.tekening_id) : null
-      return url ? { url, blad: p.tekening_blad!, x: p.tekening_x!, y: p.tekening_y!, tekst: tekeningTekst(p) } : null
-    }
-    await maakControlePdf({
-      titel: titel.value,
-      ondertitel: ondertitel.value,
-      selectie: STATUS_TEKST.value.selectie,
-      bijLabel: anders.value === 'project' ? 'Project' : 'Leverancier',
-      groepen: groepen.value.map(g => ({
-        titel: g.titel,
-        punten: g.punten.map(p => ({ punt: p, nummer: nummers.value.get(p.id), fotoUrl: urls[p.foto] ?? null, bij: g.titel, plek: plekVan(p) })),
-      })),
-      bestandsnaam: pdfNaam([titel.value, ondertitel.value], fmt(nu)),
-    })
+    const { blob, naam } = await maakPdf()
+    downloaden(blob, naam)
     toon('Pdf gemaakt')
   } catch (e) {
     toon(`De pdf maken is niet gelukt. ${foutTekst(e)}`, 'fout')
@@ -166,6 +176,25 @@ async function pdf() {
     bezig.value = false
   }
 }
+
+// ---------- delen met extern ----------
+const delenOpen = ref(false)
+/** Leveranciers met open punten, voor de link; op naam. */
+const metOpen = computed(() => [...telPunten(punten.value, 'leverancier')]
+  .filter(([id, t]) => id !== 'geen' && t.open)
+  .map(([id, t]) => ({ id, naam: leverancierNaam(id), open: t.open }))
+  .sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
+/** Met wie het venster begint: de gekozen leverancier, of de eerste met open punten op het gekozen project. */
+const deelStart = computed(() => {
+  if (keuze.indeling === 'leverancier') return keuze.gekozen
+  if (keuze.leverancier !== 'alle' && keuze.leverancier !== 'geen') return keuze.leverancier
+  return metOpen.value.find(l => vanGekozen.value.some(p => p.leverancier_id === l.id && !p.opgelost))?.id ?? null
+})
+const deelPdf = computed(() => ({ omschrijving: `${titel.value} · ${ondertitel.value} · ${STATUS_TEKST.value.selectie.toLowerCase()}`, aantal: zichtbaar.value.length, maak: maakPdf }))
+function linkBijgewerkt(l: Deellink) {
+  links.value = [l, ...links.value.filter(x => x.id !== l.id)]
+}
+const gedeeld = computed(() => (keuze.indeling === 'leverancier' && keuze.gekozen ? actieveLink(links.value, keuze.gekozen, new Date()) : null))
 </script>
 
 <template>
@@ -207,6 +236,7 @@ async function pdf() {
               <p class="klein">
                 {{ ondertitel }} · {{ STATUS_TEKST.selectie.toLowerCase() }}: {{ zichtbaar.length }}
                 <template v-if="gekozenProject"> · <NuxtLink :to="`/projecten/${gekozenProject.slug}#controle`">naar de kaart</NuxtLink></template>
+                <template v-if="gedeeld"> · <button type="button" class="link gedeeld-link" @click="delenOpen = true">gedeeld tot {{ fmt(new Date(gedeeld.geldig_tot)) }}{{ gedeeld.bekeken_op ? ', bekeken' : '' }}</button></template>
               </p>
             </div>
             <div class="overzicht-acties">
@@ -214,7 +244,8 @@ async function pdf() {
                 <option value="alle">Alle leveranciers</option>
                 <option v-for="l in leverancierKeuzes" :key="l.id" :value="l.id">{{ l.naam }} ({{ l.open }} open)</option>
               </select>
-              <button type="button" class="knop zwart" :disabled="bezig || !zichtbaar.length" @click="pdf">{{ bezig ? 'Pdf maken…' : 'Pdf maken' }}</button>
+              <button type="button" class="knop" :disabled="bezig || !zichtbaar.length" @click="pdf">{{ bezig ? 'Pdf maken…' : 'Pdf maken' }}</button>
+              <button type="button" class="knop zwart" aria-haspopup="dialog" @click="delenOpen = true">Delen met extern</button>
             </div>
           </div>
 
@@ -250,6 +281,7 @@ async function pdf() {
       :plek="{ tekening_id: viewer.tekening_id, blad: viewer.tekening_blad!, x: viewer.tekening_x!, y: viewer.tekening_y! }" :actief="viewer.id"
       :titel="`#${nummers.get(viewer.id)} · ${projectNaam(viewer.project_id)}`" @sluit="viewer = null"
     />
+    <ControleDelen v-if="delenOpen" :leveranciers="metOpen" :start="deelStart" :links="links" :pdf="deelPdf" @link="linkBijgewerkt" @sluit="delenOpen = false" />
     <footer>Projectkaart BbDW</footer>
   </main>
 </template>

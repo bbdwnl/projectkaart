@@ -18,6 +18,15 @@ export function plusDagen(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 }
 
+/** Een maand later, op dezelfde tijd; van 31 januari naar 28 (of 29) februari, net als in Postgres. */
+export function plusMaand(d: Date): Date {
+  const r = new Date(d)
+  r.setDate(1)
+  r.setMonth(r.getMonth() + 1)
+  r.setDate(Math.min(d.getDate(), new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate()))
+  return r
+}
+
 /** Hele dagen van a naar b (negatief als b eerder is). */
 export function dagenTussen(a: Date, b: Date): number {
   return Math.round((b.getTime() - a.getTime()) / DAG)

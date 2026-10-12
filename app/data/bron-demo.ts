@@ -3,10 +3,13 @@ import { BronFout } from './bron'
 import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import { leegProject } from '~/lib/leads'
-import { GEEN_PLEK, type Controlepunt, type Fase, type LogRegel, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
+import { GEEN_PLEK, type Controlepunt, type Deellink, type DeellinkReden, type Fase, type LogRegel, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
 import { bewaarBestand, leesBestand, wisAlleBestanden, wisBestand } from './demo-bestanden'
 import { VOORBEELDTEKENING } from './demo'
 import { fotoPad } from '~/lib/controle'
+import { controleerCode, dichtAntwoord, externeInhoud, metProefStand, nieuweCode, nieuwToken, openPuntenVan, standVan, type ExternAntwoord } from '~/lib/deellink'
+import type { ProefServer } from './proef-server'
+import { plusMaand } from '~/lib/datum'
 import { naarDataUrl, verkleinFoto } from '~/utils/foto'
 
 // Dezelfde velden als de logboektriggers in de migratie.
@@ -18,12 +21,15 @@ const TAAK_VELDEN = ['status', 'eigenaar', 'klantakkoord', 'document_url', 'docu
 const kopie = <T>(o: T): T => JSON.parse(JSON.stringify(o))
 const alsTekst = (v: unknown): string | null => v === null || v === undefined ? null : Array.isArray(v) ? `{${v.join(',')}}` : String(v)
 const wacht = () => new Promise(r => setTimeout(r, 120)) // voelt als een echte opslag
+const willekeurig = (n: number) => crypto.getRandomValues(new Uint8Array(n))
 
 function laad(opslag: string): DemoGegevens | null {
   try {
     const s = localStorage.getItem(opslag)
     const d = s ? JSON.parse(s) as DemoGegevens : null
-    return d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) && Array.isArray(d.projectLeveranciers) && Array.isArray(d.tekeningen) ? d : null
+    if (!(d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) && Array.isArray(d.projectLeveranciers) && Array.isArray(d.tekeningen))) return null
+    d.deellinks ??= [] // bewaard vóór er deellinks waren: de wijzigingen van de tester blijven staan
+    return d
   } catch {
     return null
   }
@@ -49,14 +55,17 @@ function ruimOudeVersiesOp() {
  * Voorbeeldgegevens in het geheugen. `gegevens` komen van de server (alleen met toegang).
  * Met `opslag` blijven de wijzigingen van een tester bewaard in zijn eigen browser
  * (localStorage); anderen zien ze niet. Zonder toegang: een lege bron.
+ * `door` staat in het logboek ("Jij"); `naam` is wie een leverancier op zijn pagina als aanspreekpunt ziet.
+ * Met `server` werken de links voor leveranciers ook op een ander apparaat: daar staat een kopie (proef-server.ts).
  */
-export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: string, opslag?: string, gegevens: DemoGegevens | null }): Bron {
+export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, server }: { door?: string, naam?: string, opslag?: string, gegevens: DemoGegevens | null, server?: ProefServer }): Bron {
   if (opslag) ruimOudeVersiesOp()
   const db = gegevens ? (opslag && laad(opslag)) || gegevens : LEGE_GEGEVENS()
   let teller = 0
   const nieuwId = (soort: string) => `${soort}-demo-${Date.now().toString(36)}-${++teller}`
   /** false: de opslag van de browser is vol of geblokkeerd; dan staat het alleen in het geheugen. */
-  function bewaar(): boolean {
+  function bewaar(metServer = true): boolean {
+    if (metServer) planNaarServer()
     if (!opslag) return true
     try {
       localStorage.setItem(opslag, JSON.stringify(db))
@@ -89,6 +98,111 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
     t.gewijzigd_door = door
     return oud
   }
+  /** Zoals de trigger in de database: geen open punten meer voor deze leverancier, dan gaan zijn links dicht. */
+  function sluitAlsOpgelost(leverancierId: string | null) {
+    if (!leverancierId || openPuntenVan(leverancierId, db.controlepunten).length) return
+    for (const l of db.deellinks) if (l.leverancier_id === leverancierId && standVan(l, new Date()) === 'open') sluit(l, 'opgelost')
+  }
+  function sluit(l: Deellink, reden: DeellinkReden, wie: string | null = door) {
+    Object.assign(l, { gesloten_reden: reden, gesloten_op: new Date().toISOString(), gesloten_door: wie })
+  }
+  /** Zoals de server: de link zoeken en de code controleren. Een verkeerde code telt. */
+  function poort(token: string, code: string): { link: Deellink } | { antwoord: ExternAntwoord } {
+    const link = db.deellinks.find(l => l.token === token)
+    if (!link) return { antwoord: { stand: 'onbekend' } }
+    const nu = new Date()
+    const stand = standVan(link, nu)
+    if (stand !== 'open') return { antwoord: dichtAntwoord(link, stand) }
+    const { wijziging, antwoord } = controleerCode(link, code, code === link.code, nu)
+    if (wijziging) {
+      Object.assign(link, wijziging, wijziging.gesloten_reden ? { gesloten_door: 'systeem' } : {})
+      bewaar()
+    }
+    return antwoord ? { antwoord } : { link }
+  }
+  /** Waar de viewer een tekening ophaalt: de voorbeeldtekening, of de pdf van de tester uit IndexedDB. */
+  async function pdfUrl(tekening: Tekening): Promise<string> {
+    if (tekening.pad === VOORBEELDTEKENING) return '/voorbeeld-tekening.pdf'
+    const bestand = await leesBestand(tekening.pad).catch(() => null)
+    if (!bestand) throw new BronFout('Deze tekening staat alleen in de browser waarin hij is geüpload (proefversie).')
+    return URL.createObjectURL(bestand)
+  }
+  /** Wat de leverancier van deze link ziet. */
+  function inhoudVan(link: Deellink, fotoUrl: (pad: string) => string | null) {
+    const leverancier = db.leveranciers.find(l => l.id === link.leverancier_id)
+    const projectIds = new Set(openPuntenVan(link.leverancier_id, db.controlepunten).map(p => p.project_id))
+    if (!leverancier || !projectIds.size) return null
+    return externeInhoud({
+      link, leverancier,
+      punten: db.controlepunten.filter(p => projectIds.has(p.project_id)),
+      projecten: db.projecten.filter(p => projectIds.has(p.id)),
+      tekeningen: db.tekeningen.filter(t => projectIds.has(t.project_id)),
+      fotoUrl,
+    })
+  }
+
+  // ---------- de links ook op een ander apparaat: een kopie op de server ----------
+  /** Wat er per link het laatst naar de server ging (in dit venster), zodat niets dubbel gaat. */
+  const verzonden = new Map<string, string>()
+  /**
+   * Zet de links op de server of werkt ze bij: alleen wat veranderde, of met `alles` elke link (dan komt ook terug
+   * of de leverancier keek). Lukt het niet, dan werkt de link alleen in deze browser; de volgende keer opnieuw.
+   */
+  async function naarServer(alles = false) {
+    if (!server) return
+    const nu = new Date()
+    const voorbeeld = db.tekeningen.filter(t => t.pad === VOORBEELDTEKENING).map(t => t.id)
+    let gewijzigd = false
+    for (const link of db.deellinks.filter(l => standVan(l, nu) !== 'verlopen')) {
+      const open = !link.gesloten_reden
+      // De vingerafdruk met de paden van de foto's in plaats van de foto's zelf.
+      const afdruk = `${link.gesloten_reden ?? ''}|${JSON.stringify(open ? inhoudVan(link, pad => pad) : null)}`
+      const veranderd = verzonden.get(link.token) !== afdruk
+      if (!veranderd && !alles) continue
+      if (!open && !link.op_server) continue // nooit op de server gezet: daar hoeft hij ook niet dicht
+      const metInhoud = open && (veranderd || !link.op_server)
+      try {
+        const [stand] = await server.bewaar({
+          token: link.token, code: link.code, geldig_tot: link.geldig_tot, gesloten_reden: link.gesloten_reden, gesloten_op: link.gesloten_op,
+          inhoud: metInhoud ? inhoudVan(link, pad => db.fotos[pad] ?? null) : null,
+          voorbeeld_tekeningen: voorbeeld,
+        })
+        verzonden.set(link.token, afdruk)
+        if (stand) Object.assign(link, metProefStand(link, stand))
+        else link.op_server = false
+        if (stand && metInhoud) await uploadTekeningen(link)
+      } catch {
+        link.op_server = false
+      }
+      gewijzigd = true
+    }
+    if (gewijzigd) bewaar(false)
+  }
+  /** Eigen tekeningen van de tester met een punt van deze link: één keer naar de server, voor de leverancier. */
+  async function uploadTekeningen(link: Deellink) {
+    const ids = new Set(openPuntenVan(link.leverancier_id, db.controlepunten).map(p => p.tekening_id))
+    db.proefUploads ??= []
+    for (const t of db.tekeningen.filter(t => ids.has(t.id) && t.pad !== VOORBEELDTEKENING)) {
+      const sleutel = `${link.token}/${t.id}`
+      if (db.proefUploads.includes(sleutel)) continue
+      const pdf = await leesBestand(t.pad).catch(() => null)
+      if (!pdf) continue
+      try {
+        await server!.uploadTekening(link.token, t.id, pdf)
+        db.proefUploads.push(sleutel)
+      } catch { /* de volgende keer opnieuw */ }
+    }
+  }
+  let wachtrij: Promise<void> = Promise.resolve()
+  let gepland: ReturnType<typeof setTimeout> | undefined
+  /** Na elke wijziging, even later en één tegelijk. */
+  function planNaarServer() {
+    if (!server || !db.deellinks.length) return
+    clearTimeout(gepland)
+    gepland = setTimeout(() => naarServerNu(), 400)
+  }
+  const naarServerNu = (alles = false) => (wachtrij = wachtrij.then(() => naarServer(alles)).catch(() => undefined))
+
   const projectVan = (id: string) => {
     const p = db.projecten.find(x => x.id === id)
     if (!p) throw new BronFout('Dit project bestaat niet (meer).')
@@ -218,10 +332,7 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       bewaar()
     },
     async tekeningUrl(tekening) {
-      if (tekening.pad === VOORBEELDTEKENING) return '/voorbeeld-tekening.pdf'
-      const bestand = await leesBestand(tekening.pad).catch(() => null)
-      if (!bestand) throw new BronFout('Deze tekening staat alleen in de browser waarin hij is geüpload (proefversie).')
-      return URL.createObjectURL(bestand)
+      return pdfUrl(tekening)
     },
 
     async leveranciers(projectId) {
@@ -315,11 +426,13 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       if (!p) throw new BronFout('Dit aandachtspunt bestaat niet (meer).')
       if (w.leverancier_id && !db.projectLeveranciers.some(k => k.project_id === p.project_id && k.leverancier_id === w.leverancier_id)) throw new BronFout('Kies een leverancier van dit project.')
       if (w.tekening_id && !db.tekeningen.some(t => t.id === w.tekening_id && t.project_id === p.project_id)) throw new BronFout('Kies een tekening van dit project.')
+      const vorige = p.leverancier_id
       if (w.leverancier_id !== undefined) p.leverancier_id = w.leverancier_id
       for (const v of ['tekening_id', 'tekening_blad', 'tekening_x', 'tekening_y'] as const) if (w[v] !== undefined) Object.assign(p, { [v]: w[v] })
       if (w.opgelost !== undefined && w.opgelost !== p.opgelost) {
         Object.assign(p, { opgelost: w.opgelost, opgelost_door: w.opgelost ? door : null, opgelost_op: w.opgelost ? new Date().toISOString() : null })
       }
+      sluitAlsOpgelost(vorige)
       bewaar()
       return kopie(p)
     },
@@ -328,7 +441,60 @@ export function maakDemoBron({ door = 'Demo', opslag, gegevens }: { door?: strin
       db.controlepunten = db.controlepunten.filter(p => p.id !== punt.id)
       // De voorbeeldpunten delen één foto: die blijft zolang een ander punt hem nog gebruikt.
       if (!db.controlepunten.some(p => p.foto === punt.foto)) delete db.fotos[punt.foto]
+      sluitAlsOpgelost(punt.leverancier_id)
       bewaar()
+    },
+
+    async deellinks() {
+      await naarServerNu(true)
+      return kopie([...db.deellinks].sort((a, b) => Date.parse(b.aangemaakt_op) - Date.parse(a.aangemaakt_op)))
+    },
+    async maakDeellink(leverancierId) {
+      await wacht()
+      if (!openPuntenVan(leverancierId, db.controlepunten).length) throw new BronFout('Deze leverancier heeft geen open aandachtspunten.')
+      const nu = new Date()
+      const l: Deellink = {
+        id: nieuwId('dl'), leverancier_id: leverancierId, token: nieuwToken(willekeurig(32)), code: nieuweCode(willekeurig(5)),
+        geldig_tot: plusMaand(nu).toISOString(), gesloten_op: null, gesloten_door: null, gesloten_reden: null,
+        foute_pogingen: 0, bekeken_op: null, aangemaakt_door: naam, aangemaakt_op: nu.toISOString(),
+      }
+      db.deellinks.push(l)
+      bewaar(false)
+      await naarServerNu()
+      return kopie(l)
+    },
+    async trekDeellinkIn(id) {
+      await wacht()
+      const l = db.deellinks.find(x => x.id === id)
+      if (!l) throw new BronFout('Deze link bestaat niet (meer).')
+      if (!l.gesloten_reden) sluit(l, 'ingetrokken')
+      bewaar(false)
+      await naarServerNu()
+      return kopie(l)
+    },
+    async externeInhoud(token, code) {
+      await wacht()
+      // Niet in deze browser gemaakt: dan de kopie op de server.
+      if (server && !db.deellinks.some(l => l.token === token)) return server.inhoud(token, code)
+      const poging = poort(token, code)
+      if ('antwoord' in poging) return kopie(poging.antwoord)
+      const { link } = poging
+      const inhoud = inhoudVan(link, pad => db.fotos[pad] ?? null)
+      if (!inhoud) {
+        sluit(link, 'opgelost', 'systeem')
+        bewaar()
+        return dichtAntwoord(link, 'opgelost')
+      }
+      return { stand: 'open', inhoud: kopie(inhoud) }
+    },
+    async externeTekeningUrl(token, code, tekeningId) {
+      if (server && !db.deellinks.some(l => l.token === token)) return server.tekeningUrl(token, code, tekeningId)
+      const poging = poort(token, code)
+      if ('antwoord' in poging) throw new BronFout('Deze link is niet (meer) open.')
+      const op = openPuntenVan(poging.link.leverancier_id, db.controlepunten).some(p => p.tekening_id === tekeningId)
+      const t = db.tekeningen.find(x => x.id === tekeningId)
+      if (!op || !t) throw new BronFout('Deze tekening hoort niet (meer) bij deze link.')
+      return pdfUrl(t)
     },
   }
 }

@@ -4,10 +4,11 @@ import { naarDataUrl, verkleinFoto } from '~/utils/foto'
 import { sluitTekeningen, tekeningUitsnede, type TekeningCache } from '~/utils/tekeningUitsnede'
 
 // De pdf van het Controle-overzicht: A4, per groep (een leverancier of een project) de punten met foto.
-// jsPDF wordt pas geladen als iemand op de knop drukt.
+// jsPDF wordt pas geladen als iemand op de knop drukt. Het resultaat is een bestand: om te downloaden of te delen.
 
 export interface PdfPunt {
-  punt: Controlepunt
+  /** Op de pagina van een leverancier zonder wie het meldde. */
+  punt: Pick<Controlepunt, 'id' | 'notitie' | 'aangemaakt_op' | 'opgelost' | 'opgelost_door' | 'opgelost_op'> & { aangemaakt_door?: string | null }
   /** Het nummer zoals op de tekening en in de lijst. */
   nummer: number | undefined
   fotoUrl: string | null
@@ -22,10 +23,9 @@ export interface PdfInvoer {
   ondertitel: string
   /** Bijvoorbeeld "Open aandachtspunten". */
   selectie: string
-  /** "Leverancier" of "Project": wat er in `bij` staat. */
+  /** "Leverancier" of "Project": wat er in `bij` staat. Leeg: die regel niet (de pagina van een leverancier). */
   bijLabel: string
   groepen: { titel: string, punten: PdfPunt[] }[]
-  bestandsnaam: string
 }
 
 interface Foto { data: string, b: number, h: number }
@@ -47,7 +47,7 @@ async function laadFoto(url: string): Promise<Foto | null> {
   }
 }
 
-export async function maakControlePdf(invoer: PdfInvoer): Promise<void> {
+export async function maakControlePdf(invoer: PdfInvoer): Promise<Blob> {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const breed = MM.pagina - 2 * MM.marge
@@ -113,7 +113,7 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<void> {
       doc.setFont('helvetica', 'normal').setFontSize(11)
       const notitie = doc.splitTextToSize(`${nummer ? `#${nummer}  ` : ''}${punt.notitie}`, tekstBreed) as string[]
       const plekRegels = plek ? doc.setFontSize(9).splitTextToSize(`Plek: ${plek.tekst}`, tekstBreed) as string[] : []
-      const tekstHoog = notitie.length * 5 + 4 * 4.5 + plekRegels.length * 4.5
+      const tekstHoog = notitie.length * 5 + (invoer.bijLabel ? 4 : 3) * 4.5 + plekRegels.length * 4.5
       const blok = Math.max(MM.fotoHoog, tekstHoog) + 6
       if (y + blok > onder) nieuwePagina()
 
@@ -147,13 +147,15 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<void> {
       ty += 1
       doc.setFontSize(9)
       kleur(KLEUR.stil)
-      doc.text(`${invoer.bijLabel}: ${bij}`, tekstX, ty)
-      ty += 4.5
+      if (invoer.bijLabel) {
+        doc.text(`${invoer.bijLabel}: ${bij}`, tekstX, ty)
+        ty += 4.5
+      }
       for (const regel of plekRegels) {
         doc.text(regel, tekstX, ty)
         ty += 4.5
       }
-      doc.text(`Gemeld door ${punt.aangemaakt_door ?? 'onbekend'} op ${datum(punt.aangemaakt_op)}`, tekstX, ty)
+      doc.text(`Gemeld${punt.aangemaakt_door ? ` door ${punt.aangemaakt_door}` : ''} op ${datum(punt.aangemaakt_op)}`, tekstX, ty)
       ty += 4.5
       doc.setFont('helvetica', 'bold')
       kleur(punt.opgelost ? KLEUR.klaar : KLEUR.open)
@@ -176,5 +178,5 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<void> {
     doc.text(`Pagina ${i} van ${paginas}`, MM.pagina - MM.marge, MM.hoogte - 10, { align: 'right' })
   }
 
-  doc.save(invoer.bestandsnaam)
+  return doc.output('blob')
 }

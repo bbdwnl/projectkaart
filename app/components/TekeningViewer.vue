@@ -27,7 +27,9 @@ const props = withDefaults(defineProps<{
   /** De pin waar het om gaat: valt op en staat onderin. */
   actief?: string | null
   titel?: string
-}>(), { pins: () => [], markeren: false, kanVerplaatsen: false, plek: null, actief: null, titel: 'Tekening' })
+  /** Waar de pdf vandaan komt; standaard de bron. Op de pagina van een leverancier: via zijn link. */
+  urlVan?: (tekening: Tekening) => Promise<string>
+}>(), { pins: () => [], markeren: false, kanVerplaatsen: false, plek: null, actief: null, titel: 'Tekening', urlVan: undefined })
 const emit = defineEmits<{ sluit: [], kies: [plek: TekeningPlek] }>()
 const bron = useBron()
 
@@ -72,7 +74,7 @@ async function laadTekening(id: string, startBlad = 1, focus?: { x: number, y: n
   const nummer = ++laadNummer
   stand.value = 'laden'
   try {
-    const [pdfjs, url] = await Promise.all([laadPdfjs(), bron.tekeningUrl(t)])
+    const [pdfjs, url] = await Promise.all([laadPdfjs(), props.urlVan ? props.urlVan(t) : bron.tekeningUrl(t)])
     if (nummer !== laadNummer) return
     if (blobUrl) URL.revokeObjectURL(blobUrl)
     blobUrl = url.startsWith('blob:') ? url : null

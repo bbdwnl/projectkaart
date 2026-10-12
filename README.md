@@ -44,7 +44,11 @@ npm run build
    (Vercel en `http://localhost:3000`) toe aan de toegestane redirect-URL's.
 3. **Omgeving** (Vercel en `.env`, zie [.env.example](.env.example)):
    `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_KEY` en `NUXT_PUBLIC_PROEFVERSIE=false`.
-4. **MT.** Wie de financiën mag zien en de catalogus beheert, zet je na de eerste login in de
+4. **Delen met leveranciers.** Zet in Vercel `NUXT_SUPABASE_SERVICE_KEY` (Supabase → Project Settings → API:
+   de service-role of secret key). Die sleutel blijft op de server: alleen `server/api/punten` gebruikt hem om
+   de pagina van een leverancier te vullen, na controle van de link en de code. Zonder sleutel werkt de rest
+   van de app gewoon, maar opent een gedeelde link niet.
+5. **MT.** Wie de financiën mag zien en de catalogus beheert, zet je na de eerste login in de
    SQL-editor op MT: `update profielen set rol = 'mt' where email = 'naam@bbdw.nl';`
 
 Alleen Microsoft-accounts met een e-mailadres op `@bbdw.nl` komen erin; dat staat in de RLS-policies

@@ -3,6 +3,7 @@ import type { Bron } from '~/data/bron'
 import type { DemoGegevens } from '~/data/demo'
 import { maakDemoBron, PROEF_OPSLAG } from '~/data/bron-demo'
 import { maakSupabaseBron } from '~/data/bron-supabase'
+import { maakProefServer } from '~/data/proef-server'
 
 // Kiest de bron. Proefversie (of geen Supabase ingesteld): nep-login en voorbeeldgegevens,
 // bewaard in de browser van de tester. De gegevens komen van de server, en alleen met het
@@ -17,7 +18,7 @@ export default defineNuxtPlugin(async () => {
   if (proef) {
     const gegevens = await $fetch<DemoGegevens>('/api/proef/gegevens').catch(() => null)
     proefToegang = !!gegevens
-    bron = maakDemoBron({ door: 'Jij', opslag: PROEF_OPSLAG, gegevens })
+    bron = maakDemoBron({ door: 'Jij', naam: 'Testgebruiker', opslag: PROEF_OPSLAG, gegevens, server: maakProefServer(config.supabaseKey) })
   } else {
     supabase = createClient(config.supabaseUrl, config.supabaseKey, { auth: { flowType: 'pkce' } })
     bron = maakSupabaseBron(supabase)

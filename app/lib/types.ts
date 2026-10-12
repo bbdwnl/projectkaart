@@ -168,6 +168,34 @@ export interface Tekening {
   aangemaakt_op: string
 }
 
+/** Waarom een deellink dicht is. Verlopen staat er niet bij: dat volgt uit geldig_tot. */
+export type DeellinkReden = 'opgelost' | 'ingetrokken' | 'geblokkeerd'
+
+/**
+ * Een link waarmee een leverancier zonder account zijn open aandachtspunten ziet (/punten/<token>), met een code.
+ * Token, code en einddatum (een maand na het maken) komen van de database; een link die dicht is, blijft dicht.
+ */
+export interface Deellink {
+  id: string
+  leverancier_id: string
+  /** 64 tekens (0-9, a-f): het stuk van de link dat niet te raden is. */
+  token: string
+  /** Vijf cijfers, alleen 2 tot en met 9. */
+  code: string
+  geldig_tot: string
+  gesloten_op: string | null
+  gesloten_door: string | null
+  gesloten_reden: DeellinkReden | null
+  /** Verkeerde codes op rij; bij tien gaat de link dicht. */
+  foute_pogingen: number
+  /** Wanneer de leverancier de pagina het laatst opende, met de juiste code. */
+  bekeken_op: string | null
+  aangemaakt_door: string | null
+  aangemaakt_op: string
+  /** Alleen in de proefversie: de kopie staat op de server, dus de link werkt ook op een ander apparaat. */
+  op_server?: boolean
+}
+
 export type PlekVeld = 'tekening_id' | 'tekening_blad' | 'tekening_x' | 'tekening_y'
 /** Een plek op een tekening: blad (vanaf 1) en x, y van 0 tot 1 vanaf linksboven. */
 export interface Plek { tekening_id: string, tekening_blad: number, tekening_x: number, tekening_y: number }
