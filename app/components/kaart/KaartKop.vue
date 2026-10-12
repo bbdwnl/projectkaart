@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FASEN, faseInfo, ROLLEN } from '~/lib/fasen'
+import { FASEN, faseInfo, MENSEN, ROLLEN } from '~/lib/fasen'
 import type { Fase } from '~/lib/types'
 
 const emit = defineEmits<{ lamp: [licht: 'telaat' | 'letop' | 'klaar'], planning: [] }>()
@@ -9,6 +9,13 @@ const { weergave } = useWeergave()
 const rol = computed(() => faseInfo(project.value!.fase).rol)
 const eigenaar = computed(() => project.value?.[rol.value] ?? null)
 const label = computed(() => [project.value?.nummer, project.value?.afas_nummer && `AFAS ${project.value.afas_nummer}`, project.value?.plaats].filter(Boolean).join(' · '))
+
+/** Wie de rol van deze fase kan hebben; ook iemand die er nu staat maar niet in de lijst. */
+const keuzes = computed(() => [...new Set([...MENSEN[rol.value], ...(eigenaar.value ? [eigenaar.value] : [])])])
+function kiesEigenaar(e: Event) {
+  const naam = (e.target as HTMLSelectElement).value || null
+  wijzigProject({ [rol.value]: naam }, naam ? `${ROLLEN[rol.value].kort}: ${naam}` : `${ROLLEN[rol.value].kort} weggehaald`)
+}
 
 function kiesFase(e: Event) {
   const fase = (e.target as HTMLSelectElement).value as Fase
@@ -31,10 +38,12 @@ function kiesFase(e: Event) {
             <option v-for="f in FASEN" :key="f.id" :value="f.id">{{ f.naam }}</option>
           </select>
         </label>
-        <span class="chip" :class="{ leeg: !eigenaar }">
-          <span class="label">{{ ROLLEN[rol].kort }}</span>
-          <b v-if="eigenaar">{{ eigenaar }}</b><template v-else>nog niet gekozen</template>
-        </span>
+        <label class="chip" :class="{ leeg: !eigenaar }"><span class="label">{{ ROLLEN[rol].kort }}</span>
+          <select :value="eigenaar ?? ''" :aria-label="ROLLEN[rol].naam" @change="kiesEigenaar">
+            <option value="">nog niet gekozen</option>
+            <option v-for="m in keuzes" :key="m" :value="m">{{ m }}</option>
+          </select>
+        </label>
         <a v-if="project.sharepoint_url" class="chip" :href="project.sharepoint_url" target="_blank" rel="noopener"><b>Projectmap in SharePoint ↗</b></a>
       </div>
       <Transition name="blok">

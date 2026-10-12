@@ -78,6 +78,7 @@ section.blok{padding:58px 0 0}
 .chip{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:4px 12px 4px 10px;border:var(--rand);border-radius:var(--rond);background:var(--wit);font-size:14px}
 .chip .label{margin:0;font-size:9.5px;color:var(--stil)}
 .chip.leeg{border-style:dashed;color:var(--stil)}
+.chip.leeg select{color:var(--stil);font-weight:500}
 .chip select{border:0;background:transparent;font-weight:700;font-size:14px;padding:0 2px;cursor:pointer}
 .links{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:18px;font-size:14px}
 .links a{font-weight:700;text-underline-offset:3px;text-decoration-thickness:2px}
@@ -458,13 +459,23 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .projectfilters .seg button{flex:none;white-space:nowrap}
 .zoekveld{width:min(380px,100%);height:38px;border-radius:var(--rond);padding:0 16px}
 .projectgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:28px 18px;padding-top:22px}
-.projectkaartje{display:flex;flex-direction:column;gap:6px;text-decoration:none;padding:26px 18px 16px;animation:binnen-zacht .5s var(--uit) both;animation-delay:calc(var(--i,0)*35ms)}
+.projectkaartje{display:flex;flex-direction:column;gap:6px;text-decoration:none;padding:18px 18px 16px;animation:binnen-zacht .5s var(--uit) both;animation-delay:calc(var(--i,0)*35ms)}
 .projectkaartje .label{margin:0}
 .projectkaartje h3{font-weight:900;font-size:22px;line-height:1.05;letter-spacing:-.02em}
-.projectkaartje .fase-regel{margin:0;font-size:14px;font-weight:700}
-.projectkaartje .klein{margin:0}
-.projectkaartje .mijlpaal{margin:4px 0 0;font-size:13.5px;font-weight:500}
+.projectkaartje .wie{margin:2px 0 0;font-size:15px;font-weight:700}
+.projectkaartje .wie.leeg{color:var(--stil);font-weight:500}
+.projectkaartje .kaartje-datum{margin:0}
 .mini-balk{display:flex;height:6px;border-radius:6px;overflow:hidden;background:var(--grijs);margin:6px 0 2px}
+.projectkaartje .mini-balk{height:12px;border-radius:7px;margin:8px 0 4px}
+/* projecten: drie kolommen */
+.kolommen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;align-items:start;padding-top:26px}
+.kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
+.kolom-kop h2{font-size:24px}
+.kolom-lijst{display:grid;gap:16px}
+.kolom .leeg-staat{padding:18px}
+@media (max-width:900px){
+  .kolommen{grid-template-columns:1fr;gap:34px}
+}
 .mini-balk .seg-open{background:var(--grijs)}
 
 /* leads */

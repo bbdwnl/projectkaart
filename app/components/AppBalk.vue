@@ -3,8 +3,16 @@ import { wisProefbestanden, wisProefgegevens } from '~/data/bron-demo'
 
 const { gebruiker, modus, initialen, uitloggen } = useGebruiker()
 const route = useRoute()
-const kruimel = useState<{ naam: string, lead: boolean } | null>('kruimel', () => null)
-const opKaart = computed(() => !!kruimel.value && route.path.startsWith('/projecten/'))
+const kruimel = useState<{ naam: string, groep: 'leads' | 'haalbaarheid' | 'projecten' } | null>('kruimel', () => null)
+/** De projectnaam achter dit menu-item, als je op een kaart bent. */
+const kruimelBij = (groep: string) => (kruimel.value && route.path.startsWith('/projecten/') && kruimel.value.groep === groep ? kruimel.value.naam : null)
+const MENU = [
+  { pad: '/', naam: 'Projecten', groep: 'projecten' },
+  { pad: '/leads', naam: 'Leads', groep: 'leads' },
+  { pad: '/haalbaarheid', naam: 'Haalbaarheid', groep: 'haalbaarheid' },
+  { pad: '/controle', naam: 'Controle', groep: '' },
+  { pad: '/uitzonderingen', naam: 'Uitzonderingen', groep: '' },
+]
 const menuOpen = ref(false)
 const menu = ref<HTMLElement>()
 // Op mobiel: één menu met de pagina's, de weergave van de kaart en je account.
@@ -45,12 +53,10 @@ async function opnieuw() {
         <b>Projectkaart</b>
       </NuxtLink>
       <nav class="nav" aria-label="Hoofdmenu">
-        <NuxtLink to="/">Projecten</NuxtLink>
-        <span v-if="opKaart && !kruimel!.lead" class="kruimel" aria-current="page">{{ kruimel!.naam }}</span>
-        <NuxtLink to="/leads">Leads</NuxtLink>
-        <span v-if="opKaart && kruimel!.lead" class="kruimel" aria-current="page">{{ kruimel!.naam }}</span>
-        <NuxtLink to="/controle">Controle</NuxtLink>
-        <NuxtLink to="/uitzonderingen">Uitzonderingen</NuxtLink>
+        <template v-for="m in MENU" :key="m.pad">
+          <NuxtLink :to="m.pad">{{ m.naam }}</NuxtLink>
+          <span v-if="kruimelBij(m.groep)" class="kruimel" aria-current="page">{{ kruimelBij(m.groep) }}</span>
+        </template>
       </nav>
       <div class="rechts">
         <span v-if="modus === 'proef'" class="tab later alleen-breed" title="Microsoft is nog niet gekoppeld. Voorbeeldgegevens; je wijzigingen blijven in deze browser.">Proefversie</span>
@@ -74,12 +80,10 @@ async function opnieuw() {
           <Transition name="pop">
             <div v-if="mobielOpen" id="mobiel-paneel" class="mobiel-paneel">
               <nav class="mm-nav" aria-label="Hoofdmenu">
-                <NuxtLink to="/">Projecten</NuxtLink>
-                <span v-if="opKaart && !kruimel!.lead" class="mm-kruimel" aria-current="page">{{ kruimel!.naam }}</span>
-                <NuxtLink to="/leads">Leads</NuxtLink>
-                <span v-if="opKaart && kruimel!.lead" class="mm-kruimel" aria-current="page">{{ kruimel!.naam }}</span>
-                <NuxtLink to="/controle">Controle</NuxtLink>
-                <NuxtLink to="/uitzonderingen">Uitzonderingen</NuxtLink>
+                <template v-for="m in MENU" :key="m.pad">
+                  <NuxtLink :to="m.pad">{{ m.naam }}</NuxtLink>
+                  <span v-if="kruimelBij(m.groep)" class="mm-kruimel" aria-current="page">{{ kruimelBij(m.groep) }}</span>
+                </template>
                 <NuxtLink to="/instellingen">Instellingen</NuxtLink>
               </nav>
               <section v-if="route.path.startsWith('/projecten/')" class="mm-groep">

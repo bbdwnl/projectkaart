@@ -217,6 +217,6 @@ async function maakLead() {
       </div>
       <p v-else class="leeg-staat">Geen lead past bij deze filters. <button type="button" class="link" @click="wis">Wis de filters</button></p>
     </template>
-    <footer>Projectkaart BbDW · een lead gaat naar Projecten zodra je op de kaart de fase op Haalbaarheid zet.</footer>
+    <footer>Projectkaart BbDW · een lead gaat naar Haalbaarheid zodra je op de kaart de fase op Haalbaarheid zet.</footer>
   </main>
 </template>
