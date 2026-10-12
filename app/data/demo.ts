@@ -2,7 +2,7 @@
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import type { Controlepunt, Deellink, Fase, Financien, Leverancier, LogRegel, ProjectLeverancier, Tekening, Project, Soort, Status, Taak, Uitzondering } from '../lib/types'
+import { GEEN_MELDING, type Controlepunt, type Deellink, type Fase, type Financien, type Leverancier, type LogRegel, type ProjectLeverancier, type Tekening, type Project, type Soort, type Status, type Taak, type Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
@@ -324,9 +324,13 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
         tekening_blad: plek ? plek[0] : null,
         tekening_x: plek ? plek[1] : null,
         tekening_y: plek ? plek[2] : null,
+        ...GEEN_MELDING,
       })
     }
   }
+  // Eén punt op Vlijtseweg heeft de leverancier al opgelost gemeld: BbDW moet het nog controleren.
+  const gemeld = controlepunten.find(c => c.project_id === vlijtseweg.id && !c.opgelost && c.leverancier_id)
+  if (gemeld) Object.assign(gemeld, { gereed_op: opMoment(1, 'gereed'), gereed_door: leveranciers.find(l => l.id === gemeld.leverancier_id)!.naam })
 
   const tekeningen: Tekening[] = [{
     id: 'tek-vlijtseweg', project_id: vlijtseweg.id, naam: 'Plattegronden begane grond en 1e verdieping (voorbeeld)',

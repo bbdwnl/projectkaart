@@ -1,4 +1,4 @@
-import { dichtAntwoord, type ExternAntwoord } from '../../../../../app/lib/deellink'
+import { dichtAntwoord, metMeldingen, type ExternAntwoord } from '../../../../../app/lib/deellink'
 
 // Proefversie: de pagina van een leverancier, uit de kopie die de browser van de tester op de server zette.
 export default defineEventHandler(async (event): Promise<ExternAntwoord> => {
@@ -13,5 +13,5 @@ export default defineEventHandler(async (event): Promise<ExternAntwoord> => {
     await sb.from('proef_deellinks').update({ gesloten_reden: 'opgelost', gesloten_op: op }).eq('token', link.token)
     return dichtAntwoord({ geldig_tot: link.geldig_tot, gesloten_op: op }, 'opgelost')
   }
-  return { stand: 'open', inhoud: { ...link.inhoud, geldig_tot: link.geldig_tot } }
+  return { stand: 'open', inhoud: { ...metMeldingen(link.inhoud, link.gereed ?? {}), geldig_tot: link.geldig_tot } }
 })

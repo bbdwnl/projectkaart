@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
 import type { Deellink } from '../../app/lib/types'
-import { controleerCode, dichtAntwoord, standVan, TOKEN_VORM, type ExternAntwoord, type ExternInhoud } from '../../app/lib/deellink'
+import { controleerCode, dichtAntwoord, standVan, TOKEN_VORM, type ExternAntwoord, type ExternInhoud, type Meldingen } from '../../app/lib/deellink'
 
 // De pagina van een leverancier (/punten/<token>) heeft geen account: de server leest voor hem, met de
 // service-rol, en geeft alleen wat bij de link hoort. Elke vraag controleert de link en de code opnieuw.
@@ -19,7 +19,7 @@ export const nietBereikbaar = () => createError({ statusCode: 502, statusMessage
 
 type LinkVelden = Pick<Deellink, 'token' | 'code' | 'geldig_tot' | 'gesloten_reden' | 'gesloten_op' | 'foute_pogingen'>
 /** Een link in de proefversie: een kopie uit de browser van een tester (tabel proef_deellinks). */
-export type ProefRij = LinkVelden & Pick<Deellink, 'bekeken_op'> & { inhoud: ExternInhoud, voorbeeld_tekeningen: string[] }
+export type ProefRij = LinkVelden & Pick<Deellink, 'bekeken_op'> & { inhoud: ExternInhoud, voorbeeld_tekeningen: string[], gereed: Meldingen }
 
 /**
  * Zoekt de link en controleert hem en de code. Geeft de link als hij open is en de code klopt, anders het

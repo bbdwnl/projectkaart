@@ -22,14 +22,16 @@ const props = withDefaults(defineProps<{
   markeren?: boolean
   /** Mag de plek hier ook verplaatst worden (vanuit kijken)? */
   kanVerplaatsen?: boolean
-  /** Hier gaat de viewer naartoe; bij markeren staat de plek er al. */
+  /** Hier gaat de viewer naartoe (ingezoomd); bij markeren staat de plek er al. */
   plek?: TekeningPlek | null
+  /** Zonder plek: het blad waarmee de viewer opent, passend in beeld. */
+  startBlad?: number
   /** De pin waar het om gaat: valt op en staat onderin. */
   actief?: string | null
   titel?: string
   /** Waar de pdf vandaan komt; standaard de bron. Op de pagina van een leverancier: via zijn link. */
   urlVan?: (tekening: Tekening) => Promise<string>
-}>(), { pins: () => [], markeren: false, kanVerplaatsen: false, plek: null, actief: null, titel: 'Tekening', urlVan: undefined })
+}>(), { pins: () => [], markeren: false, kanVerplaatsen: false, plek: null, startBlad: 1, actief: null, titel: 'Tekening', urlVan: undefined })
 const emit = defineEmits<{ sluit: [], kies: [plek: TekeningPlek] }>()
 const bron = useBron()
 
@@ -43,7 +45,7 @@ const huidigeId = ref(props.plek?.tekening_id ?? props.tekeningId)
 const tekening = computed(() => props.tekeningen.find(t => t.id === huidigeId.value))
 const stand = ref<'laden' | 'klaar' | 'fout'>('laden')
 const fout = ref('')
-const blad = ref(props.plek?.blad ?? 1)
+const blad = ref(props.plek?.blad ?? props.startBlad)
 const bladen = ref(1)
 const modus = ref<'kijken' | 'markeren'>(props.markeren ? 'markeren' : 'kijken')
 const marker = ref<TekeningPlek | null>(props.markeren && props.plek ? { ...props.plek } : null)
@@ -395,7 +397,7 @@ onBeforeUnmount(() => {
         <!-- Pins en de plek in een eigen laag, boven de scherpe uitsnede. -->
         <div class="viewer-lagen" :style="bladStijl" aria-hidden="true">
           <span v-for="p in zichtbarePins" :key="p.id" class="pin-anker" :style="ankerStijl(p)">
-            <span class="viewer-pin" :class="{ opgelost: p.opgelost, actief: p.id === actief || p.id === gekozenPin }">{{ p.label }}</span>
+            <span class="viewer-pin" :class="{ opgelost: p.opgelost, gereed: p.gereed, actief: p.id === actief || p.id === gekozenPin }">{{ p.label }}</span>
           </span>
           <span v-if="markerHier" class="pin-anker" :style="ankerStijl(markerHier)"><span class="viewer-marker" /></span>
         </div>

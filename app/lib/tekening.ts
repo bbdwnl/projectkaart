@@ -17,17 +17,19 @@ export interface Pin {
   y: number
   label: string
   opgelost?: boolean
+  /** De leverancier meldde het opgelost; BbDW moet nog aftekenen. */
+  gereed?: boolean
   /** Wat er onderin de viewer staat als je de pin aantikt. */
   tekst?: string
 }
 
 /** De aandachtspunten met een plek als pins, genummerd zoals in de lijst. */
-export function pinsVan<P extends { id: string, opgelost: boolean, notitie: string, tekening_id: string | null, tekening_blad: number | null, tekening_x: number | null, tekening_y: number | null }>(
+export function pinsVan<P extends { id: string, opgelost: boolean, gereed_op?: string | null, notitie: string, tekening_id: string | null, tekening_blad: number | null, tekening_x: number | null, tekening_y: number | null }>(
   punten: P[], nummer: (p: P) => number | string, extra: (p: P) => string = () => '',
 ): Pin[] {
   return punten.filter(p => p.tekening_id && p.tekening_blad && p.tekening_x !== null && p.tekening_y !== null).map(p => ({
     id: p.id, tekening_id: p.tekening_id!, blad: p.tekening_blad!, x: p.tekening_x!, y: p.tekening_y!,
-    label: String(nummer(p)), opgelost: p.opgelost, tekst: [p.notitie, extra(p)].filter(Boolean).join(' · '),
+    label: String(nummer(p)), opgelost: p.opgelost, gereed: !p.opgelost && !!p.gereed_op, tekst: [p.notitie, extra(p)].filter(Boolean).join(' · '),
   }))
 }
 

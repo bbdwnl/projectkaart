@@ -154,8 +154,18 @@ export interface Controlepunt {
   tekening_blad: number | null
   tekening_x: number | null
   tekening_y: number | null
+  /** De leverancier meldde het opgelost (op zijn pagina); BbDW moet nog aftekenen (opgelost). */
+  gereed_op: string | null
+  gereed_door: string | null
+  /** BbDW keurde de laatste melding af: weer open voor de leverancier, met de reden. */
+  afgekeurd_op: string | null
+  afgekeurd_door: string | null
+  afgekeurd_reden: string | null
 }
-export type ControlepuntWijziging = Partial<Pick<Controlepunt, 'opgelost' | 'leverancier_id' | PlekVeld>>
+/** Afkeuren: gereed_op null, met de reden. Wie en wanneer vult de database in. */
+export type ControlepuntWijziging = Partial<Pick<Controlepunt, 'opgelost' | 'leverancier_id' | PlekVeld | 'gereed_op' | 'afgekeurd_reden'>>
+export type MeldingVeld = 'gereed_op' | 'gereed_door' | 'afgekeurd_op' | 'afgekeurd_door' | 'afgekeurd_reden'
+export const GEEN_MELDING: Record<MeldingVeld, null> = { gereed_op: null, gereed_door: null, afgekeurd_op: null, afgekeurd_door: null, afgekeurd_reden: null }
 
 /** Een pdf-tekening van een project (plattegrond, gevel). */
 export interface Tekening {

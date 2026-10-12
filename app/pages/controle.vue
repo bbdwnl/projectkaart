@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Controlepunt, Deellink, Leverancier, Project, Tekening } from '~/lib/types'
-import { groepeerPunten, nummerPerProject, pastPunt, pdfNaam, telPunten, type ControleFilter, type Indeling } from '~/lib/controle'
+import { groepeerPunten, nummerPerProject, pastPunt, pdfNaam, puntStand, telPunten, type ControleFilter, type Indeling } from '~/lib/controle'
 import { actieveLink } from '~/lib/deellink'
 import { pinsVan } from '~/lib/tekening'
 import { fmt, fmtMoment, vandaag } from '~/lib/datum'
@@ -42,6 +42,7 @@ onMounted(laad)
 // ---------- keuze, ook in de adresbalk ----------
 const STATUSSEN: { id: ControleFilter, naam: string, selectie: string }[] = [
   { id: 'open', naam: 'Open', selectie: 'Open aandachtspunten' },
+  { id: 'controleren', naam: 'Controleren', selectie: 'Te controleren aandachtspunten' },
   { id: 'opgelost', naam: 'Opgelost', selectie: 'Opgeloste aandachtspunten' },
   { id: 'alles', naam: 'Alles', selectie: 'Alle aandachtspunten' },
 ]
@@ -112,8 +113,9 @@ const totaalOpen = computed(() => punten.value.filter(p => !p.opgelost).length)
 const zin = computed(() => {
   if (!punten.value.length) return 'Nog geen aandachtspunten.'
   const ps = new Set(punten.value.filter(p => !p.opgelost).map(p => p.project_id)).size
+  const k = punten.value.filter(p => puntStand(p) === 'controleren').length
   return totaalOpen.value
-    ? `${totaalOpen.value} ${totaalOpen.value === 1 ? 'aandachtspunt staat' : 'aandachtspunten staan'} open, op ${ps} ${ps === 1 ? 'project' : 'projecten'}.`
+    ? `${totaalOpen.value} ${totaalOpen.value === 1 ? 'aandachtspunt staat' : 'aandachtspunten staan'} open, op ${ps} ${ps === 1 ? 'project' : 'projecten'}.${k ? ` ${k} ${k === 1 ? 'wacht' : 'wachten'} op controle.` : ''}`
     : 'Alle aandachtspunten zijn opgelost.'
 })
 
@@ -224,7 +226,7 @@ const gedeeld = computed(() => (keuze.indeling === 'leverancier' && keuze.gekoze
         <nav class="lijst keuzelijst" :aria-label="keuze.indeling === 'project' ? 'Projecten met aandachtspunten' : 'Leveranciers met aandachtspunten'">
           <button v-for="k in keuzelijst" :key="k.id" type="button" class="keuze" :aria-current="keuze.gekozen === k.id ? 'true' : undefined" @click="kies(k.id)">
             <b>{{ k.naam }}</b>
-            <small>{{ k.open }} open · {{ k.totaal }} totaal</small>
+            <small>{{ k.open }} open<template v-if="k.controleren"> · {{ k.controleren }} controleren</template> · {{ k.totaal }} totaal</small>
           </button>
         </nav>
 
@@ -265,14 +267,16 @@ const gedeeld = computed(() => (keuze.indeling === 'leverancier' && keuze.gekoze
                     <small v-if="p.tekening_id">
                       <button type="button" class="link plek-link" @click="viewer = p">Op tekening: {{ tekeningTekst(p) }}</button>
                     </small>
-                    <small v-if="p.opgelost && p.opgelost_op">Opgelost door {{ p.opgelost_door ?? 'onbekend' }} · {{ fmtMoment(p.opgelost_op, nu) }}</small>
+                    <small v-if="p.gereed_op" class="melding-regel">Opgelost gemeld door {{ p.gereed_door ?? 'de leverancier' }} · {{ fmtMoment(p.gereed_op, nu) }}</small>
+                    <small v-else-if="!p.opgelost && p.afgekeurd_op" class="melding-regel afgekeurd">Afgekeurd door {{ p.afgekeurd_door ?? 'onbekend' }} · {{ fmtMoment(p.afgekeurd_op, nu) }}<template v-if="p.afgekeurd_reden">: {{ p.afgekeurd_reden }}</template></small>
+                    <small v-if="p.opgelost && p.opgelost_op">{{ p.gereed_op ? 'Afgetekend' : 'Opgelost' }} door {{ p.opgelost_door ?? 'onbekend' }} · {{ fmtMoment(p.opgelost_op, nu) }}</small>
                   </div>
-                  <span><StatusTab :licht="p.opgelost ? 'klaar' : 'letop'" :woord="p.opgelost ? 'Opgelost' : 'Open'" /></span>
+                  <span><StatusTab :licht="p.opgelost ? 'klaar' : puntStand(p) === 'controleren' ? 'nu' : 'letop'" :woord="p.opgelost ? 'Opgelost' : puntStand(p) === 'controleren' ? 'Controleren' : 'Open'" /></span>
                 </div>
               </li>
             </ol>
           </div>
-          <div v-if="!zichtbaar.length" class="leeg-staat">Niets {{ keuze.status === 'opgelost' ? 'opgelost' : keuze.status === 'open' ? 'open' : '' }} in deze selectie.</div>
+          <div v-if="!zichtbaar.length" class="leeg-staat">Niets {{ { opgelost: 'opgelost', open: 'open', controleren: 'te controleren', alles: '' }[keuze.status] }} in deze selectie.</div>
         </section>
       </div>
     </template>

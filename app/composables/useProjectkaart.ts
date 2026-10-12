@@ -301,7 +301,10 @@ function maakKaart(slug: string) {
       toon(foutTekst(e), 'fout')
     }
   }
-  const zetOpgelost = (punt: Controlepunt, opgelost: boolean) => wijzigPunt(punt, { opgelost }, opgelost ? 'Opgelost' : 'Weer open')
+  const zetOpgelost = (punt: Controlepunt, opgelost: boolean) =>
+    wijzigPunt(punt, { opgelost }, opgelost ? (punt.gereed_op ? 'Afgetekend' : 'Opgelost') : 'Weer open')
+  /** De leverancier meldde het opgelost, maar het klopt niet: weer open voor hem, met de reden. */
+  const keurAf = (punt: Controlepunt, reden: string) => wijzigPunt(punt, { gereed_op: null, afgekeurd_reden: reden }, 'Afgekeurd')
   const zetPlek = (punt: Controlepunt, plek: Plek | null) =>
     wijzigPunt(punt, plek ?? GEEN_PLEK, plek ? 'Plek op de tekening vastgelegd' : 'Plek weggehaald')
   const kiesLeverancier = (punt: Controlepunt, id: string | null) =>
@@ -321,7 +324,7 @@ function maakKaart(slug: string) {
     project, taken, catalogus, gebruik, financien, logboek, leveranciers, globaleLeveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
     regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
     laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering,
-    nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, kiesLeverancier, verwijderControlepunt,
+    nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, keurAf, kiesLeverancier, verwijderControlepunt,
     tekeningen, nummers, uploadTekening, hernoemTekening, verwijderTekening, zetPlek,
   }
 }

@@ -137,7 +137,7 @@ async function deelLink() {
 
       <section class="delen-deel" aria-labelledby="delen-link">
         <h3 id="delen-link">Link voor een leverancier</h3>
-        <p class="klein">Een eigen pagina, zonder account: alleen de open punten van deze leverancier, per project en in totaal, met de foto's en de plek op de hele tekening. Daar maakt hij ook zelf een pdf. Een maand geldig, met een code van vijf cijfers, en dicht zodra alles is opgelost.</p>
+        <p class="klein">Een eigen pagina, zonder account: alleen de open punten van deze leverancier, per project en in totaal, met de foto's en de plek op de hele tekening. Daar maakt hij zelf een pdf en vinkt hij af wat hij heeft opgelost; jullie tekenen het af of keuren het af. Een maand geldig, met een code van vijf cijfers, en dicht zodra alles is afgetekend.</p>
         <div v-if="!leveranciers.length" class="leeg-staat">Geen leverancier met open punten.</div>
         <template v-else>
           <label class="delen-veld">

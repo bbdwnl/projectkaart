@@ -360,3 +360,66 @@ describe('proefversie: kopie van een deellink', () => {
     await expect(als(MICHIEL, `insert into storage.objects (bucket_id, name) values ('proef', 'x/y.pdf')`)).rejects.toThrow()
   })
 })
+
+describe('opgelost melden (leverancier) en aftekenen (BbDW)', () => {
+  const SERVER = { role: 'service_role' }
+  let lev: string
+  let punt: string
+  let link: string
+  const stand = (id: string) => db.query<{ opgelost: boolean, gereed_op: string | null, gereed_door: string | null, afgekeurd_door: string | null, afgekeurd_reden: string | null, opgelost_door: string | null }>(
+    `select opgelost, gereed_op, gereed_door, afgekeurd_door, afgekeurd_reden, opgelost_door from public.controlepunten where id = $1`, [id]).then(r => r.rows[0]!)
+  const linkReden = () => db.query<{ gesloten_reden: string | null }>(`select gesloten_reden from public.deellinks where id = $1`, [link]).then(r => r.rows[0]!.gesloten_reden)
+  const meld = (gereed_door: string | null) => als(SERVER, `update public.controlepunten set gereed_door = $2 where id = $1`, [punt, gereed_door], 'service_role')
+
+  it('laat alleen de leverancier (via de server) opgelost melden', async () => {
+    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam, globaal) values ('Schildersbedrijf Jansen', true) returning id`)
+    lev = l!.id
+    await als(MICHIEL, `insert into public.project_leveranciers (project_id, leverancier_id) values ($1, $2)`, [projectId, lev])
+    const [p] = await als<{ id: string, gereed_op: string | null }>(MICHIEL,
+      `insert into public.controlepunten (project_id, leverancier_id, notitie, foto, gereed_op, gereed_door) values ($1, $2, 'Verf op het glas', $3, now(), 'Nep') returning id, gereed_op`,
+      [projectId, lev, `${projectId}/v.jpg`])
+    punt = p!.id
+    expect(p!.gereed_op).toBeNull()
+    link = (await als<{ id: string }>(MICHIEL, `insert into public.deellinks (leverancier_id) values ($1) returning id`, [lev]))[0]!.id
+    // Een medewerker kan niet namens de leverancier melden.
+    await als(MICHIEL, `update public.controlepunten set gereed_op = now(), gereed_door = 'Schildersbedrijf Jansen' where id = $1`, [punt])
+    expect((await stand(punt)).gereed_op).toBeNull()
+    await meld('Schildersbedrijf Jansen')
+    expect(await stand(punt)).toMatchObject({ opgelost: false, gereed_door: 'Schildersbedrijf Jansen' })
+    expect((await stand(punt)).gereed_op).not.toBeNull()
+    // Terugdraaien kan de leverancier zelf.
+    await meld(null)
+    expect((await stand(punt)).gereed_op).toBeNull()
+  })
+
+  it('afkeuren: weer open voor de leverancier, met wie en de reden', async () => {
+    await meld('Schildersbedrijf Jansen')
+    await als(BENNO, `update public.controlepunten set gereed_op = null, afgekeurd_reden = '  Nog strepen op het glas  ', afgekeurd_door = 'Nep' where id = $1`, [punt])
+    expect(await stand(punt)).toMatchObject({ opgelost: false, gereed_op: null, gereed_door: null, afgekeurd_door: 'Benno van Bergen', afgekeurd_reden: 'Nog strepen op het glas' })
+    expect(await linkReden()).toBeNull()
+  })
+
+  it('pas na het aftekenen is het punt opgelost en gaat de link dicht', async () => {
+    await meld('Schildersbedrijf Jansen')
+    expect(await linkReden()).toBeNull()
+    await als(MICHIEL, `update public.controlepunten set opgelost = true where id = $1`, [punt])
+    expect(await stand(punt)).toMatchObject({ opgelost: true, opgelost_door: 'Michiel', gereed_door: 'Schildersbedrijf Jansen' })
+    expect(await linkReden()).toBe('opgelost')
+    // Na het aftekenen kan de leverancier niets meer veranderen.
+    await meld(null)
+    expect((await stand(punt)).gereed_door).toBe('Schildersbedrijf Jansen')
+  })
+
+  it('weer open: de melding en de oude afkeuring vervallen', async () => {
+    await als(MICHIEL, `update public.controlepunten set opgelost = false where id = $1`, [punt])
+    expect(await stand(punt)).toMatchObject({ opgelost: false, gereed_op: null, gereed_door: null, afgekeurd_reden: null })
+  })
+})
+
+describe('proefversie: wat de leverancier afvinkte', () => {
+  it('bewaart de meldingen per link, standaard leeg', async () => {
+    const [r] = await als<{ gereed: Record<string, string> }>({ role: 'service_role' },
+      `insert into public.proef_deellinks (token, code, geldig_tot, inhoud) values ($1, '23456', now(), '{}') returning gereed`, ['9'.repeat(64)], 'service_role')
+    expect(r!.gereed).toEqual({})
+  })
+})

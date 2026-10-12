@@ -13,6 +13,8 @@ export interface ProefServer {
   /** De pagina van de leverancier, voor wie de link niet in zijn eigen browser heeft. */
   inhoud(token: string, code: string): Promise<ExternAntwoord>
   tekeningUrl(token: string, code: string, tekeningId: string): Promise<string>
+  /** De leverancier vinkt een punt af als opgelost, of draait dat terug. */
+  meldGereed(token: string, code: string, puntId: string, gereed: boolean): Promise<void>
 }
 
 async function post<T>(pad: string, body: object): Promise<T> {
@@ -22,7 +24,8 @@ async function post<T>(pad: string, body: object): Promise<T> {
     const status = (e as { statusCode?: number }).statusCode
     throw new BronFout(status === 503
       ? 'Delen is op de server nog niet ingesteld.'
-      : status === 404 ? 'Niet gevonden: de link of de tekening staat niet (meer) op de server.' : 'De server is nu niet bereikbaar. Probeer het straks opnieuw.')
+      : status === 403 ? 'Deze link is niet (meer) open.'
+        : status === 404 ? 'Niet gevonden: dit staat niet (meer) bij de link op de server.' : 'De server is nu niet bereikbaar. Probeer het straks opnieuw.')
   }
 }
 
@@ -42,5 +45,8 @@ export function maakProefServer(apikey: string): ProefServer {
     inhoud: (token, code) => post<ExternAntwoord>(`/api/proef/punten/${encodeURIComponent(token)}`, { code }),
     tekeningUrl: async (token, code, tekeningId) =>
       (await post<{ url: string }>(`/api/proef/punten/${encodeURIComponent(token)}/tekening/${encodeURIComponent(tekeningId)}`, { code })).url,
+    async meldGereed(token, code, punt, gereed) {
+      await post(`/api/proef/punten/${encodeURIComponent(token)}/gereed`, { code, punt, gereed })
+    },
   }
 }

@@ -8,6 +8,8 @@ import { fmt } from '~/lib/datum'
 // De pagina van een leverancier, zonder account. Eerst de code van vijf cijfers (dit apparaat onthoudt hem),
 // dan alleen zijn open aandachtspunten: per project of alles, met de foto en de plek op de hele tekening.
 // Van wat hij ziet, maakt hij zelf een pdf (dezelfde als bij BbDW, zonder wie het punt meldde).
+// Is een punt opgelost, dan vinkt hij het af; BbDW controleert en tekent af (dan verdwijnt het hier), of keurt af
+// (dan staat het weer open, met de reden). Pas als BbDW alles heeft afgetekend, gaat de link dicht.
 // Is de link verlopen, ingetrokken of alles opgelost, dan zegt de pagina dat, en verder niets.
 definePageMeta({ extern: true })
 useHead({ title: 'Open punten · BbDW', meta: [{ name: 'referrer', content: 'no-referrer' }] })
@@ -88,20 +90,48 @@ function vergeet() {
 
 // ---------- wat er open staat ----------
 const keuze = ref('alle')
-const projecten = computed(() => (inhoud.value?.projecten ?? []).map(p => ({
-  ...p,
-  punten: inhoud.value!.punten.filter(x => x.project_id === p.id),
-  tekeningen: inhoud.value!.tekeningen.filter(t => t.project_id === p.id),
-})))
+/** Wat hij nog moet doen eerst, dan wat hij al opgelost meldde. */
+const projecten = computed(() => (inhoud.value?.projecten ?? []).map((p) => {
+  const punten = inhoud.value!.punten.filter(x => x.project_id === p.id)
+  return {
+    ...p,
+    punten: [...punten].sort((a, b) => Number(!!a.gereed_op) - Number(!!b.gereed_op) || a.nummer - b.nummer),
+    teDoen: punten.filter(x => !x.gereed_op).length,
+    tekeningen: inhoud.value!.tekeningen.filter(t => t.project_id === p.id),
+  }
+}))
 watch(projecten, (ps) => {
   if (keuze.value !== 'alle' && !ps.some(p => p.id === keuze.value)) keuze.value = 'alle'
 })
 const zichtbaar = computed(() => (keuze.value === 'alle' ? projecten.value : projecten.value.filter(p => p.id === keuze.value)))
 const aantal = computed(() => inhoud.value?.punten.length ?? 0)
+const teDoen = computed(() => projecten.value.reduce((n, p) => n + p.teDoen, 0))
 const zin = computed(() => {
   const ps = projecten.value.length
-  return `${aantal.value} ${aantal.value === 1 ? 'punt staat' : 'punten staan'} open${ps > 1 ? `, op ${ps} projecten` : ''}.`
+  const gemeld = aantal.value - teDoen.value
+  if (!teDoen.value) return `Je hebt alles opgelost gemeld. BbDW controleert ${gemeld === 1 ? 'het' : 'ze'} nu.`
+  return `${teDoen.value} ${teDoen.value === 1 ? 'punt staat' : 'punten staan'} open${ps > 1 ? `, op ${ps} projecten` : ''}.${gemeld ? ` ${gemeld} opgelost gemeld.` : ''}`
 })
+
+// ---------- afvinken ----------
+const vinkBezig = ref<string | null>(null)
+/** Meteen op het scherm; daarna de stand van BbDW opnieuw ophalen. */
+async function vink(punt: ExternPunt, gereed: boolean) {
+  if (!inhoud.value || vinkBezig.value) return
+  vinkBezig.value = punt.id
+  const vorige = inhoud.value
+  inhoud.value = { ...vorige, punten: vorige.punten.map(x => (x.id === punt.id ? { ...x, gereed_op: gereed ? new Date().toISOString() : null } : x)) }
+  try {
+    await bron.meldGereed(token, code.value, punt.id, gereed)
+    toon(gereed ? `#${punt.nummer} gemeld als opgelost` : `#${punt.nummer} weer open`)
+    await laad()
+  } catch (e) {
+    inhoud.value = vorige
+    toon(foutTekst(e), 'fout')
+  } finally {
+    vinkBezig.value = null
+  }
+}
 const geldigTot = computed(() => (inhoud.value ? fmt(new Date(inhoud.value.geldig_tot)) : ''))
 /** Het adres, of de plaats als die niet al in de projectnaam staat. */
 const waar = (p: { naam: string, adres: string | null, plaats: string | null }) =>
@@ -112,7 +142,7 @@ const dicht = computed(() => {
   const a = antwoord.value
   const op = a && 'op' in a ? fmt(new Date(a.op)) : ''
   switch (stand.value) {
-    case 'opgelost': return { tab: 'Opgelost', licht: 'klaar', titel: 'Alles is opgelost.', tekst: `Dank je wel. Alle punten op deze pagina zijn opgelost, dus de link is gesloten${op ? ` (${op})` : ''}.` }
+    case 'opgelost': return { tab: 'Opgelost', licht: 'klaar', titel: 'Alles is opgelost.', tekst: `Dank je wel. BbDW heeft alle punten op deze pagina afgetekend, dus de link is gesloten${op ? ` (${op})` : ''}.` }
     case 'verlopen': return { tab: 'Verlopen', licht: 'letop', titel: 'Deze link is verlopen.', tekst: `De link was geldig tot ${op}. Staan er nog punten open? Vraag BbDW om een nieuwe link.` }
     case 'ingetrokken': return { tab: 'Gesloten', licht: 'later', titel: 'Deze link is gesloten.', tekst: 'BbDW heeft deze link ingetrokken. Heb je hem nog nodig? Vraag je contactpersoon bij BbDW om een nieuwe.' }
     case 'geblokkeerd': return { tab: 'Gesloten', licht: 'telaat', titel: 'Deze link is gesloten.', tekst: 'Er is te vaak een verkeerde code ingevuld. Vraag BbDW om een nieuwe link.' }
@@ -134,7 +164,8 @@ function fotoFout() {
 }
 
 type ProjectMetPunten = (typeof projecten.value)[number]
-const viewer = ref<{ projectId: string, tekeningId: string, punt: ExternPunt | null, titel: string } | null>(null)
+// Altijd de hele tekening met al zijn punten (geen ingezoomd stukje); een aangetikt punt valt op en staat onderin.
+const viewer = ref<{ projectId: string, tekeningId: string, blad: number, actief: string | null, titel: string } | null>(null)
 const alsTekening = (t: ExternTekening): Tekening => ({ ...t, pad: '', aangemaakt_door: null, aangemaakt_op: '' })
 const viewerTekeningen = computed(() => (inhoud.value?.tekeningen ?? []).filter(t => t.project_id === viewer.value?.projectId).map(alsTekening))
 const viewerPins = computed(() => pinsVan((inhoud.value?.punten ?? []).filter(p => p.project_id === viewer.value?.projectId).map(p => ({ ...p, opgelost: false })), p => p.nummer))
@@ -143,16 +174,24 @@ const tekeningTekst = (p: ExternPunt) => {
   const t = inhoud.value?.tekeningen.find(x => x.id === p.tekening_id)
   return t ? `${t.naam}, blad ${p.tekening_blad}` : ''
 }
+/** Het blad van deze tekening met de meeste punten van hem. */
+function drukstBlad(projectId: string, tekeningId: string) {
+  const tel = new Map<number, number>()
+  for (const p of inhoud.value?.punten ?? []) {
+    if (p.project_id === projectId && p.tekening_id === tekeningId) tel.set(p.tekening_blad!, (tel.get(p.tekening_blad!) ?? 0) + 1)
+  }
+  return [...tel].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0]?.[0] ?? 1
+}
 /** De hele tekening met al zijn punten; bij meer tekeningen die met de meeste punten eerst. */
 function heleTekening(p: ProjectMetPunten) {
   const op = (t: ExternTekening) => p.punten.filter(x => x.tekening_id === t.id).length
   const t = [...p.tekeningen].sort((a, b) => op(b) - op(a))[0]
-  if (t) viewer.value = { projectId: p.id, tekeningId: t.id, punt: null, titel: p.naam }
+  if (t) viewer.value = { projectId: p.id, tekeningId: t.id, blad: drukstBlad(p.id, t.id), actief: null, titel: p.naam }
 }
 function opTekening(punt: ExternPunt) {
-  if (punt.tekening_id) viewer.value = { projectId: punt.project_id, tekeningId: punt.tekening_id, punt, titel: `#${punt.nummer} · ${punt.notitie}` }
+  const project = projecten.value.find(p => p.id === punt.project_id)
+  if (punt.tekening_id) viewer.value = { projectId: punt.project_id, tekeningId: punt.tekening_id, blad: punt.tekening_blad ?? 1, actief: punt.id, titel: project?.naam ?? '' }
 }
-const plekVan = (p: ExternPunt | null) => (p?.tekening_id ? { tekening_id: p.tekening_id, blad: p.tekening_blad!, x: p.tekening_x!, y: p.tekening_y! } : null)
 
 // ---------- pdf van wat hij ziet ----------
 const pdfBezig = ref(false)
@@ -181,7 +220,7 @@ async function pdf() {
         punten: p.punten.map((x) => {
           const url = x.tekening_id ? tekeningUrls.get(x.tekening_id) : null
           return {
-            punt: { id: x.id, notitie: x.notitie, aangemaakt_op: x.aangemaakt_op, opgelost: false, opgelost_door: null, opgelost_op: null },
+            punt: { id: x.id, notitie: x.notitie, aangemaakt_op: x.aangemaakt_op, opgelost: false, opgelost_door: null, opgelost_op: null, gereed_op: x.gereed_op, afgekeurd_op: x.afgekeurd_op, afgekeurd_reden: x.afgekeurd_reden },
             nummer: x.nummer, fotoUrl: x.foto, bij: '',
             plek: url ? { url, blad: x.tekening_blad!, x: x.tekening_x!, y: x.tekening_y!, tekst: tekeningTekst(x) } : null,
           }
@@ -260,7 +299,7 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
           <p class="label">Open punten voor<template v-if="inhoud.leverancier.vak"> · {{ inhoud.leverancier.vak }}</template></p>
           <h1>{{ inhoud.leverancier.naam }}</h1>
           <p class="zin extern-zin">{{ zin }}</p>
-          <p class="extern-uitleg">Dit vond BbDW bij de controle, en het staat nog open. Bij elk punt de foto en de plek op de tekening.</p>
+          <p class="extern-uitleg">Dit vond BbDW bij de controle, en het staat nog open. Bij elk punt de foto en de plek op de tekening. Opgelost? Vink het af; BbDW controleert het en tekent het af.</p>
           <div class="extern-acties">
             <div v-if="projecten.length > 1" class="seg extern-filter" role="group" aria-label="Welke projecten">
               <button type="button" :aria-pressed="keuze === 'alle'" @click="keuze = 'alle'">Alle projecten <span class="n">{{ aantal }}</span></button>
@@ -275,7 +314,7 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
 
       <div class="wrap extern-lijst">
         <section v-for="p in zichtbaar" :key="p.id" class="kaart extern-project" :aria-labelledby="`project-${p.id}`">
-          <span class="tab letop">{{ p.punten.length }} open</span>
+          <span class="tab" :class="p.teDoen ? 'letop' : 'nu'">{{ p.teDoen ? `${p.teDoen} open` : 'Alles gemeld' }}</span>
           <div class="extern-project-kop">
             <div>
               <h2 :id="`project-${p.id}`">{{ p.naam }}</h2>
@@ -287,17 +326,29 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
             </button>
           </div>
           <ol class="extern-punten">
-            <li v-for="punt in p.punten" :key="punt.id" class="extern-punt">
+            <li v-for="punt in p.punten" :key="punt.id" class="extern-punt" :class="{ gemeld: punt.gereed_op }">
               <button type="button" class="duim" :aria-label="`Foto van punt ${punt.nummer} bekijken`" :disabled="!punt.foto" @click="toonFoto(punt)">
                 <img v-if="punt.foto" :src="punt.foto" alt="" loading="lazy" @error="fotoFout">
               </button>
               <div class="extern-punt-tekst">
                 <p class="notitie"><b class="punt-nr">#{{ punt.nummer }}</b> {{ punt.notitie }}</p>
-                <small>Gemeld op {{ fmt(new Date(punt.aangemaakt_op)) }}<template v-if="punt.tekening_id"> · {{ tekeningTekst(punt) }}</template></small>
-                <button v-if="punt.tekening_id" type="button" class="extern-plek" :aria-label="`Punt ${punt.nummer} op de tekening bekijken`" @click="opTekening(punt)">
-                  <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 15s5-4.6 5-8.5A5 5 0 0 0 3 6.5C3 10.4 8 15 8 15z" fill="none" stroke="currentColor" stroke-width="1.9" /><circle cx="8" cy="6.5" r="1.8" fill="currentColor" /></svg>
-                  Op de tekening
-                </button>
+                <small>Gemeld op {{ fmt(new Date(punt.aangemaakt_op)) }}</small>
+                <small v-if="punt.tekening_id">
+                  <button type="button" class="link plek-link" @click="opTekening(punt)">Op tekening: {{ tekeningTekst(punt) }}</button>
+                </small>
+                <p v-if="!punt.gereed_op && punt.afgekeurd_op" class="afgekeurd-regel">
+                  Nog niet goed volgens BbDW ({{ fmt(new Date(punt.afgekeurd_op)) }}){{ punt.afgekeurd_reden ? `: ${punt.afgekeurd_reden}` : '.' }}
+                </p>
+                <div class="vink">
+                  <button
+                    type="button" class="vink-knop" :aria-pressed="!!punt.gereed_op" :disabled="vinkBezig === punt.id"
+                    @click="vink(punt, !punt.gereed_op)"
+                  >
+                    <span class="vink-vak" aria-hidden="true"><svg v-if="punt.gereed_op" width="14" height="14" viewBox="0 0 16 16"><path d="M3 8.5l3.2 3.2L13 5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
+                    {{ punt.gereed_op ? 'Opgelost gemeld' : 'Opgelost' }}
+                  </button>
+                  <small v-if="punt.gereed_op">{{ fmt(new Date(punt.gereed_op)) }} · BbDW controleert. Per ongeluk? Tik nog eens om het terug te draaien.</small>
+                </div>
               </div>
             </li>
           </ol>
@@ -305,7 +356,7 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
 
         <footer class="extern-voet">
           <p>
-            Deze pagina is van BbDW en alleen voor {{ inhoud.leverancier.naam }}. Hij gaat vanzelf dicht zodra alles is opgelost, en uiterlijk op {{ geldigTot }}.
+            Deze pagina is van BbDW en alleen voor {{ inhoud.leverancier.naam }}. Hij gaat vanzelf dicht zodra BbDW alles heeft afgetekend, en uiterlijk op {{ geldigTot }}.
             <template v-if="inhoud.gedeeld_door">Vragen over een punt? Neem contact op met {{ inhoud.gedeeld_door }} van BbDW.</template>
           </p>
           <button type="button" class="link" @click="vergeet">Code vergeten op dit apparaat</button>
@@ -314,8 +365,8 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
     </template>
 
     <TekeningViewer
-      v-if="viewer" :tekeningen="viewerTekeningen" :tekening-id="viewer.tekeningId" :pins="viewerPins" :plek="plekVan(viewer.punt)"
-      :actief="viewer.punt?.id ?? null" :titel="viewer.titel" :url-van="tekeningUrl" @sluit="viewer = null"
+      v-if="viewer" :tekeningen="viewerTekeningen" :tekening-id="viewer.tekeningId" :pins="viewerPins" :start-blad="viewer.blad"
+      :actief="viewer.actief" :titel="viewer.titel" :url-van="tekeningUrl" @sluit="viewer = null"
     />
 
     <dialog ref="venster" class="fotovenster" @close="groot = null" @click.self="venster?.close()">

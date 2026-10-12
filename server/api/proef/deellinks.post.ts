@@ -1,4 +1,4 @@
-import { schoneProefLink, type ProefStand } from '../../../app/lib/deellink'
+import { geldigeMeldingen, meldingenUit, schoneProefLink, type Meldingen, type ProefStand } from '../../../app/lib/deellink'
 
 // Proefversie: de browser van een tester zet een kopie van zijn links op de server (of werkt hem bij), zodat een
 // leverancier de link ook op een ander apparaat kan openen. Terug komt wat alleen de server weet: gekeken, verkeerde
@@ -14,16 +14,22 @@ export default defineEventHandler(async (event): Promise<ProefStand[]> => {
   const tokens = links.map(l => l!.token)
   if (!tokens.length) return []
 
-  const bestaand = await sb.from('proef_deellinks').select('token, gesloten_reden').in('token', tokens)
+  const bestaand = await sb.from('proef_deellinks').select('token, gesloten_reden, gereed').in('token', tokens)
   if (bestaand.error) throw nietBereikbaar()
   const nu = new Date().toISOString()
   for (const l of links as NonNullable<(typeof links)[number]>[]) {
     const oud = bestaand.data.find(r => r.token === l.token)
     const res = !oud
-      ? l.inhoud ? await sb.from('proef_deellinks').insert({ token: l.token, code: l.code, geldig_tot: l.geldig_tot, gesloten_reden: l.gesloten_reden, gesloten_op: l.gesloten_op, inhoud: l.inhoud, voorbeeld_tekeningen: l.voorbeeld_tekeningen }) : null
+      ? l.inhoud ? await sb.from('proef_deellinks').insert({
+          token: l.token, code: l.code, geldig_tot: l.geldig_tot, gesloten_reden: l.gesloten_reden, gesloten_op: l.gesloten_op,
+          inhoud: l.inhoud, voorbeeld_tekeningen: l.voorbeeld_tekeningen,
+          // Wat al als opgelost gemeld stond; daarna vinkt alleen de leverancier af, hier op de server.
+          gereed: meldingenUit(l.inhoud),
+        }) : null
       : await sb.from('proef_deellinks').update({
           bijgewerkt_op: nu,
-          ...(l.inhoud ? { inhoud: l.inhoud, voorbeeld_tekeningen: l.voorbeeld_tekeningen } : {}),
+          // Afgetekende en afgekeurde punten vallen af.
+          ...(l.inhoud ? { inhoud: l.inhoud, voorbeeld_tekeningen: l.voorbeeld_tekeningen, gereed: geldigeMeldingen(oud.gereed as Meldingen, l.inhoud) } : {}),
           // Dicht blijft dicht: alleen sluiten, nooit weer openen.
           ...(!oud.gesloten_reden && l.gesloten_reden ? { gesloten_reden: l.gesloten_reden, gesloten_op: l.gesloten_op } : {}),
         }).eq('token', l.token)
@@ -32,7 +38,7 @@ export default defineEventHandler(async (event): Promise<ProefStand[]> => {
   // Opruimen: links die al een maand verlopen zijn.
   await sb.from('proef_deellinks').delete().lt('geldig_tot', new Date(Date.now() - 30 * 864e5).toISOString())
 
-  const stand = await sb.from('proef_deellinks').select('token, gesloten_reden, gesloten_op, foute_pogingen, bekeken_op').in('token', tokens)
+  const stand = await sb.from('proef_deellinks').select('token, gesloten_reden, gesloten_op, foute_pogingen, bekeken_op, gereed').in('token', tokens)
   if (stand.error) throw nietBereikbaar()
   return stand.data as ProefStand[]
 })

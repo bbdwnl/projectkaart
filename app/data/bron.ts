@@ -70,6 +70,8 @@ export interface Bron {
   externeInhoud(token: string, code: string): Promise<ExternAntwoord>
   /** Een tijdelijk adres van een tekening op die pagina (met de juiste code). */
   externeTekeningUrl(token: string, code: string, tekeningId: string): Promise<string>
+  /** De leverancier vinkt op zijn pagina een open punt af als opgelost, of draait dat terug. BbDW tekent daarna af. */
+  meldGereed(token: string, code: string, puntId: string, gereed: boolean): Promise<void>
 }
 
 export interface NieuwControlepunt {

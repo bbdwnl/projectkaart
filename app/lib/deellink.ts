@@ -66,7 +66,8 @@ export function deelTekst(a: { leverancier: string, adres: string, geldigTot: st
 
 // ---------- de pagina van de leverancier ----------
 
-export type ExternPunt = Pick<Controlepunt, 'id' | 'project_id' | 'notitie' | 'aangemaakt_op' | PlekVeld> & {
+/** Een open punt zoals de leverancier het ziet: met zijn eigen melding, en een afkeuring van BbDW met de reden. */
+export type ExternPunt = Pick<Controlepunt, 'id' | 'project_id' | 'notitie' | 'aangemaakt_op' | PlekVeld | 'gereed_op' | 'afgekeurd_op' | 'afgekeurd_reden'> & {
   /** Zoals op de tekening en in de lijsten bij BbDW. */
   nummer: number
   /** Een tijdelijk adres van de foto. */
@@ -139,6 +140,7 @@ export function externeInhoud(a: {
     punten: eigen.map(p => ({
       id: p.id, project_id: p.project_id, nummer: nummers.get(p.id)!, notitie: p.notitie, aangemaakt_op: p.aangemaakt_op, foto: a.fotoUrl(p.foto),
       tekening_id: p.tekening_id, tekening_blad: p.tekening_blad, tekening_x: p.tekening_x, tekening_y: p.tekening_y,
+      gereed_op: p.gereed_op ?? null, afgekeurd_op: p.afgekeurd_op ?? null, afgekeurd_reden: p.afgekeurd_reden ?? null,
     })).sort((x, y) => x.nummer - y.nummer),
     tekeningen: a.tekeningen.filter(t => tekeningIds.has(t.id)).map(t => ({ id: t.id, project_id: t.project_id, naam: t.naam })),
   }
@@ -165,8 +167,10 @@ export interface ProefLink {
   /** De tekeningen die de openbare voorbeeldtekening zijn; de rest uploadt de tester. */
   voorbeeld_tekeningen: string[]
 }
-/** Wat alleen de server weet: of er is gekeken, verkeerde codes, en of hij daar dicht ging. */
-export type ProefStand = Pick<Deellink, 'token' | 'gesloten_reden' | 'gesloten_op' | 'foute_pogingen' | 'bekeken_op'>
+/** Wat de leverancier op zijn pagina afvinkte: per punt wanneer. */
+export type Meldingen = Record<string, string>
+/** Wat alleen de server weet: of er is gekeken, verkeerde codes, of hij daar dicht ging, en wat de leverancier afvinkte. */
+export type ProefStand = Pick<Deellink, 'token' | 'gesloten_reden' | 'gesloten_op' | 'foute_pogingen' | 'bekeken_op'> & { gereed: Meldingen }
 
 type Los = Record<string, unknown>
 const isLos = (v: unknown): v is Los => !!v && typeof v === 'object' && !Array.isArray(v)
@@ -204,6 +208,7 @@ export function schoneInhoud(x: unknown): ExternInhoud | null {
     punten.push({
       id: p.id as string, project_id: p.project_id as string, nummer: p.nummer, notitie: p.notitie as string, aangemaakt_op: p.aangemaakt_op as string, foto: foto(p.foto),
       tekening_id: plek ? t.id : null, tekening_blad: plek ? blad : null, tekening_x: plek ? tx : null, tekening_y: plek ? ty : null,
+      gereed_op: moment(p.gereed_op), afgekeurd_op: moment(p.afgekeurd_op), afgekeurd_reden: tekst(p.afgekeurd_reden, 1000),
     })
   }
   return {
@@ -224,6 +229,34 @@ export function schoneProefLink(x: unknown): ProefLink | null {
   if (x.inhoud != null && !inhoud) return null
   const voorbeeld = Array.isArray(x.voorbeeld_tekeningen) ? x.voorbeeld_tekeningen.filter((v): v is string => typeof v === 'string' && TEKENING_ID_VORM.test(v)).slice(0, 50) : []
   return { token: x.token, code: x.code, geldig_tot: geldig, gesloten_reden: reden, gesloten_op: reden ? moment(x.gesloten_op) ?? new Date().toISOString() : null, inhoud, voorbeeld_tekeningen: voorbeeld }
+}
+
+/** Een melding telt als hij nieuwer is dan de laatste afkeuring van BbDW. */
+const geldig = (op: string | undefined, p: Pick<ExternPunt, 'afgekeurd_op'>) => !!op && (!p.afgekeurd_op || Date.parse(op) > Date.parse(p.afgekeurd_op))
+
+/** Bij een nieuwe kopie op de server: wat de tester al als opgelost gemeld had (zoals in de voorbeeldgegevens). */
+export const meldingenUit = (inhoud: ExternInhoud): Meldingen =>
+  Object.fromEntries(inhoud.punten.filter(p => p.gereed_op).map(p => [p.id, p.gereed_op!]))
+
+/** Wat er van de meldingen overblijft bij een nieuwe kopie: niet voor punten die BbDW aftekende of daarna afkeurde. */
+export const geldigeMeldingen = (m: Meldingen, inhoud: ExternInhoud): Meldingen =>
+  Object.fromEntries(inhoud.punten.filter(p => geldig(m[p.id], p)).map(p => [p.id, m[p.id]!]))
+
+/** De kopie zoals de leverancier hem ziet: met wat hij zelf afvinkte. */
+export const metMeldingen = (inhoud: ExternInhoud, m: Meldingen): ExternInhoud =>
+  ({ ...inhoud, punten: inhoud.punten.map(p => ({ ...p, gereed_op: geldig(m[p.id], p) ? m[p.id]! : null })) })
+
+/** Bij de tester: wat de leverancier op de server afvinkte of terugdraaide, in zijn eigen punten. true als er iets veranderde. */
+export function neemMeldingenOver(punten: Controlepunt[], leverancierId: string, leverancier: string, m: Meldingen): boolean {
+  let veranderd = false
+  for (const p of openPuntenVan(leverancierId, punten)) {
+    const nieuw = geldig(m[p.id], p) ? { gereed_op: m[p.id]!, gereed_door: leverancier } : { gereed_op: null, gereed_door: null }
+    if (p.gereed_op !== nieuw.gereed_op || p.gereed_door !== nieuw.gereed_door) {
+      Object.assign(p, nieuw)
+      veranderd = true
+    }
+  }
+  return veranderd
 }
 
 /** De stand van de server bij de link van de tester: gekeken en pogingen van de server; dicht blijft dicht, aan beide kanten. */

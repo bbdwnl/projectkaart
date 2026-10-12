@@ -8,7 +8,8 @@ import { sluitTekeningen, tekeningUitsnede, type TekeningCache } from '~/utils/t
 
 export interface PdfPunt {
   /** Op de pagina van een leverancier zonder wie het meldde. */
-  punt: Pick<Controlepunt, 'id' | 'notitie' | 'aangemaakt_op' | 'opgelost' | 'opgelost_door' | 'opgelost_op'> & { aangemaakt_door?: string | null }
+  punt: Pick<Controlepunt, 'id' | 'notitie' | 'aangemaakt_op' | 'opgelost' | 'opgelost_door' | 'opgelost_op' | 'gereed_op' | 'afgekeurd_op' | 'afgekeurd_reden'>
+    & { aangemaakt_door?: string | null, gereed_door?: string | null }
   /** Het nummer zoals op de tekening en in de lijst. */
   nummer: number | undefined
   fotoUrl: string | null
@@ -31,7 +32,7 @@ export interface PdfInvoer {
 interface Foto { data: string, b: number, h: number }
 
 const MM = { marge: 18, pagina: 210, hoogte: 297, foto: 52, fotoHoog: 39 }
-const KLEUR = { zwart: [17, 17, 17], stil: [107, 107, 107], lijn: [214, 214, 208], open: [138, 90, 23], klaar: [63, 107, 85] } as const
+const KLEUR = { zwart: [17, 17, 17], stil: [107, 107, 107], lijn: [214, 214, 208], open: [138, 90, 23], klaar: [63, 107, 85], gemeld: [47, 106, 128] } as const
 const datum = (iso: string | null) => (iso ? fmt(new Date(iso)) : '')
 
 /** Haalt een foto op en maakt hem klein genoeg voor een pdf die nog te mailen is. */
@@ -113,7 +114,14 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<Blob> {
       doc.setFont('helvetica', 'normal').setFontSize(11)
       const notitie = doc.splitTextToSize(`${nummer ? `#${nummer}  ` : ''}${punt.notitie}`, tekstBreed) as string[]
       const plekRegels = plek ? doc.setFontSize(9).splitTextToSize(`Plek: ${plek.tekst}`, tekstBreed) as string[] : []
-      const tekstHoog = notitie.length * 5 + (invoer.bijLabel ? 4 : 3) * 4.5 + plekRegels.length * 4.5
+      // De stand: opgelost (afgetekend), door de leverancier opgelost gemeld, of open (eventueel afgekeurd, met de reden).
+      const [statusKleur, statusTekst] = punt.opgelost
+        ? [KLEUR.klaar, `${punt.gereed_op ? 'Afgetekend' : 'Opgelost'}${punt.opgelost_door ? ` door ${punt.opgelost_door}` : ''}${punt.opgelost_op ? ` op ${datum(punt.opgelost_op)}` : ''}`]
+        : punt.gereed_op
+          ? [KLEUR.gemeld, `Opgelost gemeld${punt.gereed_door ? ` door ${punt.gereed_door}` : ''} op ${datum(punt.gereed_op)} · BbDW controleert`]
+          : [KLEUR.open, punt.afgekeurd_op ? `Open · afgekeurd op ${datum(punt.afgekeurd_op)}${punt.afgekeurd_reden ? `: ${punt.afgekeurd_reden}` : ''}` : 'Open']
+      const statusRegels = doc.setFont('helvetica', 'bold').setFontSize(9).splitTextToSize(statusTekst, tekstBreed) as string[]
+      const tekstHoog = notitie.length * 5 + (invoer.bijLabel ? 3 : 2) * 4.5 + plekRegels.length * 4.5 + statusRegels.length * 4.5
       const blok = Math.max(MM.fotoHoog, tekstHoog) + 6
       if (y + blok > onder) nieuwePagina()
 
@@ -158,8 +166,11 @@ export async function maakControlePdf(invoer: PdfInvoer): Promise<Blob> {
       doc.text(`Gemeld${punt.aangemaakt_door ? ` door ${punt.aangemaakt_door}` : ''} op ${datum(punt.aangemaakt_op)}`, tekstX, ty)
       ty += 4.5
       doc.setFont('helvetica', 'bold')
-      kleur(punt.opgelost ? KLEUR.klaar : KLEUR.open)
-      doc.text(punt.opgelost ? `Opgelost${punt.opgelost_door ? ` door ${punt.opgelost_door}` : ''}${punt.opgelost_op ? ` op ${datum(punt.opgelost_op)}` : ''}` : 'Open', tekstX, ty)
+      kleur(statusKleur)
+      for (const regel of statusRegels) {
+        doc.text(regel, tekstX, ty)
+        ty += 4.5
+      }
 
       y += blok
       doc.setDrawColor(KLEUR.lijn[0], KLEUR.lijn[1], KLEUR.lijn[2]).setLineWidth(0.2)

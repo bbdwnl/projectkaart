@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { Controlepunt } from '~/lib/types'
-import { pastPunt, sorteerPunten, type ControleFilter } from '~/lib/controle'
+import { pastPunt, puntStand, sorteerPunten, type ControleFilter } from '~/lib/controle'
 import { pinsVan, type BladPlek } from '~/lib/tekening'
 import { fmtMoment } from '~/lib/datum'
 
 // Aandachtspunten: wat opvalt op de bouw of bij de oplevering. Elk punt heeft een foto en een notitie;
 // de leverancier die het oplost kies je meteen of later in de lijst.
-const { controlepunten, leveranciers, nu, openPunten, zetOpgelost, kiesLeverancier, verwijderControlepunt, tekeningen, nummers, zetPlek } = useKaart()
+const { controlepunten, leveranciers, nu, openPunten, zetOpgelost, keurAf, kiesLeverancier, verwijderControlepunt, tekeningen, nummers, zetPlek } = useKaart()
 const bron = useBron()
 const filter = ref<ControleFilter>('open')
 const leverancier = ref('alle')
@@ -36,9 +36,12 @@ const selectieTekst = computed(() => leverancier.value === 'alle' ? '' : leveran
 const kies = (p: Controlepunt, e: Event) => kiesLeverancier(p, (e.target as HTMLSelectElement).value || null)
 const zichtbaar = computed(() => sorteerPunten(controlepunten.value.filter(p => pastPunt(p, filter.value, leverancier.value))))
 const aantal = (f: ControleFilter) => controlepunten.value.filter(p => pastPunt(p, f, leverancier.value)).length
+const teControleren = computed(() => controlepunten.value.filter(p => puntStand(p) === 'controleren').length)
 const kop = computed(() => !controlepunten.value.length
   ? 'Nog geen aandachtspunten'
-  : openPunten.value ? `${openPunten.value} ${openPunten.value === 1 ? 'aandachtspunt staat' : 'aandachtspunten staan'} open` : 'Alle aandachtspunten zijn opgelost')
+  : openPunten.value
+    ? `${openPunten.value} ${openPunten.value === 1 ? 'aandachtspunt staat' : 'aandachtspunten staan'} open${teControleren.value ? `, ${teControleren.value} te controleren` : ''}`
+    : 'Alle aandachtspunten zijn opgelost')
 
 function toonFoto(p: Controlepunt) {
   groot.value = p
@@ -62,6 +65,18 @@ function plekGekozen(plek: BladPlek & { tekening_id: string }) {
   const p = viewer.value?.punt
   if (p) zetPlek(p, { tekening_id: plek.tekening_id, tekening_blad: plek.blad, tekening_x: plek.x, tekening_y: plek.y })
 }
+
+/** De leverancier meldde het opgelost, maar het klopt niet. De reden ziet hij op zijn pagina. */
+function afkeuren(p: Controlepunt) {
+  const reden = prompt(`#${nummers.value.get(p.id)} afkeuren: wat klopt er nog niet? De leverancier ziet dit op zijn pagina.`)
+  if (reden !== null) keurAf(p, reden)
+}
+const STAND = {
+  open: { licht: 'letop', woord: 'Open' },
+  afgekeurd: { licht: 'letop', woord: 'Open' },
+  controleren: { licht: 'nu', woord: 'Controleren' },
+  opgelost: { licht: 'klaar', woord: 'Opgelost' },
+} as const
 
 async function weg(p: Controlepunt) {
   if (confirm('Dit aandachtspunt weghalen? De foto gaat ook weg.')) await verwijderControlepunt(p)
@@ -90,6 +105,7 @@ async function weg(p: Controlepunt) {
         <div class="filters">
           <div class="seg" role="group" aria-label="Welke aandachtspunten">
             <button type="button" :aria-pressed="filter === 'open'" @click="filter = 'open'">Open <span class="n">{{ aantal('open') }}</span></button>
+            <button v-if="aantal('controleren') || filter === 'controleren'" type="button" :aria-pressed="filter === 'controleren'" @click="filter = 'controleren'">Controleren <span class="n">{{ aantal('controleren') }}</span></button>
             <button type="button" :aria-pressed="filter === 'opgelost'" @click="filter = 'opgelost'">Opgelost <span class="n">{{ aantal('opgelost') }}</span></button>
             <button type="button" :aria-pressed="filter === 'alles'" @click="filter = 'alles'">Alles <span class="n">{{ aantal('alles') }}</span></button>
           </div>
@@ -115,11 +131,17 @@ async function weg(p: Controlepunt) {
                   <template v-else>Geen leverancier</template>
                   · {{ p.aangemaakt_door ?? 'Onbekend' }} · {{ fmtMoment(p.aangemaakt_op, nu) }}
                 </small>
-                <small v-if="p.opgelost && p.opgelost_op">Opgelost door {{ p.opgelost_door ?? 'onbekend' }} · {{ fmtMoment(p.opgelost_op, nu) }}</small>
+                <small v-if="p.gereed_op" class="melding-regel">Opgelost gemeld door {{ p.gereed_door ?? 'de leverancier' }} · {{ fmtMoment(p.gereed_op, nu) }}</small>
+                <small v-else-if="!p.opgelost && p.afgekeurd_op" class="melding-regel afgekeurd">Afgekeurd door {{ p.afgekeurd_door ?? 'onbekend' }} · {{ fmtMoment(p.afgekeurd_op, nu) }}<template v-if="p.afgekeurd_reden">: {{ p.afgekeurd_reden }}</template></small>
+                <small v-if="p.opgelost && p.opgelost_op">{{ p.gereed_op ? 'Afgetekend' : 'Opgelost' }} door {{ p.opgelost_door ?? 'onbekend' }} · {{ fmtMoment(p.opgelost_op, nu) }}</small>
               </div>
-              <span><StatusTab :licht="p.opgelost ? 'klaar' : 'letop'" :woord="p.opgelost ? 'Opgelost' : 'Open'" /></span>
+              <span><StatusTab :licht="STAND[puntStand(p)].licht" :woord="STAND[puntStand(p)].woord" /></span>
               <span class="acties">
-                <button v-if="!p.opgelost" type="button" class="knop klein" @click="zetOpgelost(p, true)">Opgelost</button>
+                <template v-if="puntStand(p) === 'controleren'">
+                  <button type="button" class="knop klein zwart" @click="zetOpgelost(p, true)">Aftekenen</button>
+                  <button type="button" class="link" @click="afkeuren(p)">Afkeuren</button>
+                </template>
+                <button v-else-if="!p.opgelost" type="button" class="knop klein" @click="zetOpgelost(p, true)">Opgelost</button>
                 <button v-else type="button" class="link" @click="zetOpgelost(p, false)">Weer open</button>
                 <button v-if="p.tekening_id || tekeningen.length" type="button" class="plek-knop" :class="{ heeft: p.tekening_id }" :title="p.tekening_id ? 'Op de tekening bekijken' : 'Plek op de tekening kiezen'" :aria-label="p.tekening_id ? `#${nummers.get(p.id)} op de tekening bekijken` : `Plek op de tekening kiezen voor #${nummers.get(p.id)}`" @click="opTekening(p)">
                   <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 15s5-4.6 5-8.5A5 5 0 0 0 3 6.5C3 10.4 8 15 8 15z" fill="none" stroke="currentColor" stroke-width="1.7" /><circle cx="8" cy="6.5" r="1.8" fill="currentColor" /></svg>
@@ -129,7 +151,7 @@ async function weg(p: Controlepunt) {
             </div>
           </li>
         </TransitionGroup>
-        <div v-else class="leeg-staat">{{ filter === 'open' ? 'Niets open' : 'Niets' }}{{ selectieTekst }}.</div>
+        <div v-else class="leeg-staat">{{ filter === 'open' ? 'Niets open' : filter === 'controleren' ? 'Niets te controleren' : 'Niets' }}{{ selectieTekst }}.</div>
       </template>
       <div v-else-if="!nieuwOpen" class="leeg-staat">Hier komen de aandachtspunten van dit project, met de foto erbij. Begin met Aandachtspunt toevoegen.</div>
     </section>

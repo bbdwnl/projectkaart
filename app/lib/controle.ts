@@ -1,18 +1,51 @@
-import type { Controlepunt } from './types'
+import { GEEN_MELDING, type Controlepunt, type ControlepuntWijziging } from './types'
 
 // Controle: de lijst met aandachtspunten op de projectkaart.
 
-export type ControleFilter = 'open' | 'opgelost' | 'alles'
+/** controleren: de leverancier meldde het opgelost, BbDW moet nog aftekenen. Die tellen ook als open. */
+export type ControleFilter = 'open' | 'controleren' | 'opgelost' | 'alles'
+
+/**
+ * De stand van een punt. Opgelost: afgetekend door BbDW. Controleren: de leverancier meldde het opgelost.
+ * Afgekeurd: BbDW keurde de laatste melding af, en de leverancier heeft het nog niet opnieuw gemeld.
+ */
+export type PuntStand = 'open' | 'controleren' | 'afgekeurd' | 'opgelost'
+export function puntStand(p: Pick<Controlepunt, 'opgelost' | 'gereed_op' | 'afgekeurd_op'>): PuntStand {
+  if (p.opgelost) return 'opgelost'
+  if (p.gereed_op) return 'controleren'
+  return p.afgekeurd_op ? 'afgekeurd' : 'open'
+}
 
 /** leverancier: een id, 'geen' (nog zonder leverancier) of 'alle'. */
 export function pastPunt(p: Controlepunt, filter: ControleFilter, leverancier: string): boolean {
   if (leverancier !== 'alle' && (p.leverancier_id ?? 'geen') !== leverancier) return false
+  if (filter === 'controleren') return puntStand(p) === 'controleren'
   return filter === 'alles' || (filter === 'open') === !p.opgelost
 }
 
-/** Open punten eerst, daarbinnen het nieuwste bovenaan. */
+const VOLGORDE: Record<PuntStand, number> = { controleren: 0, afgekeurd: 1, open: 1, opgelost: 2 }
+/** Wat BbDW moet controleren eerst, dan de open punten, dan opgelost; daarbinnen het nieuwste bovenaan. */
 export function sorteerPunten(punten: Controlepunt[]): Controlepunt[] {
-  return [...punten].sort((a, b) => Number(a.opgelost) - Number(b.opgelost) || Date.parse(b.aangemaakt_op) - Date.parse(a.aangemaakt_op))
+  return [...punten].sort((a, b) => VOLGORDE[puntStand(a)] - VOLGORDE[puntStand(b)] || Date.parse(b.aangemaakt_op) - Date.parse(a.aangemaakt_op))
+}
+
+/**
+ * Zoals de trigger controlepunt_bijwerken: wat er met de meldingen van een punt gebeurt bij een wijziging door BbDW.
+ * Voor de proefversie, zodat die hetzelfde doet als de database.
+ */
+export function meldingNaWijziging(p: Controlepunt, w: ControlepuntWijziging, wie: string, nu: Date): Partial<Controlepunt> {
+  const opgelost = w.opgelost ?? p.opgelost
+  if (p.opgelost && !opgelost) return { ...GEEN_MELDING }
+  if (p.gereed_op && w.gereed_op === null && !opgelost) {
+    return { gereed_op: null, gereed_door: null, afgekeurd_op: nu.toISOString(), afgekeurd_door: wie, afgekeurd_reden: w.afgekeurd_reden?.trim() || null }
+  }
+  return {}
+}
+
+/** De leverancier meldt een open punt opgelost, of draait dat terug (zoals de trigger bij de server). null: kan niet. */
+export function gereedMelding(p: Controlepunt, gereed: boolean, leverancier: string, nu: Date): Partial<Controlepunt> | null {
+  if (p.opgelost) return null
+  return gereed ? { gereed_op: p.gereed_op ?? nu.toISOString(), gereed_door: leverancier } : { gereed_op: null, gereed_door: null }
 }
 
 /** Waar de foto van een nieuw punt komt te staan: een eigen map per project. */
@@ -40,13 +73,14 @@ export function groepeerPunten(punten: Controlepunt[], op: Indeling, naam: (sleu
     .sort((a, b) => Number(a.sleutel === 'geen') - Number(b.sleutel === 'geen') || a.titel.localeCompare(b.titel, 'nl'))
 }
 
-/** Per project of per leverancier: hoeveel punten er open staan, en hoeveel er zijn. */
-export function telPunten(punten: Controlepunt[], op: Indeling): Map<string, { open: number, totaal: number }> {
-  const tel = new Map<string, { open: number, totaal: number }>()
+/** Per project of per leverancier: hoeveel punten er open staan (waarvan te controleren), en hoeveel er zijn. */
+export function telPunten(punten: Controlepunt[], op: Indeling): Map<string, { open: number, controleren: number, totaal: number }> {
+  const tel = new Map<string, { open: number, controleren: number, totaal: number }>()
   for (const p of punten) {
-    const t = tel.get(sleutelVan(p, op)) ?? { open: 0, totaal: 0 }
+    const t = tel.get(sleutelVan(p, op)) ?? { open: 0, controleren: 0, totaal: 0 }
     t.totaal++
     if (!p.opgelost) t.open++
+    if (puntStand(p) === 'controleren') t.controleren++
     tel.set(sleutelVan(p, op), t)
   }
   return tel

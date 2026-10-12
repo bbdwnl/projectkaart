@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import projecten from '~/data/projecten.json'
 import { maakDemoGegevens } from '~/data/demo'
 import { maakDemoBron } from '~/data/bron-demo'
-import { actieveLink, CODE_VORM, controleerCode, deelTekst, dichtAntwoord, externeInhoud, MAX_POGINGEN, metProefStand, nieuweCode, nieuwToken, schoneInhoud, schoneProefLink, standVan, TOKEN_VORM, type ExternAntwoord, type ExternInhoud, type ProefLink, type ProefStand } from '~/lib/deellink'
+import { actieveLink, CODE_VORM, controleerCode, deelTekst, dichtAntwoord, externeInhoud, geldigeMeldingen, MAX_POGINGEN, meldingenUit, metMeldingen, metProefStand, neemMeldingenOver, nieuweCode, nieuwToken, schoneInhoud, schoneProefLink, standVan, TOKEN_VORM, type ExternAntwoord, type ExternInhoud, type Meldingen, type ProefLink, type ProefStand } from '~/lib/deellink'
 import type { ProefServer } from '~/data/proef-server'
 import { fotoPad } from '~/lib/controle'
 import { plusMaand } from '~/lib/datum'
@@ -179,7 +179,10 @@ describe('proefversie: wat een tester naar de server stuurt', () => {
     leverancier: { naam: 'Klimaattechniek Oost', vak: null }, geldig_tot: '2026-11-12T10:00:00.000Z', gedeeld_door: 'Testgebruiker',
     projecten: [{ id: 'p1', naam: 'Apeldoorn Vlijtseweg', plaats: 'Apeldoorn', adres: null }],
     tekeningen: [{ id: 'tek-vlijtseweg', project_id: 'p1', naam: 'Plattegrond' }],
-    punten: [{ id: 'c1', project_id: 'p1', nummer: 3, notitie: 'Kitnaad', aangemaakt_op: '2026-10-01T09:00:00.000Z', foto: 'data:image/jpeg;base64,/9j/4AAQ==', tekening_id: 'tek-vlijtseweg', tekening_blad: 1, tekening_x: 0.4, tekening_y: 0.6 }],
+    punten: [{
+      id: 'c1', project_id: 'p1', nummer: 3, notitie: 'Kitnaad', aangemaakt_op: '2026-10-01T09:00:00.000Z', foto: 'data:image/jpeg;base64,/9j/4AAQ==',
+      tekening_id: 'tek-vlijtseweg', tekening_blad: 1, tekening_x: 0.4, tekening_y: 0.6, gereed_op: null, afgekeurd_op: '2026-10-05T09:00:00.000Z', afgekeurd_reden: 'Kit nog niet glad',
+    }],
   }
   const link: ProefLink = { token: 'a'.repeat(64), code: '23456', geldig_tot: '2026-11-12T10:00:00.000Z', gesloten_reden: null, gesloten_op: null, inhoud, voorbeeld_tekeningen: ['tek-vlijtseweg'] }
 
@@ -212,19 +215,19 @@ const link_ = (extra: Partial<Deellink>) => link(extra)
 
 /** Doet wat server/api/proef doet, in het geheugen; elke vraag gaat als JSON heen en terug, zoals over het net. */
 function nepServer() {
-  type Rij = ProefLink & { inhoud: ExternInhoud, foute_pogingen: number, bekeken_op: string | null }
+  type Rij = ProefLink & { inhoud: ExternInhoud, foute_pogingen: number, bekeken_op: string | null, gereed: Meldingen }
   const rijen = new Map<string, Rij>()
   const json = <T>(x: T): T => JSON.parse(JSON.stringify(x))
-  const stand = (r: Rij): ProefStand => ({ token: r.token, gesloten_reden: r.gesloten_reden, gesloten_op: r.gesloten_op, foute_pogingen: r.foute_pogingen, bekeken_op: r.bekeken_op })
+  const stand = (r: Rij): ProefStand => ({ token: r.token, gesloten_reden: r.gesloten_reden, gesloten_op: r.gesloten_op, foute_pogingen: r.foute_pogingen, bekeken_op: r.bekeken_op, gereed: r.gereed })
   const uploads: string[] = []
   const server: ProefServer = {
     async bewaar(l) {
       const s = schoneProefLink(json(l))!
       const oud = rijen.get(s.token)
       if (!oud) {
-        if (s.inhoud) rijen.set(s.token, { ...s, inhoud: s.inhoud, foute_pogingen: 0, bekeken_op: null })
+        if (s.inhoud) rijen.set(s.token, { ...s, inhoud: s.inhoud, foute_pogingen: 0, bekeken_op: null, gereed: meldingenUit(s.inhoud) })
       } else {
-        if (s.inhoud) Object.assign(oud, { inhoud: s.inhoud, voorbeeld_tekeningen: s.voorbeeld_tekeningen })
+        if (s.inhoud) Object.assign(oud, { inhoud: s.inhoud, voorbeeld_tekeningen: s.voorbeeld_tekeningen, gereed: geldigeMeldingen(oud.gereed, s.inhoud) })
         if (!oud.gesloten_reden && s.gesloten_reden) Object.assign(oud, { gesloten_reden: s.gesloten_reden, gesloten_op: s.gesloten_op })
       }
       const r = rijen.get(s.token)
@@ -239,7 +242,13 @@ function nepServer() {
       if (st !== 'open') return dichtAntwoord(r, st)
       const { wijziging, antwoord } = controleerCode(r, code, code === r.code, nu)
       if (wijziging) Object.assign(r, wijziging)
-      return json(antwoord ?? { stand: 'open', inhoud: r.inhoud })
+      return json(antwoord ?? { stand: 'open', inhoud: metMeldingen(r.inhoud, r.gereed) })
+    },
+    async meldGereed(token, code, punt, gereed) {
+      const r = rijen.get(token)
+      if (!r || standVan(r, new Date()) !== 'open' || code !== r.code || !r.inhoud.punten.some(p => p.id === punt)) throw new Error('403')
+      if (gereed) r.gereed[punt] ??= new Date().toISOString()
+      else delete r.gereed[punt]
     },
     async tekeningUrl(token, _code, id) { return rijen.get(token)?.voorbeeld_tekeningen.includes(id) ? '/voorbeeld-tekening.pdf' : 'getekend-adres' },
   }
@@ -301,5 +310,66 @@ describe('proefversie: de link op een ander apparaat', () => {
     const kapot: ProefServer = { ...server, bewaar: () => Promise.reject(new Error('weg')) }
     const b = maakDemoBron({ gegevens: maakDemoGegevens(new Date(), projecten), server: kapot })
     expect((await b.maakDeellink(lev)).op_server).toBe(false)
+  })
+})
+
+describe('proefversie: afvinken op het andere apparaat, controleren bij de tester', () => {
+  const gegevens = maakDemoGegevens(new Date(), projecten)
+  const { server, rijen } = nepServer()
+  const tester = maakDemoBron({ door: 'Jij', gegevens, server })
+  const elders = maakDemoBron({ gegevens: null, server })
+  const open = (lev: string) => gegevens.controlepunten.filter(p => p.leverancier_id === lev && !p.opgelost)
+  const lev = gegevens.leveranciers.map(l => l.id).sort((a, b) => open(b).length - open(a).length)[0]!
+  const naam = gegevens.leveranciers.find(l => l.id === lev)!.naam
+  const wacht = () => new Promise(r => setTimeout(r, 700))
+  let l: Deellink
+  const inhoud = async () => (await elders.externeInhoud(l.token, l.code) as Extract<ExternAntwoord, { stand: 'open' }>).inhoud
+
+  it('neemt mee wat al als opgelost gemeld stond, en wat de leverancier afvinkt komt bij de tester', async () => {
+    for (const p of open(lev)) Object.assign(p, { gereed_op: null, gereed_door: null })
+    const [eerste, tweede] = open(lev)
+    Object.assign(eerste!, { gereed_op: '2026-10-11T09:00:00.000Z', gereed_door: naam })
+    l = await tester.maakDeellink(lev)
+    expect(Object.keys(rijen.get(l.token)!.gereed)).toEqual([eerste!.id])
+    await elders.meldGereed(l.token, l.code, tweede!.id, true)
+    expect((await inhoud()).punten.find(p => p.id === tweede!.id)!.gereed_op).not.toBeNull()
+    await tester.deellinks()
+    expect(tweede).toMatchObject({ gereed_door: naam })
+    expect(tweede!.gereed_op).not.toBeNull()
+  })
+
+  it('afkeuren bij de tester: weer open bij de leverancier, met de reden; opnieuw afvinken kan', async () => {
+    const tweede = open(lev)[1]!
+    await tester.bewaarControlepunt(tweede.id, { gereed_op: null, afgekeurd_reden: 'Nog niet goed' })
+    await wacht()
+    const p = (await inhoud()).punten.find(x => x.id === tweede.id)!
+    expect(p).toMatchObject({ gereed_op: null, afgekeurd_reden: 'Nog niet goed' })
+    await elders.meldGereed(l.token, l.code, tweede.id, true)
+    await tester.deellinks()
+    expect(tweede.gereed_op).not.toBeNull()
+  })
+
+  it('de link gaat pas dicht als de tester alles heeft afgetekend', async () => {
+    for (const p of open(lev)) await elders.meldGereed(l.token, l.code, p.id, true)
+    expect((await elders.externeInhoud(l.token, l.code)).stand).toBe('open')
+    for (const p of open(lev)) await tester.bewaarControlepunt(p.id, { opgelost: true })
+    await wacht()
+    expect((await elders.externeInhoud(l.token, l.code)).stand).toBe('opgelost')
+  })
+})
+
+describe('proefversie: meldingen', () => {
+  const p = (id: string, afgekeurd_op: string | null = null) => ({ id, project_id: 'p1', nummer: 1, notitie: id, aangemaakt_op: '2026-10-01T00:00:00Z', foto: null, tekening_id: null, tekening_blad: null, tekening_x: null, tekening_y: null, gereed_op: null, afgekeurd_op, afgekeurd_reden: null })
+  const inhoud = { leverancier: { naam: 'X', vak: null }, geldig_tot: '2026-11-01T00:00:00Z', gedeeld_door: null, projecten: [], tekeningen: [], punten: [p('a'), p('b', '2026-10-12T00:00:00Z')] }
+  it('laat meldingen vallen van afgetekende punten en van punten die daarna zijn afgekeurd', () => {
+    expect(geldigeMeldingen({ a: '2026-10-10T00:00:00Z', b: '2026-10-10T00:00:00Z', weg: '2026-10-10T00:00:00Z' }, inhoud)).toEqual({ a: '2026-10-10T00:00:00Z' })
+    expect(geldigeMeldingen({ b: '2026-10-13T00:00:00Z' }, inhoud)).toEqual({ b: '2026-10-13T00:00:00Z' })
+    expect(metMeldingen(inhoud, { a: '2026-10-10T00:00:00Z', b: '2026-10-10T00:00:00Z' }).punten.map(x => x.gereed_op)).toEqual(['2026-10-10T00:00:00Z', null])
+  })
+  it('zet bij de tester wat de leverancier afvinkte of terugdraaide', () => {
+    const punten = [punt('x', { leverancier_id: 'lev-1' }), punt('y', { leverancier_id: 'lev-1', gereed_op: '2026-10-01T00:00:00Z', gereed_door: 'X' })]
+    expect(neemMeldingenOver(punten, 'lev-1', 'X', { x: '2026-10-12T00:00:00Z' })).toBe(true)
+    expect(punten.map(q => q.gereed_op)).toEqual(['2026-10-12T00:00:00Z', null])
+    expect(neemMeldingenOver(punten, 'lev-1', 'X', { x: '2026-10-12T00:00:00Z' })).toBe(false)
   })
 })

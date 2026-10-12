@@ -51,11 +51,12 @@ describe('tekeningviewer', () => {
 describe('pins', () => {
   it('maakt pins van de punten met een plek, genummerd en met tekst', async () => {
     const { pinsVan } = await import('~/lib/tekening')
-    const punt = (id: string, plek: boolean) => ({ id, opgelost: id === 'b', notitie: `Notitie ${id}`, tekening_id: plek ? 't1' : null, tekening_blad: plek ? 2 : null, tekening_x: plek ? 0.25 : null, tekening_y: plek ? 0.75 : null })
-    const pins = pinsVan([punt('a', true), punt('b', true), punt('c', false)], p => ({ a: 1, b: 2, c: 3 })[p.id]!, p => `Leverancier ${p.id}`)
+    const punt = (id: string, plek: boolean, gereed_op: string | null = null) => ({ id, opgelost: id === 'b', gereed_op, notitie: `Notitie ${id}`, tekening_id: plek ? 't1' : null, tekening_blad: plek ? 2 : null, tekening_x: plek ? 0.25 : null, tekening_y: plek ? 0.75 : null })
+    const pins = pinsVan([punt('a', true, '2026-10-12T10:00:00Z'), punt('b', true, '2026-10-12T10:00:00Z'), punt('c', false)], p => ({ a: 1, b: 2, c: 3 })[p.id]!, p => `Leverancier ${p.id}`)
     expect(pins).toEqual([
-      { id: 'a', tekening_id: 't1', blad: 2, x: 0.25, y: 0.75, label: '1', opgelost: false, tekst: 'Notitie a · Leverancier a' },
-      { id: 'b', tekening_id: 't1', blad: 2, x: 0.25, y: 0.75, label: '2', opgelost: true, tekst: 'Notitie b · Leverancier b' },
+      // a: door de leverancier opgelost gemeld; b: afgetekend, dan telt de melding niet meer.
+      { id: 'a', tekening_id: 't1', blad: 2, x: 0.25, y: 0.75, label: '1', opgelost: false, gereed: true, tekst: 'Notitie a · Leverancier a' },
+      { id: 'b', tekening_id: 't1', blad: 2, x: 0.25, y: 0.75, label: '2', opgelost: true, gereed: false, tekst: 'Notitie b · Leverancier b' },
     ])
   })
 })

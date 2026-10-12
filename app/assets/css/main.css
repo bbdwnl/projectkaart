@@ -538,6 +538,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .plek-gekozen .link{font-size:14px}
 .controle-knoppen{display:flex;flex-wrap:wrap;gap:10px}
 .punt-nr{font-weight:900;margin-right:2px}
+.melding-regel{color:var(--blauw-diep)!important;font-weight:700}
+.melding-regel.afgekeurd{color:var(--baksteen-diep)!important}
 .plek-link{font-size:12.5px;font-weight:700;color:var(--zwart);text-align:left}
 .plek-knop{width:30px;height:30px;padding:0;border:0;border-radius:50%;background:none;color:var(--stil);display:grid;place-items:center;cursor:pointer}
 .plek-knop:hover{background:var(--grijs);color:var(--zwart)}
@@ -587,6 +589,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .viewer-pin{position:absolute;left:-14px;top:-38px;min-width:28px;height:28px;padding:0 6px;border:2px solid var(--zwart);border-radius:var(--rond);background:var(--oker);color:var(--zwart);display:grid;place-items:center;font-size:12px;font-weight:900;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .viewer-pin::after{content:"";position:absolute;left:50%;top:100%;width:2px;height:10px;margin-left:-1px;background:var(--zwart)}
 .viewer-pin.opgelost{background:var(--salie)}
+.viewer-pin.gereed{background:var(--marker)}
 .viewer-pin.actief{background:var(--blauw);transform:scale(1.25);transform-origin:50% 140%;z-index:1}
 .viewer-marker{position:absolute;left:-11px;top:-11px;width:22px;height:22px;border:3px solid var(--zwart);border-radius:50%;background:var(--baksteen);box-shadow:0 0 0 4px rgba(255,255,255,.85),0 2px 8px rgba(0,0,0,.4)}
 .viewer-marker::after{content:"";position:absolute;inset:-12px;border:2px solid var(--baksteen);border-radius:50%;animation:ring 1.8s var(--uit) infinite}
@@ -814,10 +817,17 @@ a.knop{text-decoration:none}
 .extern-punt-tekst{display:grid;gap:4px;justify-items:start}
 .extern-punt-tekst .notitie{margin:0;font-size:17px;line-height:24px;white-space:pre-line}
 .extern-punt-tekst small{font-size:13px;line-height:19px;color:var(--stil)}
-.extern-plek{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:6px 12px;border:var(--rand);border-radius:var(--rond);background:var(--wit);font-size:13px;font-weight:700;line-height:18px;white-space:nowrap;cursor:pointer}
-.extern-plek svg{flex:none}
-.extern-plek:hover{background:var(--grijs)}
 .code-invoer::placeholder{color:#d2d2cc}
+.afgekeurd-regel{margin:6px 0 0;padding:8px 12px;border-radius:var(--radius-s);background:#f7e3df;color:var(--baksteen-diep);font-size:14px;line-height:20px;font-weight:500}
+.vink{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:8px}
+.vink small{flex:1 1 220px}
+.vink-knop{display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 16px 0 10px;border:var(--rand);border-radius:var(--rond);background:var(--wit);font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;transition:background-color .2s}
+.vink-knop:hover{background:var(--grijs-2)}
+.vink-knop:disabled{opacity:.6;cursor:default}
+.vink-vak{width:22px;height:22px;border:2px solid var(--zwart);border-radius:6px;display:grid;place-items:center;background:var(--wit)}
+.vink-knop[aria-pressed="true"]{background:var(--marker)}
+.vink-knop[aria-pressed="true"] .vink-vak{background:var(--zwart);color:var(--wit)}
+.extern-punt.gemeld .notitie{color:var(--stil)}
 .extern-voet{display:grid;gap:10px;justify-items:start;padding:30px 0 60px;font-size:14px;line-height:21px}
 .extern-voet p{margin:0;max-width:44em}
 .extern-voet .link{font-size:13px;color:var(--stil)}

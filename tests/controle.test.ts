@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { fotoPad, groepeerPunten, nummerPerProject, pastPunt, pdfNaam, sorteerPunten, telPunten } from '~/lib/controle'
+import { fotoPad, gereedMelding, groepeerPunten, meldingNaWijziging, nummerPerProject, pastPunt, pdfNaam, puntStand, sorteerPunten, telPunten } from '~/lib/controle'
 import type { Controlepunt } from '~/lib/types'
 
 const punt = (id: string, extra: Partial<Controlepunt> = {}): Controlepunt => ({
   id, project_id: 'p1', leverancier_id: 'lev-1', notitie: id, foto: fotoPad('p1', id), opgelost: false,
-  opgelost_door: null, opgelost_op: null, aangemaakt_door: 'Michiel', aangemaakt_op: '2026-10-01T09:00:00Z', ...extra,
+  opgelost_door: null, opgelost_op: null, aangemaakt_door: 'Michiel', aangemaakt_op: '2026-10-01T09:00:00Z',
+  tekening_id: null, tekening_blad: null, tekening_x: null, tekening_y: null,
+  gereed_op: null, gereed_door: null, afgekeurd_op: null, afgekeurd_door: null, afgekeurd_reden: null, ...extra,
 })
 
 describe('controle', () => {
@@ -42,8 +44,8 @@ describe('controle', () => {
   it('groepeert per project en telt open en totaal', () => {
     const ander = punt('elders', { project_id: 'p2', foto: fotoPad('p2', 'elders') })
     expect(groepeerPunten([...punten, ander], 'project', s => (s === 'p1' ? 'Vlijtseweg' : 'Apeldoorn')).map(g => [g.sleutel, g.punten.length])).toEqual([['p2', 1], ['p1', 4]])
-    expect(Object.fromEntries(telPunten([...punten, ander], 'project'))).toEqual({ p1: { open: 3, totaal: 4 }, p2: { open: 1, totaal: 1 } })
-    expect(telPunten(punten, 'leverancier').get('geen')).toEqual({ open: 1, totaal: 1 })
+    expect(Object.fromEntries(telPunten([...punten, ander], 'project'))).toEqual({ p1: { open: 3, controleren: 0, totaal: 4 }, p2: { open: 1, controleren: 0, totaal: 1 } })
+    expect(telPunten(punten, 'leverancier').get('geen')).toEqual({ open: 1, controleren: 0, totaal: 1 })
   })
   it('maakt een nette bestandsnaam voor de pdf', () => {
     expect(pdfNaam(['Apeldoorn Vlijtseweg', 'Glas/Kozijn: "Oost"'], '09-10-2026')).toBe('Controle - Apeldoorn Vlijtseweg - Glas Kozijn Oost - 09-10-2026.pdf')
@@ -52,5 +54,33 @@ describe('controle', () => {
   it('nummert per project in volgorde van melden', () => {
     const ander = punt('elders', { project_id: 'p2', aangemaakt_op: '2026-08-01T09:00:00Z' })
     expect(Object.fromEntries(nummerPerProject([...punten, ander]))).toEqual({ 'oud-open': 1, 'zonder': 2, 'opgelost': 3, 'nieuw-open': 4, 'elders': 1 })
+  })
+})
+
+describe('opgelost melden en aftekenen', () => {
+  const NU = new Date('2026-10-12T10:00:00Z')
+  const gemeld = punt('gemeld', { gereed_op: '2026-10-11T09:00:00Z', gereed_door: 'Klimaattechniek Oost' })
+  const afgekeurd = punt('afgekeurd', { afgekeurd_op: '2026-10-10T09:00:00Z', afgekeurd_reden: 'Kit nog niet glad' })
+
+  it('kent de stand: open, controleren, afgekeurd, opgelost', () => {
+    expect([punt('a'), gemeld, afgekeurd, punt('b', { opgelost: true, gereed_op: '2026-10-11T09:00:00Z' })].map(puntStand))
+      .toEqual(['open', 'controleren', 'afgekeurd', 'opgelost'])
+  })
+  it('zet wat BbDW moet controleren bovenaan, en telt het als open', () => {
+    expect(sorteerPunten([punt('nieuw', { aangemaakt_op: '2026-10-09T09:00:00Z' }), gemeld]).map(p => p.id)).toEqual(['gemeld', 'nieuw'])
+    expect(pastPunt(gemeld, 'controleren', 'alle') && pastPunt(gemeld, 'open', 'alle') && !pastPunt(afgekeurd, 'controleren', 'alle')).toBe(true)
+    expect(telPunten([gemeld, afgekeurd], 'project').get('p1')).toEqual({ open: 2, controleren: 1, totaal: 2 })
+  })
+  it('afkeuren haalt de melding weg en legt wie en waarom vast; weer open wist alles', () => {
+    expect(meldingNaWijziging(gemeld, { gereed_op: null, afgekeurd_reden: ' Kit nog niet glad ' }, 'Benno', NU))
+      .toEqual({ gereed_op: null, gereed_door: null, afgekeurd_op: NU.toISOString(), afgekeurd_door: 'Benno', afgekeurd_reden: 'Kit nog niet glad' })
+    expect(meldingNaWijziging(gemeld, { opgelost: true }, 'Benno', NU)).toEqual({})
+    expect(meldingNaWijziging({ ...gemeld, opgelost: true }, { opgelost: false }, 'Benno', NU)).toMatchObject({ gereed_op: null, afgekeurd_op: null })
+  })
+  it('laat de leverancier melden en terugdraaien, maar niet na het aftekenen', () => {
+    expect(gereedMelding(punt('a'), true, 'Klimaattechniek Oost', NU)).toEqual({ gereed_op: NU.toISOString(), gereed_door: 'Klimaattechniek Oost' })
+    expect(gereedMelding(gemeld, true, 'Klimaattechniek Oost', NU)).toEqual({ gereed_op: gemeld.gereed_op, gereed_door: 'Klimaattechniek Oost' })
+    expect(gereedMelding(gemeld, false, 'Klimaattechniek Oost', NU)).toEqual({ gereed_op: null, gereed_door: null })
+    expect(gereedMelding({ ...gemeld, opgelost: true }, false, 'x', NU)).toBeNull()
   })
 })

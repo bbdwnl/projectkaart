@@ -3,11 +3,11 @@ import { BronFout } from './bron'
 import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import { leegProject } from '~/lib/leads'
-import { GEEN_PLEK, type Controlepunt, type Deellink, type DeellinkReden, type Fase, type LogRegel, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
+import { GEEN_MELDING, GEEN_PLEK, type Controlepunt, type Deellink, type DeellinkReden, type Fase, type LogRegel, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
 import { bewaarBestand, leesBestand, wisAlleBestanden, wisBestand } from './demo-bestanden'
 import { VOORBEELDTEKENING } from './demo'
-import { fotoPad } from '~/lib/controle'
-import { controleerCode, dichtAntwoord, externeInhoud, metProefStand, nieuweCode, nieuwToken, openPuntenVan, standVan, type ExternAntwoord } from '~/lib/deellink'
+import { fotoPad, gereedMelding, meldingNaWijziging } from '~/lib/controle'
+import { controleerCode, dichtAntwoord, externeInhoud, metProefStand, neemMeldingenOver, nieuweCode, nieuwToken, openPuntenVan, standVan, type ExternAntwoord } from '~/lib/deellink'
 import type { ProefServer } from './proef-server'
 import { plusMaand } from '~/lib/datum'
 import { naarDataUrl, verkleinFoto } from '~/utils/foto'
@@ -28,7 +28,9 @@ function laad(opslag: string): DemoGegevens | null {
     const s = localStorage.getItem(opslag)
     const d = s ? JSON.parse(s) as DemoGegevens : null
     if (!(d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) && Array.isArray(d.projectLeveranciers) && Array.isArray(d.tekeningen))) return null
-    d.deellinks ??= [] // bewaard vóór er deellinks waren: de wijzigingen van de tester blijven staan
+    // Bewaard vóór er deellinks en meldingen waren: de wijzigingen van de tester blijven staan.
+    d.deellinks ??= []
+    for (const c of d.controlepunten) for (const k of Object.keys(GEEN_MELDING) as (keyof typeof GEEN_MELDING)[]) c[k] ??= null
     return d
   } catch {
     return null
@@ -168,8 +170,14 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
           voorbeeld_tekeningen: voorbeeld,
         })
         verzonden.set(link.token, afdruk)
-        if (stand) Object.assign(link, metProefStand(link, stand))
-        else link.op_server = false
+        if (stand) {
+          Object.assign(link, metProefStand(link, stand))
+          // Wat de leverancier op zijn pagina afvinkte of terugdraaide, ook hier.
+          const lev = db.leveranciers.find(x => x.id === link.leverancier_id)
+          if (!link.gesloten_reden && lev) neemMeldingenOver(db.controlepunten, link.leverancier_id, lev.naam, stand.gereed ?? {})
+        } else {
+          link.op_server = false
+        }
         if (stand && metInhoud) await uploadTekeningen(link)
       } catch {
         link.op_server = false
@@ -410,7 +418,7 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
       const p: Controlepunt = {
         id, project_id: projectId, leverancier_id: invoer.leverancierId, notitie: invoer.notitie, foto, opgelost: false,
         opgelost_door: null, opgelost_op: null, aangemaakt_door: door, aangemaakt_op: new Date().toISOString(),
-        ...GEEN_PLEK, ...invoer.plek,
+        ...GEEN_PLEK, ...invoer.plek, ...GEEN_MELDING,
       }
       db.controlepunten.push(p)
       if (!bewaar()) {
@@ -427,11 +435,13 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
       if (w.leverancier_id && !db.projectLeveranciers.some(k => k.project_id === p.project_id && k.leverancier_id === w.leverancier_id)) throw new BronFout('Kies een leverancier van dit project.')
       if (w.tekening_id && !db.tekeningen.some(t => t.id === w.tekening_id && t.project_id === p.project_id)) throw new BronFout('Kies een tekening van dit project.')
       const vorige = p.leverancier_id
+      const melding = meldingNaWijziging(p, w, door, new Date())
       if (w.leverancier_id !== undefined) p.leverancier_id = w.leverancier_id
       for (const v of ['tekening_id', 'tekening_blad', 'tekening_x', 'tekening_y'] as const) if (w[v] !== undefined) Object.assign(p, { [v]: w[v] })
       if (w.opgelost !== undefined && w.opgelost !== p.opgelost) {
         Object.assign(p, { opgelost: w.opgelost, opgelost_door: w.opgelost ? door : null, opgelost_op: w.opgelost ? new Date().toISOString() : null })
       }
+      Object.assign(p, melding)
       sluitAlsOpgelost(vorige)
       bewaar()
       return kopie(p)
@@ -486,6 +496,24 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
         return dichtAntwoord(link, 'opgelost')
       }
       return { stand: 'open', inhoud: kopie(inhoud) }
+    },
+    async meldGereed(token, code, puntId, gereed) {
+      await wacht()
+      const lokaal = db.deellinks.find(l => l.token === token)
+      // Staat de link op de server, dan daar (zoals op een ander apparaat), en dan terug naar deze gegevens.
+      if (server && (!lokaal || lokaal.op_server)) {
+        await server.meldGereed(token, code, puntId, gereed)
+        if (lokaal) await naarServerNu(true)
+        return
+      }
+      const poging = poort(token, code)
+      if ('antwoord' in poging) throw new BronFout('Deze link is niet (meer) open.')
+      const p = openPuntenVan(poging.link.leverancier_id, db.controlepunten).find(x => x.id === puntId)
+      const lev = db.leveranciers.find(l => l.id === poging.link.leverancier_id)
+      const melding = p && lev ? gereedMelding(p, gereed, lev.naam, new Date()) : null
+      if (!p || !melding) throw new BronFout('Dit punt staat niet (meer) open.')
+      Object.assign(p, melding)
+      bewaar()
     },
     async externeTekeningUrl(token, code, tekeningId) {
       if (server && !db.deellinks.some(l => l.token === token)) return server.tekeningUrl(token, code, tekeningId)

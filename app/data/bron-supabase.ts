@@ -21,14 +21,15 @@ const FOTOS = 'controle'
 const TEKENINGEN = 'tekeningen'
 
 /** De pagina van de leverancier praat met de server (server/api/punten), niet met de database. */
-async function viaServer<T>(pad: string, code: string): Promise<T> {
+async function viaServer<T>(pad: string, body: { code: string } & Record<string, unknown>): Promise<T> {
   try {
-    return await ($fetch(pad, { method: 'POST', body: { code } }) as Promise<T>)
+    return await ($fetch(pad, { method: 'POST', body }) as Promise<T>)
   } catch (e) {
     const status = (e as { statusCode?: number }).statusCode
     throw new BronFout(status === 503
       ? 'Delen met leveranciers is nog niet ingesteld op de server.'
-      : status === 403 || status === 404 ? 'Deze tekening hoort niet (meer) bij deze link.' : 'De gegevens zijn nu niet bereikbaar. Probeer het straks opnieuw.')
+      : status === 403 ? 'Deze link is niet (meer) open.'
+        : status === 404 ? 'Dit hoort niet (meer) bij deze link.' : 'De gegevens zijn nu niet bereikbaar. Probeer het straks opnieuw.')
   }
 }
 
@@ -232,10 +233,13 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       return uitkomst(await sb.from('deellinks').update({ gesloten_reden: 'ingetrokken' }).eq('id', id).select().single(), 'de link intrekken') as Deellink
     },
     async externeInhoud(token, code) {
-      return viaServer<ExternAntwoord>(`/api/punten/${encodeURIComponent(token)}`, code)
+      return viaServer<ExternAntwoord>(`/api/punten/${encodeURIComponent(token)}`, { code })
     },
     async externeTekeningUrl(token, code, tekeningId) {
-      return (await viaServer<{ url: string }>(`/api/punten/${encodeURIComponent(token)}/tekening/${encodeURIComponent(tekeningId)}`, code)).url
+      return (await viaServer<{ url: string }>(`/api/punten/${encodeURIComponent(token)}/tekening/${encodeURIComponent(tekeningId)}`, { code })).url
+    },
+    async meldGereed(token, code, punt, gereed) {
+      await viaServer(`/api/punten/${encodeURIComponent(token)}/gereed`, { code, punt, gereed })
     },
   }
 }
