@@ -1,5 +1,5 @@
 import type { LogRegel, Uitzondering } from './types'
-import { DATUMVELDEN, faseInfo, ROLLEN } from './fasen'
+import { DATUMVELDEN, faseInfo, PROGNOSEVELDEN, ROLLEN } from './fasen'
 import { vindStandaardtaak } from './taken'
 import { statusNaam } from './taak'
 import { fmt, naarDatum } from './datum'
@@ -25,7 +25,8 @@ export function beschrijf(r: LogRegel, catalogus: Uitzondering[]): LogDeel[] {
       case 'document_naam': return leeg(r.nieuw) ? [t('haalde het document weg bij '), n(titel)] : [t('koppelde een document aan '), n(titel)]
       case 'reden_nvt': return [t('gaf een reden voor n.v.t. bij '), n(titel), ...(r.nieuw ? [t(`: ${r.nieuw}`)] : [])]
       case 'deadline': return [t('zette de deadline van '), n(titel), t(` op ${fmt(naarDatum(r.nieuw))}`)]
-      case 'notitie': return [t('schreef een notitie bij '), n(titel)]
+      // notitie: van voor de opmerkingen.
+      case 'opmerking': case 'notitie': return [t('schreef een opmerking bij '), n(titel)]
       case 'aanleiding': return [t('beschreef de aanleiding van '), n(titel)]
       case 'toegevoegd': return [t('voegde uitzondering '), n(titel), t(' toe')]
       case 'verwijderd': return [t('haalde uitzondering '), n(titel), t(' weg')]
@@ -33,7 +34,7 @@ export function beschrijf(r: LogRegel, catalogus: Uitzondering[]): LogDeel[] {
     }
   }
 
-  const datum = DATUMVELDEN.find(d => d.veld === r.veld)
+  const datum = DATUMVELDEN.find(d => d.veld === r.veld) ?? PROGNOSEVELDEN.map(d => ({ ...d, naam: `prognose ${d.naam.toLowerCase()}` })).find(d => d.veld === r.veld)
   if (datum) return [t('veranderde '), n(datum.naam.toLowerCase()), t(r.nieuw ? ` naar ${fmt(naarDatum(r.nieuw))}` : ': leeggemaakt')]
   if (r.veld in ROLLEN) {
     const rol = ROLLEN[r.veld as keyof typeof ROLLEN]
@@ -41,8 +42,12 @@ export function beschrijf(r: LogRegel, catalogus: Uitzondering[]): LogDeel[] {
   }
   switch (r.veld) {
     case 'fase': return [t('zette de fase op '), n(r.nieuw ? faseInfo(r.nieuw as never)?.naam ?? r.nieuw : '—')]
-    case 'afas_nummer': return [t('zette het AFAS-nummer op '), n(r.nieuw || '—')]
-    case 'nummer': return [t('zette het projectnummer op '), n(r.nieuw || '—')]
+    // afas_nummer: van voor het samenvoegen met het projectnummer.
+    case 'nummer': case 'afas_nummer': return [t('zette het projectnummer op '), n(r.nieuw || '—')]
+    case 'postcode': return [t('zette de postcode op '), n(r.nieuw || '—')]
+    case 'huisnummer': return [t('zette het huisnummer op '), n(r.nieuw || '—')]
+    case 'straat': case 'adres': return [t('zette de straat op '), n(r.nieuw || '—')]
+    case 'plaats': return [t('zette de plaats op '), n(r.nieuw || '—')]
     case 'soort': return [t('paste de '), n('soort project'), t(' aan')]
     case 'slagingskans': return [t('zette de '), n('slagingskans'), t(` op ${r.nieuw ? `${r.nieuw}%` : 'onbekend'}`)]
     case 'prio': return [t(r.nieuw === 'true' ? 'gaf het project ' : 'haalde '), n('prio'), t(r.nieuw === 'true' ? '' : ' weg')]

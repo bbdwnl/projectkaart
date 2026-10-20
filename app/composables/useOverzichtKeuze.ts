@@ -11,7 +11,10 @@ export function useOverzichtKeuze(pad: string) {
   const sortering = ref<Sortering>(leesSortering(route.query.sort))
   const wie = ref(tekst(route.query.wie) ?? 'alle')
   watch([sortering, wie], ([s, w]) => {
-    if (route.path === pad) router.replace({ query: { ...(s !== 'telaat' ? { sort: s } : {}), ...(w !== 'alle' ? { wie: w } : {}) } })
+    if (route.path !== pad) return
+    // Andere sleutels (zoals het tabblad) blijven staan.
+    const { sort: _s, wie: _w, ...rest } = route.query
+    router.replace({ query: { ...rest, ...(s !== 'telaat' ? { sort: s } : {}), ...(w !== 'alle' ? { wie: w } : {}) } })
   })
   // Opnieuw op het menu-item klikken (zonder query): terug naar de standaard.
   watch(() => route.query, (q) => {

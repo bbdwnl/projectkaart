@@ -1,4 +1,4 @@
-import type { Fase, ProjectDatums, Rol } from './types'
+import type { Fase, ProjectDatums, ProjectPrognose, Rol } from './types'
 
 export interface FaseInfo {
   id: Fase
@@ -41,6 +41,13 @@ export const DATUMVELDEN: { veld: keyof ProjectDatums, naam: string, kort: strin
   { veld: 'datum_inkoop', naam: 'Inkoop gereed', kort: 'Inkoop gereed' },
   { veld: 'datum_afbouw', naam: 'Start afbouw', kort: 'Start afbouw' },
   { veld: 'datum_oplevering', naam: 'Oplevering', kort: 'Oplevering' },
+]
+
+/** De prognose tijdens lead en haalbaarheid: voor het planningsoverzicht, los van de deadlines. */
+export const PROGNOSEVELDEN: { veld: keyof ProjectPrognose, naam: string }[] = [
+  { veld: 'prognose_casco', naam: 'Start casco' },
+  { veld: 'prognose_afbouw', naam: 'Start afbouw' },
+  { veld: 'prognose_oplevering', naam: 'Oplevering' },
 ]
 
 /** Waar elke fase naartoe werkt: de mijlpaal in de standzin en de planning. */

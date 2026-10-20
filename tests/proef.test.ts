@@ -9,9 +9,11 @@ describe('voorbeeldgegevens van de proefversie', () => {
   const g = maakDemoGegevens(nu, projecten)
   const p = g.projecten.find(x => x.nummer === 'P20038')!
 
-  it('maakt alle 27 projecten, plus de verzonnen leads, met unieke slugs', () => {
-    expect(g.projecten.filter(x => x.fase !== 'lead')).toHaveLength(27)
+  it('maakt alle 27 projecten, plus verzonnen leads en projecten in haalbaarheid, met unieke slugs', () => {
+    expect(g.projecten.filter(x => projecten.some(j => j.slug === x.slug))).toHaveLength(27)
     expect(g.projecten.filter(x => x.fase === 'lead')).toHaveLength(8)
+    expect(g.projecten.filter(x => x.fase === 'haalbaarheid')).toHaveLength(8)
+    expect(g.projecten.filter(x => x.fase === 'haalbaarheid').every(x => x.prognose_casco && x.prognose_afbouw && x.prognose_oplevering)).toBe(true)
     expect(new Set(g.projecten.map(x => x.slug)).size).toBe(g.projecten.length)
   })
   it('maakt aandachtspunten met een leverancier van hun eigen project (of nog geen), en één gedeelde foto', () => {

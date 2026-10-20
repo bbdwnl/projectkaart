@@ -17,7 +17,7 @@ const d = (iso: string) => naarDatum(iso)!
 function taak(extra: Partial<Taak>): Taak {
   return {
     id: 't' + Math.random(), project_id: 'p1', lijst: null, sleutel: null, uitzondering_id: null, fase: 'ontwikkeling',
-    deadline: null, status: 'niet_gestart', eigenaar: null, notitie: null, reden_nvt: null, aanleiding: null,
+    deadline: null, status: 'niet_gestart', eigenaar: null, reden_nvt: null, aanleiding: null,
     klantakkoord: false, klantakkoord_door: null, klantakkoord_op: null, document_url: null, document_naam: null,
     afgetekend_door: null, afgetekend_op: null, gewijzigd_op: null, gewijzigd_door: null, ...extra,
   }

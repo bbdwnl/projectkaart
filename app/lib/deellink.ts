@@ -1,6 +1,7 @@
 import type { Controlepunt, Deellink, DeellinkReden, Leverancier, PlekVeld, Project, Tekening } from './types'
 import { nummerPerProject } from './controle'
 import { fmt } from './datum'
+import { adresRegel, type AdresVelden } from './adres'
 
 // Delen met een leverancier: een link naar een eigen pagina met alleen zijn open aandachtspunten, achter een code
 // van vijf cijfers. Dezelfde regels voor de server (echt, server/api/punten) en de proefversie (bron-demo.ts).
@@ -73,7 +74,8 @@ export type ExternPunt = Pick<Controlepunt, 'id' | 'project_id' | 'notitie' | 'a
   /** Een tijdelijk adres van de foto. */
   foto: string | null
 }
-export type ExternProject = Pick<Project, 'id' | 'naam' | 'plaats' | 'adres'>
+/** adres: de hele regel, zie adresRegel. */
+export type ExternProject = Pick<Project, 'id' | 'naam' | 'plaats'> & { adres: string | null }
 export type ExternTekening = Pick<Tekening, 'id' | 'project_id' | 'naam'>
 
 export interface ExternInhoud {
@@ -122,7 +124,7 @@ export function externeInhoud(a: {
   link: Pick<Deellink, 'leverancier_id' | 'geldig_tot' | 'aangemaakt_door'>
   leverancier: Pick<Leverancier, 'naam' | 'vak'>
   punten: Controlepunt[]
-  projecten: ExternProject[]
+  projecten: (Pick<Project, 'id' | 'naam'> & AdresVelden)[]
   tekeningen: ExternTekening[]
   fotoUrl: (pad: string) => string | null
 }): ExternInhoud {
@@ -135,7 +137,7 @@ export function externeInhoud(a: {
     geldig_tot: a.link.geldig_tot,
     gedeeld_door: a.link.aangemaakt_door,
     projecten: a.projecten.filter(p => projectIds.has(p.id))
-      .map(p => ({ id: p.id, naam: p.naam, plaats: p.plaats, adres: p.adres }))
+      .map(p => ({ id: p.id, naam: p.naam, plaats: p.plaats, adres: adresRegel(p) }))
       .sort((x, y) => x.naam.localeCompare(y.naam, 'nl')),
     punten: eigen.map(p => ({
       id: p.id, project_id: p.project_id, nummer: nummers.get(p.id)!, notitie: p.notitie, aangemaakt_op: p.aangemaakt_op, foto: a.fotoUrl(p.foto),

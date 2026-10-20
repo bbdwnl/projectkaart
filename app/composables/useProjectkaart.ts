@@ -1,6 +1,6 @@
 import type { InjectionKey } from 'vue'
 import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
-import type { Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
+import type { Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
 import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, type TaakRegel } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
@@ -23,6 +23,8 @@ function maakKaart(slug: string) {
 
   const project = ref<Project | null>(null)
   const taken = ref<Taak[]>([])
+  /** De opmerkingen bij de taken, oudste eerst. */
+  const opmerkingen = ref<Opmerking[]>([])
   const catalogus = ref<Uitzondering[]>([])
   const gebruik = ref(new Map<string, number>())
   const projecten = ref<Pick<Project, 'id' | 'fase'>[]>([])
@@ -49,12 +51,13 @@ function maakKaart(slug: string) {
         stand.value = 'niet-gevonden'
         return
       }
-      const [t, c, f, l, alle, ps, lev, glob, cp, tek] = await Promise.all([
+      const [t, c, f, l, alle, ps, lev, glob, cp, tek, opm] = await Promise.all([
         bron.taken(p.id), bron.uitzonderingen(), bron.financien(p.id), bron.logboek(p.id), bron.taken(), bron.projecten(),
-        bron.leveranciers(p.id), bron.globaleLeveranciers(), bron.controlepunten(p.id), bron.tekeningen(p.id),
+        bron.leveranciers(p.id), bron.globaleLeveranciers(), bron.controlepunten(p.id), bron.tekeningen(p.id), bron.opmerkingen(p.id),
       ])
       project.value = p
       taken.value = t
+      opmerkingen.value = opm
       catalogus.value = c
       financien.value = f
       logboek.value = l
@@ -120,6 +123,28 @@ function maakKaart(slug: string) {
       return true
     } catch (e) {
       taken.value = vorige
+      toon(foutTekst(e), 'fout')
+      return false
+    }
+  }
+
+  const opmerkingenVan = (taakId: string | undefined) => (taakId ? opmerkingen.value.filter(o => o.taak_id === taakId) : [])
+  /** Een opmerking bij een taak. Een standaardtaak die nog geen regel in de database heeft, krijgt die eerst. */
+  async function plaatsOpmerking(regel: TaakRegel, tekst: string): Promise<boolean> {
+    const p = project.value
+    if (!p || !tekst.trim()) return false
+    try {
+      let taakId = regel.taak?.id
+      if (!taakId) {
+        const t = await bron.bewaarStandaardtaak(p.id, regel.fase, regel.standaard!.sleutel, {})
+        if (!taken.value.some(x => x.id === t.id)) taken.value.push(t)
+        taakId = t.id
+      }
+      opmerkingen.value = [...opmerkingen.value, await bron.plaatsOpmerking(taakId, tekst.trim())]
+      toon('Opmerking geplaatst · in het logboek')
+      verversLog()
+      return true
+    } catch (e) {
       toon(foutTekst(e), 'fout')
       return false
     }
@@ -323,7 +348,7 @@ function maakKaart(slug: string) {
   return {
     project, taken, catalogus, gebruik, financien, logboek, leveranciers, globaleLeveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
     regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
-    laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering,
+    laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering, opmerkingenVan, plaatsOpmerking,
     nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, keurAf, kiesLeverancier, verwijderControlepunt,
     tekeningen, nummers, uploadTekening, hernoemTekening, verwijderTekening, zetPlek,
   }

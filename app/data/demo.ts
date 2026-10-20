@@ -2,7 +2,7 @@
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import { GEEN_MELDING, type Controlepunt, type Deellink, type Fase, type Financien, type Leverancier, type LogRegel, type ProjectLeverancier, type Tekening, type Project, type Soort, type Status, type Taak, type Uitzondering } from '../lib/types'
+import { GEEN_MELDING, type Controlepunt, type Deellink, type Fase, type Financien, type Leverancier, type LogRegel, type Opmerking, type ProjectLeverancier, type Tekening, type Project, type Soort, type Status, type Taak, type Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
@@ -26,11 +26,12 @@ export interface ProjectBasis {
   datum_oplevering: string | null
 }
 
-export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {}, tekeningen: [], deellinks: [] })
+export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], opmerkingen: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {}, tekeningen: [], deellinks: [] })
 
 export interface DemoGegevens {
   projecten: Project[]
   taken: Taak[]
+  opmerkingen: Opmerking[]
   uitzonderingen: Uitzondering[]
   financien: Financien[]
   logboek: LogRegel[]
@@ -57,17 +58,44 @@ const kies = <T>(lijst: T[], sleutel: string): T => lijst[Math.floor(kans(sleute
 
 
 // Het prototype had geen leads: deze zijn verzonnen.
-// Naam, plaats, AFAS-nummer, AM, kans, prio, soort, m², dagen sinds de laatste wijziging.
+// Naam, plaats, projectnummer, AM, kans, prio, soort, m², dagen sinds de laatste wijziging.
 const LEADS: [string, string, string | null, string | null, number | null, boolean, Soort[], number | null, number][] = [
-  ['Gezondheidscentrum De Brink', 'Zwolle', '26014', 'Jeroen', 75, true, ['ont', 'tk'], 1400, 3],
+  ['Gezondheidscentrum De Brink', 'Zwolle', 'P26014', 'Jeroen', 75, true, ['ont', 'tk'], 1400, 3],
   ['Huisartsenpost Rivierenland', 'Tiel', null, 'Peter', 50, false, ['ont'], 620, 12],
   ['Fysio en tandarts Kloosterhof', 'Veghel', null, 'Jeroen', 25, false, [], null, 40],
-  ['Medisch centrum Stationsplein', 'Ede', '26009', 'Benno', 100, true, ['tk'], 2100, 1],
+  ['Medisch centrum Stationsplein', 'Ede', 'P26009', 'Benno', 100, true, ['tk'], 2100, 1],
   ['Apotheek en huisartsen Oosterpark', 'Groningen', null, 'Peter', null, false, [], null, 65],
-  ['Kindergezondheidscentrum Het Anker', 'Harderwijk', '26021', 'Michiel', 50, false, ['adv'], 480, 20],
+  ['Kindergezondheidscentrum Het Anker', 'Harderwijk', 'P26021', 'Michiel', 50, false, ['adv'], 480, 20],
   ['Gezondheidshuis Molenwijk', 'Oss', null, null, 0, false, [], null, 90],
   ['Zorgplein Noord', 'Almere', null, 'Jeroen', 75, false, ['ont'], 1750, 6],
 ]
+
+// Projecten in haalbaarheid naast de twee uit het prototype (verzonnen): naam, plaats, projectnummer, AM, kans, m².
+// Vooral bij Michiel en Benno, die ook de meeste lopende projecten hebben: zo valt de prognose in het
+// planningsoverzicht zichtbaar over wat er al loopt.
+const HAALBAARHEID: [string, string, string | null, string, number, number][] = [
+  ['Gezondheidscentrum Veldhoven Zuid', 'Veldhoven', 'P26031', 'Michiel', 75, 1600],
+  ['Huisartsenpost Gorinchem', 'Gorinchem', null, 'Benno', 50, 900],
+  ['Medisch centrum Vathorst', 'Amersfoort', 'P26034', 'Michiel', 75, 2200],
+  ['Gezondheidshuis Zeist Noord', 'Zeist', null, 'Benno', 75, 1300],
+  ['Huisartsen De Kempen', 'Bergeijk', 'P26037', 'Michiel', 50, 750],
+  ['Zorgcentrum Castellum', 'Houten', null, 'Jeroen', 25, 1900],
+]
+/**
+ * De prognose per project in haalbaarheid, in dagen: start casco vanaf vandaag, start afbouw na de casco, oplevering
+ * na de afbouw. Vanaf vandaag gerekend, zodat de bouw altijd samenvalt met de afbouw van de lopende projecten.
+ * Ook wie de accountmanager is (de twee uit het prototype hebben er in het prototype nog geen).
+ */
+const PROGNOSE: Record<string, [am: string, casco: number, afbouw: number, oplevering: number]> = {
+  'p14041-mijdrecht': ['Jeroen', 120, 150, 130],
+  'p23070-uden-pius-x': ['Peter', 200, 160, 150],
+  'gezondheidscentrum-veldhoven-zuid': ['Michiel', 75, 150, 140],
+  'huisartsenpost-gorinchem': ['Benno', 110, 140, 120],
+  'medisch-centrum-vathorst': ['Michiel', 150, 170, 150],
+  'gezondheidshuis-zeist-noord': ['Benno', 60, 150, 130],
+  'huisartsen-de-kempen': ['Michiel', 240, 150, 120],
+  'zorgcentrum-castellum': ['Jeroen', 300, 180, 160],
+}
 
 // De globale lijst met leveranciers (verzonnen). De eerste vijf werken op de projecten in uitvoering en nazorg
 // en op Apeldoorn Vlijtseweg; de laatste twee staan alleen in de lijst, om uit te kiezen.
@@ -179,7 +207,7 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
   const projecten: Project[] = basis.map((j) => {
     const fase = j.fase as Fase
     const p: Project = {
-      id: `p-${j.slug}`, slug: j.slug, nummer: j.nummer, afas_nummer: null, naam: j.naam, plaats: j.plaats, adres: null,
+      id: `p-${j.slug}`, slug: j.slug, nummer: j.nummer, naam: j.naam, postcode: null, huisnummer: null, straat: null, plaats: j.plaats, bag_id: null,
       fase, prio: j.prio, soort: [], m2: null, slagingskans: null,
       am: kies(MENSEN.am.filter(m => m === 'Jeroen' || m === 'Peter'), j.slug + 'am'),
       po: j.po,
@@ -187,19 +215,36 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
       opzichter: faseIndex(fase) >= faseIndex('uitvoering') ? kies(MENSEN.opzichter, j.slug + 'oz') : null,
       datum_casco: j.datum_casco, datum_voorbereiding: j.datum_voorbereiding, datum_inkoop: j.datum_inkoop,
       datum_afbouw: j.datum_afbouw, datum_oplevering: j.datum_oplevering,
+      prognose_casco: null, prognose_afbouw: null, prognose_oplevering: null,
       sharepoint_url: null, extern_url: null, notitieblok_url: null, tekeningen_locatie: null, gewijzigd_op: null,
     }
     if (j.nummer === 'P20038') {
-      Object.assign(p, { am: 'Jeroen', po: 'Michiel', adres: 'Vlijtseweg, Apeldoorn', m2: 1850, soort: ['ont'], tekeningen_locatie: '\\\\server\\tekeningen\\P20038' })
+      Object.assign(p, { am: 'Jeroen', po: 'Michiel', straat: 'Vlijtseweg', m2: 1850, soort: ['ont'], tekeningen_locatie: '\\\\server\\tekeningen\\P20038' })
     }
     return p
   })
-  for (const [naam, plaats, afas_nummer, am, slagingskans, prio, soort, m2, dagenGeleden] of LEADS) {
+  for (const [naam, plaats, nummer, am, slagingskans, prio, soort, m2, dagenGeleden] of LEADS) {
     const slug = maakSlug(naam, projecten.map(p => p.slug))
-    projecten.push(leegProject({ id: `p-${slug}`, slug, naam, plaats, afas_nummer, am, slagingskans, prio, soort, m2, gewijzigd_op: plusDagen(nu, -dagenGeleden).toISOString() }))
+    projecten.push(leegProject({ id: `p-${slug}`, slug, naam, plaats, nummer, am, slagingskans, prio, soort, m2, gewijzigd_op: plusDagen(nu, -dagenGeleden).toISOString() }))
+  }
+  for (const [naam, plaats, nummer, am, slagingskans, m2] of HAALBAARHEID) {
+    const slug = maakSlug(naam, projecten.map(p => p.slug))
+    projecten.push(leegProject({ id: `p-${slug}`, slug, naam, plaats, nummer, am, slagingskans, m2, fase: 'haalbaarheid', soort: ['ont'] }))
+  }
+  for (const p of projecten.filter(x => x.fase === 'haalbaarheid')) {
+    const [am, casco, afbouw, oplevering] = PROGNOSE[p.slug] ?? ['Michiel', 120, 150, 130]
+    const start = plusDagen(nu, casco)
+    Object.assign(p, {
+      am,
+      prognose_casco: naarIso(start),
+      prognose_afbouw: naarIso(plusDagen(start, afbouw)),
+      prognose_oplevering: naarIso(plusDagen(start, afbouw + oplevering)),
+    })
+    p.slagingskans ??= 75
   }
 
   const taken: Taak[] = []
+  const opmerkingen: Opmerking[] = []
   const nieuw = (p: Project, extra: Partial<Taak> & Pick<Taak, 'fase'>) => {
     const t = leegTaak({ id: `t-${taken.length + 1}`, project_id: p.id, ...extra })
     if (t.status === 'definitief') { t.afgetekend_door = t.eigenaar ?? 'Michiel'; t.afgetekend_op = naarIso(plusDagen(nu, -Math.round(kans(t.id) * 40) - 2)) }
@@ -219,7 +264,11 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
           const v = VLIJTSEWEG[sleutel]
           if (!v) continue
           const [status, wie, doc, extra] = v
-          nieuw(p, { lijst: f.id, sleutel: s.sleutel, fase: f.id, status, eigenaar: wie, document_naam: doc ?? null, klantakkoord: !!extra?.akk, notitie: extra?.n ?? null, reden_nvt: extra?.nvt ?? null })
+          const t = nieuw(p, { lijst: f.id, sleutel: s.sleutel, fase: f.id, status, eigenaar: wie, document_naam: doc ?? null, klantakkoord: !!extra?.akk, reden_nvt: extra?.nvt ?? null })
+          if (extra?.n) {
+            const dagenTerug = 2 + Math.round(kans(t.id + 'o') * 10)
+            opmerkingen.push({ id: `o-${t.id}`, taak_id: t.id, project_id: p.id, tekst: extra.n, door: wie ?? 'Michiel', op: plusDagen(nu, -dagenTerug).toISOString() })
+          }
           continue
         }
         const r = kans(p.slug + sleutel)
@@ -338,7 +387,7 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
   }]
 
   return {
-    projecten, taken, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, tekeningen, deellinks: [],
+    projecten, taken, opmerkingen, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, tekeningen, deellinks: [],
     fotos: { [VOORBEELDFOTO]: '/voorbeeld-aandachtspunt.jpg' },
   }
 }

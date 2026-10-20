@@ -3,14 +3,14 @@ import type { TaakRegel } from '~/lib/stoplicht'
 import type { Status, TaakWijziging } from '~/lib/types'
 import { EIGENAREN } from '~/lib/fasen'
 import { naamUitLink, STATUSSEN } from '~/lib/taak'
-import { fmt, naarDatum } from '~/lib/datum'
+import { fmt, fmtMoment, naarDatum } from '~/lib/datum'
 import { isKandidaat } from '~/lib/uitzonderingen'
 
 // Eén taak op één regel, zonder uitklap: het document koppel je in de regel zelf,
-// de notitie (en reden n.v.t., aanleiding, spoor) staat achter het notitie-icoon.
+// de opmerkingen (en reden n.v.t., aanleiding, spoor) staan achter het icoon.
 const props = defineProps<{ regel: TaakRegel }>()
 const emit = defineEmits<{ wijzig: [w: TaakWijziging], verwijder: [] }>()
-const { gebruik, bereikt, nadruk } = useKaart()
+const { gebruik, bereikt, nadruk, nu, opmerkingenVan, plaatsOpmerking } = useKaart()
 const { toon } = useToast()
 
 const gloed = ref(false)
@@ -24,7 +24,12 @@ const kandidaat = computed(() => {
 })
 const urgent = computed(() => props.regel.b.licht === 'telaat' || props.regel.b.licht === 'letop')
 const bestand = computed(() => t.value?.document_url || t.value?.document_naam ? { url: t.value.document_url, naam: t.value.document_naam || naamUitLink(t.value.document_url!) } : null)
-const afgetekend = computed(() => t.value?.afgetekend_door ? `Afgetekend door ${t.value.afgetekend_door} op ${fmt(naarDatum(t.value.afgetekend_op))}` : 'Nog niet afgetekend')
+const definitiefTekst = computed(() => t.value?.afgetekend_door ? `Op Definitief gezet door ${t.value.afgetekend_door} op ${fmt(naarDatum(t.value.afgetekend_op))}` : 'Nog niet definitief')
+const lijst = computed(() => opmerkingenVan(t.value?.id))
+const knopTekst = computed(() => {
+  const n = lijst.value.length
+  return n ? `${n} ${n === 1 ? 'opmerking' : 'opmerkingen'}, de laatste van ${lijst.value[n - 1]!.door}` : 'Opmerking plaatsen'
+})
 const akkoordTekst = computed(() => t.value?.klantakkoord_door ? `Klantakkoord vastgelegd door ${t.value.klantakkoord_door} op ${fmt(naarDatum(t.value.klantakkoord_op))}` : 'Klantakkoord')
 
 const tekst = (e: Event) => (e.target as HTMLInputElement | HTMLTextAreaElement).value.trim() || null
@@ -51,36 +56,53 @@ function bewaarDocument(e: Event) {
   docBewerken.value = false
 }
 
-// ---------- notitie: een klein venster bij het icoon ----------
+// ---------- opmerkingen: een venster bij het icoon ----------
 const notitieOpen = ref(false)
 const notitieKnop = ref<HTMLElement>()
 const paneel = ref<HTMLElement>()
-const notitieVeld = ref<HTMLTextAreaElement>()
+const lijstEl = ref<HTMLElement>()
+const opmerkingVeld = ref<HTMLTextAreaElement>()
 const redenVeld = ref<HTMLInputElement>()
 const aanleidingVeld = ref<HTMLInputElement>()
+/** Wat je typt maar nog niet plaatste; blijft staan als plaatsen mislukt. */
+const concept = ref('')
+const plaatsBezig = ref(false)
 /** Onder het icoon, of erboven als daar geen ruimte is. Op mobiel een paneel onderaan (CSS). */
 const plek = ref<Record<string, string>>({})
+const PANEEL_HOOGTE = 560
 function plaats() {
   const r = notitieKnop.value?.getBoundingClientRect()
   if (!r) return
-  const onder = r.bottom + 320 < innerHeight || r.top < 320
+  const onder = r.bottom + PANEEL_HOOGTE < innerHeight || r.top < PANEEL_HOOGTE
   plek.value = { right: `${Math.max(16, innerWidth - r.right)}px`, ...(onder ? { top: `${r.bottom + 6}px` } : { bottom: `${innerHeight - r.top + 6}px` }) }
 }
+/** De nieuwste opmerking staat onderaan, net boven het veld. */
+const naarNieuwste = () => lijstEl.value?.scrollTo({ top: lijstEl.value.scrollHeight })
 
-async function openNotitie(focus: 'notitie' | 'reden' = 'notitie') {
+async function openNotitie(focus: 'opmerking' | 'reden' = 'opmerking') {
   plaats()
   notitieOpen.value = true
   await nextTick()
-  ;(focus === 'reden' ? redenVeld.value : notitieVeld.value)?.focus()
+  naarNieuwste()
+  ;(focus === 'reden' ? redenVeld.value : opmerkingVeld.value)?.focus()
 }
-/** Alles in het venster in één keer bewaren, ook bij Escape, ernaast klikken of weggaan. */
+async function plaatsConcept() {
+  if (!concept.value.trim() || plaatsBezig.value) return
+  plaatsBezig.value = true
+  const gelukt = await plaatsOpmerking(props.regel, concept.value)
+  plaatsBezig.value = false
+  if (!gelukt) return
+  concept.value = ''
+  await nextTick()
+  naarNieuwste()
+}
+/** Alles in het venster in één keer bewaren, ook bij Escape, ernaast klikken of weggaan; een getypte opmerking wordt geplaatst. */
 function bewaarVenster() {
   const w: TaakWijziging = {}
   const waarde = (veld?: HTMLInputElement | HTMLTextAreaElement) => veld ? veld.value.trim() || null : undefined
-  const notitie = waarde(notitieVeld.value)
   const reden = waarde(redenVeld.value)
   const aanleiding = waarde(aanleidingVeld.value)
-  if (notitie !== undefined && notitie !== (t.value?.notitie ?? null)) w.notitie = notitie
+  plaatsConcept()
   if (reden !== undefined && reden !== (t.value?.reden_nvt ?? null)) w.reden_nvt = reden
   if (aanleiding !== undefined && aanleiding !== (t.value?.aanleiding ?? null)) w.aanleiding = aanleiding
   if (Object.keys(w).length) emit('wijzig', w)
@@ -142,7 +164,6 @@ watch(nadruk, async (id) => {
         {{ regel.titel }}
         <small v-if="regel.uitzondering">Uitzondering<span v-if="kandidaat" class="kandidaat">komt vaak voor</span></small>
         <small v-else-if="t?.status === 'nvt' && t.reden_nvt">{{ t.reden_nvt }}</small>
-        <small v-if="t?.notitie" class="notitie-regel">{{ t.notitie }}</small>
       </span>
       <span data-kol="eigenaar">
         <select class="eigenaar" :value="t?.eigenaar ?? ''" :aria-label="`Eigenaar ${regel.titel}`" @change="e => emit('wijzig', { eigenaar: tekst(e) })">
@@ -178,16 +199,17 @@ watch(nadruk, async (id) => {
         <button v-else type="button" class="doc-leeg" @click="bewerkDocument">+ Koppel document</button>
       </span>
       <span data-kol="status">
-        <select class="veld pil" :value="t?.status ?? 'niet_gestart'" :title="afgetekend" :aria-label="`Status ${regel.titel}`" @change="kiesStatus">
+        <select class="veld pil" :value="t?.status ?? 'niet_gestart'" :title="definitiefTekst" :aria-label="`Status ${regel.titel}`" @change="kiesStatus">
           <option v-for="s in STATUSSEN" :key="s.id" :value="s.id">{{ s.naam }}</option>
         </select>
       </span>
       <span class="notitie-plek">
         <button
-          ref="notitieKnop" type="button" class="notitie-knop" :class="{ heeft: !!t?.notitie }" :aria-expanded="notitieOpen" aria-haspopup="dialog"
-          :aria-label="t?.notitie ? `Notitie bij ${regel.titel}: ${t.notitie}` : `Notitie maken bij ${regel.titel}`" :title="t?.notitie || 'Notitie maken'"
+          ref="notitieKnop" type="button" class="notitie-knop" :class="{ heeft: lijst.length > 0 }" :aria-expanded="notitieOpen" aria-haspopup="dialog"
+          :aria-label="`${knopTekst} bij ${regel.titel}`" :title="knopTekst"
           @click="notitieOpen ? sluitNotitie() : openNotitie()"
         >
+          <span v-if="lijst.length" class="notitie-aantal" aria-hidden="true">{{ lijst.length }}</span>
           <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h7l3 3v9H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /><path d="M5.5 7.5h5M5.5 10.5h5" stroke="currentColor" stroke-width="1.6" /></svg>
         </button>
       </span>
@@ -196,14 +218,27 @@ watch(nadruk, async (id) => {
     <Teleport to="body">
       <Transition name="pop">
         <div
-          v-if="notitieOpen" ref="paneel" class="notitie-paneel" role="dialog" :aria-label="`Notitie bij ${regel.titel}`"
+          v-if="notitieOpen" ref="paneel" class="notitie-paneel" role="dialog" :aria-label="`Opmerkingen bij ${regel.titel}`"
           :style="plek"
         >
           <p class="notitie-titel">{{ regel.titel }}</p>
-          <label>
-            <span class="label">Notitie</span>
-            <textarea ref="notitieVeld" class="veld" rows="3" :value="t?.notitie ?? ''" placeholder="Wat moet de volgende weten?" />
-          </label>
+          <div class="opmerkingen-blok">
+            <span class="label">Opmerkingen</span>
+            <ol v-if="lijst.length" ref="lijstEl" class="opmerkingen">
+              <li v-for="o in lijst" :key="o.id">
+                <p class="opmerking-kop"><b>{{ o.door }}</b><time :datetime="o.op">{{ fmtMoment(o.op, nu) }}</time></p>
+                <p class="opmerking-tekst">{{ o.tekst }}</p>
+              </li>
+            </ol>
+            <p v-else class="klein leeg">Nog geen opmerkingen.</p>
+            <div class="opmerking-nieuw">
+              <textarea
+                ref="opmerkingVeld" v-model="concept" class="veld" rows="3" placeholder="Wat moet de volgende weten?" aria-label="Nieuwe opmerking"
+                @keydown.enter.meta.prevent="plaatsConcept" @keydown.enter.ctrl.prevent="plaatsConcept"
+              />
+              <button type="button" class="knop klein zwart" :disabled="!concept.trim() || plaatsBezig" title="Of Ctrl+Enter" @click="plaatsConcept">Plaatsen</button>
+            </div>
+          </div>
           <label v-if="t?.status === 'nvt'">
             <span class="label">Reden n.v.t.</span>
             <input ref="redenVeld" class="veld" :value="t?.reden_nvt ?? ''" placeholder="Waarom is dit niet van toepassing?" @keydown.enter.prevent="sluitNotitie">
@@ -212,7 +247,7 @@ watch(nadruk, async (id) => {
             <span class="label">Aanleiding</span>
             <input ref="aanleidingVeld" class="veld" :value="t?.aanleiding ?? ''" placeholder="Waarom is dit nodig in dit project?" @keydown.enter.prevent="sluitNotitie">
           </label>
-          <p class="klein spoor-regel">{{ afgetekend }}<template v-if="t?.klantakkoord_door"><br>{{ akkoordTekst }}</template></p>
+          <p class="klein spoor-regel">{{ definitiefTekst }}<template v-if="t?.klantakkoord_door"><br>{{ akkoordTekst }}</template></p>
           <div class="notitie-knoppen">
             <button type="button" class="knop klein" @click="sluitNotitie">Klaar</button>
             <button v-if="regel.uitzondering" type="button" class="link" @click="notitieOpen = false; emit('verwijder')">Uitzondering weghalen</button>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { MENSEN, ROLLEN, SOORTEN } from '~/lib/fasen'
 import { SLAGINGSKANSEN } from '~/lib/leads'
+import { adresRegel, bagViewer, normaalHuisnummer, normaalPostcode, zoekAdres } from '~/lib/adres'
 import type { Project, ProjectWijziging, Rol, Soort } from '~/lib/types'
 
 const { project, wijzigProject } = useKaart()
@@ -12,8 +13,8 @@ const opties = (rol: Rol) => {
   const huidig = project.value?.[rol]
   return huidig && !MENSEN[rol].includes(huidig) ? [...MENSEN[rol], huidig] : MENSEN[rol]
 }
-const route = computed(() => project.value?.adres
-  ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(KANTOOR)}&destination=${encodeURIComponent(project.value.adres)}`
+const route = computed(() => project.value?.straat || project.value?.postcode
+  ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(KANTOOR)}&destination=${encodeURIComponent(adresRegel(project.value)!)}`
   : null)
 const isLink = (v: string | null | undefined) => !!v && /^https?:\/\//i.test(v)
 
@@ -21,6 +22,44 @@ function tekst(veld: keyof ProjectWijziging, e: Event) {
   const waarde = (e.target as HTMLInputElement).value.trim() || null
   if (waarde === (project.value?.[veld as keyof Project] ?? null)) return
   wijzigProject({ [veld]: waarde })
+}
+// Adres: postcode en huisnummer; straat en plaats komen uit de BAG, of vul je zelf in (bijvoorbeeld bij nieuwbouw).
+const adresStand = ref<{ zoekt: boolean, tekst: string } | null>(null)
+const kanZoeken = computed(() => !!project.value?.postcode && !!project.value.huisnummer)
+async function adresDeel(veld: 'postcode' | 'huisnummer', e: Event) {
+  const p = project.value
+  const el = e.target as HTMLInputElement
+  if (!p) return
+  const invoer = el.value.trim()
+  const waarde = !invoer ? null : veld === 'postcode' ? normaalPostcode(invoer) : normaalHuisnummer(invoer)
+  if (invoer && !waarde) return toon(veld === 'postcode' ? 'Vul de postcode in als 1234 AB.' : 'Vul het huisnummer in als 12, 12A of 12A-1.', 'fout')
+  el.value = waarde ?? ''
+  if (waarde === p[veld]) return
+  const postcode = veld === 'postcode' ? waarde : p.postcode
+  const huisnummer = veld === 'huisnummer' ? waarde : p.huisnummer
+  if (postcode && huisnummer) return zoekEnBewaar(postcode, huisnummer)
+  adresStand.value = null
+  wijzigProject({ [veld]: waarde, bag_id: null })
+}
+/**
+ * Zoekt het adres op en bewaart het, met het BAG-object voor de link. Niet gevonden: alleen postcode en huisnummer;
+ * straat en plaats blijven zoals ze zijn.
+ */
+async function zoekEnBewaar(postcode: string, huisnummer: string) {
+  adresStand.value = { zoekt: true, tekst: 'Adres zoeken in de BAG…' }
+  const uit = await zoekAdres(postcode, huisnummer)
+  if (uit.stand === 'gevonden') {
+    adresStand.value = { zoekt: false, tekst: `Gevonden in de BAG: ${adresRegel(uit.adres)}.` }
+    wijzigProject({ ...uit.adres, bag_id: uit.bagId }, 'Adres gevonden · in het logboek')
+    return
+  }
+  adresStand.value = {
+    zoekt: false,
+    tekst: uit.stand === 'fout'
+      ? 'De BAG is nu niet bereikbaar. Vul straat en plaats zelf in, of probeer het later opnieuw.'
+      : `Niet gevonden in de BAG${uit.varianten.length ? ` (wel: ${uit.varianten.join(', ')})` : ''}. Vul straat en plaats zelf in, bijvoorbeeld bij nieuwbouw.`,
+  }
+  wijzigProject({ postcode, huisnummer, bag_id: null })
 }
 function link(veld: 'sharepoint_url' | 'extern_url' | 'notitieblok_url', e: Event) {
   const waarde = (e.target as HTMLInputElement).value.trim() || null
@@ -80,14 +119,20 @@ async function kopieer() {
       <div class="kaart">
         <span class="tab">Project</span>
         <dl class="velden">
+          <div><dt><label for="g-nummer">Projectnummer</label></dt><dd><input id="g-nummer" class="veld" :value="project.nummer ?? ''" placeholder="Uit AFAS, bijvoorbeeld P26001" @change="e => tekst('nummer', e)"></dd></div>
           <div class="naast">
-            <div><dt><label for="g-nummer">Projectnummer</label></dt><dd><input id="g-nummer" class="veld" :value="project.nummer ?? ''" placeholder="P26001" @change="e => tekst('nummer', e)"></dd></div>
-            <div><dt><label for="g-afas">AFAS-nummer</label></dt><dd><input id="g-afas" class="veld" :value="project.afas_nummer ?? ''" placeholder="Nummer in AFAS" @change="e => tekst('afas_nummer', e)"></dd></div>
+            <div><dt><label for="g-postcode">Postcode</label></dt><dd><input id="g-postcode" class="veld" :value="project.postcode ?? ''" placeholder="1234 AB" autocomplete="off" @change="e => adresDeel('postcode', e)"></dd></div>
+            <div><dt><label for="g-huisnummer">Huisnummer</label></dt><dd><input id="g-huisnummer" class="veld" :value="project.huisnummer ?? ''" placeholder="12A" autocomplete="off" @change="e => adresDeel('huisnummer', e)"></dd></div>
+          </div>
+          <div class="naast">
+            <div><dt><label for="g-straat">Straat</label></dt><dd><input id="g-straat" class="veld" :value="project.straat ?? ''" placeholder="Uit de BAG, of zelf invullen" @change="e => tekst('straat', e)"></dd></div>
+            <div><dt><label for="g-plaats">Plaats</label></dt><dd><input id="g-plaats" class="veld" :value="project.plaats ?? ''" placeholder="Uit de BAG, of zelf invullen" @change="e => tekst('plaats', e)"></dd></div>
           </div>
           <div>
-            <dt><label for="g-adres">Adres</label></dt>
-            <dd class="met-link">
-              <input id="g-adres" class="veld" :value="project.adres ?? ''" placeholder="Straat, huisnummer, plaats" @change="e => tekst('adres', e)">
+            <dd class="klein adres-stand" aria-live="polite">
+              <span>{{ adresStand?.tekst ?? 'Straat en plaats komen uit de BAG zodra postcode en huisnummer er staan.' }}</span>
+              <button v-if="kanZoeken && !adresStand?.zoekt" type="button" class="link" @click="zoekEnBewaar(project.postcode!, project.huisnummer!)">Controleer in de BAG</button>
+              <a v-if="project.bag_id" :href="bagViewer(project.bag_id)" target="_blank" rel="noopener">Open in de BAG ↗</a>
               <a v-if="route" :href="route" target="_blank" rel="noopener">Route ↗</a>
             </dd>
           </div>

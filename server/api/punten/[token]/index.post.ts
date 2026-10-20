@@ -24,7 +24,7 @@ export default defineEventHandler(async (event): Promise<ExternAntwoord> => {
   const [leverancier, punten, projecten, tekeningen] = await Promise.all([
     sb.from('leveranciers').select('naam, vak').eq('id', link.leverancier_id).single(),
     sb.from('controlepunten').select('*').in('project_id', projectIds),
-    sb.from('projecten').select('id, naam, plaats, adres').in('id', projectIds),
+    sb.from('projecten').select('id, naam, postcode, huisnummer, straat, plaats').in('id', projectIds),
     sb.from('tekeningen').select('id, project_id, naam').in('project_id', projectIds),
   ])
   if (leverancier.error || punten.error || projecten.error || tekeningen.error) throw nietBereikbaar()

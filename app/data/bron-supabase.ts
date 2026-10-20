@@ -1,7 +1,7 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import type { Controlepunt, Deellink, Financien, Leverancier, LogRegel, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
+import type { Controlepunt, Deellink, Financien, Leverancier, LogRegel, Opmerking, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
 import { fotoPad } from '~/lib/controle'
 import type { ExternAntwoord } from '~/lib/deellink'
 
@@ -64,16 +64,18 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     },
 
     async bewaarProject(id, wijziging) {
-      return uitkomst(await sb.from('projecten').update(wijziging).eq('id', id).select().single(), 'opslaan') as Project
+      const res = await sb.from('projecten').update(wijziging).eq('id', id).select().single()
+      if (res.error?.code === UNIEK && res.error.message.includes('nummer')) throw new BronFout(`Er is al een project met projectnummer ${wijziging.nummer}.`)
+      return uitkomst(res, 'opslaan') as Project
     },
-    async nieuweLead(invoer) {
-      const res = await sb.from('projecten').insert({ ...invoer, fase: 'lead' }).select().single()
+    async nieuwProject(invoer) {
+      const res = await sb.from('projecten').insert(invoer).select().single()
       if (res.error?.code === UNIEK) {
-        throw new BronFout(res.error.message.includes('afas_nummer')
-          ? `Er is al een project met AFAS-nummer ${invoer.afas_nummer}.`
+        throw new BronFout(res.error.message.includes('nummer')
+          ? `Er is al een project met projectnummer ${invoer.nummer}.`
           : 'Er bestaat al een project met deze naam. Kies een andere naam.')
       }
-      return uitkomst(res, 'de lead opslaan') as Project
+      return uitkomst(res, 'het project opslaan') as Project
     },
     async bewaarStandaardtaak(projectId, lijst, sleutel, wijziging) {
       return uitkomst(await sb.from('taken')
@@ -108,6 +110,12 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     async verwijderTaak(taakId) {
       const res = await sb.from('taken').delete().eq('id', taakId)
       if (res.error) uitkomst(res, 'verwijderen')
+    },
+    async opmerkingen(projectId) {
+      return uitkomst(await sb.from('opmerkingen').select('*').eq('project_id', projectId).order('op'), 'de opmerkingen laden') as Opmerking[]
+    },
+    async plaatsOpmerking(taakId, tekst) {
+      return uitkomst(await sb.from('opmerkingen').insert({ taak_id: taakId, tekst }).select().single(), 'de opmerking plaatsen') as Opmerking
     },
     async zetUitzonderingStatus(id, status) {
       uitkomst(await sb.from('uitzonderingen').update({ status }).eq('id', id).select().single(), 'de catalogus bijwerken')

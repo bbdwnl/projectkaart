@@ -95,7 +95,7 @@ describe('aftekenen en logboek', () => {
 
     // nog een wijziging laat de aftekening staan, ook als de browser iets anders meestuurt
     const [later] = await als<{ afgetekend_door: string }>(MICHIEL,
-      `update public.taken set notitie = 'Rev D is leidend', afgetekend_door = 'Vervalst' where id = $1 returning afgetekend_door`, [taak!.id])
+      `update public.taken set eigenaar = 'Architect', afgetekend_door = 'Vervalst' where id = $1 returning afgetekend_door`, [taak!.id])
     expect(later!.afgetekend_door).toBe('Benno van Bergen')
 
     const log = await als<{ door: string, veld: string, oud: string | null, nieuw: string | null }>(MICHIEL,
@@ -105,8 +105,25 @@ describe('aftekenen en logboek', () => {
       'Benno van Bergen: status loopt -> definitief',
       'Benno van Bergen: klantakkoord false -> true',
       'Benno van Bergen: document_naam - -> P20038 – DO Casco – rev D.pdf',
-      'Michiel: notitie - -> Rev D is leidend',
+      'Michiel: eigenaar - -> Architect',
     ])
+  })
+
+  it('vult bij een opmerking project, wie en wanneer in, logt hem en laat hem daarna staan', async () => {
+    const [taak] = await als<{ id: string }>(MICHIEL,
+      `insert into public.taken (project_id, lijst, sleutel, fase) values ($1, 'ontwikkeling', 'demarcatie', 'ontwikkeling') returning id`, [projectId])
+    const [o] = await als<{ id: string, project_id: string, door: string, op: string }>(MICHIEL,
+      `insert into public.opmerkingen (taak_id, project_id, tekst, door, op) values ($1, gen_random_uuid(), 'Rev D is leidend', 'Vervalst', '2020-01-01') returning id, project_id, door, op`, [taak!.id])
+    expect(o).toMatchObject({ project_id: projectId, door: 'Michiel' })
+    expect(new Date(o!.op).getFullYear()).toBeGreaterThan(2020)
+
+    const log = await als<{ door: string, veld: string, nieuw: string }>(MICHIEL, `select door, veld, nieuw from public.logboek where taak_id = $1`, [taak!.id])
+    expect(log).toEqual([{ door: 'Michiel', veld: 'opmerking', nieuw: 'Rev D is leidend' }])
+
+    expect(await als(MICHIEL, `update public.opmerkingen set tekst = 'Anders' where id = $1 returning id`, [o!.id])).toHaveLength(0)
+    expect(await als(MICHIEL, `delete from public.opmerkingen where id = $1 returning id`, [o!.id])).toHaveLength(0)
+    expect(await als(VREEMD, `select id from public.opmerkingen`)).toHaveLength(0)
+    await expect(als(MICHIEL, `insert into public.opmerkingen (taak_id, tekst) values ($1, '   ')`, [taak!.id])).rejects.toThrow()
   })
 
   it('logt een uitzondering die erbij komt en weer weggaat', async () => {
@@ -128,9 +145,15 @@ describe('aftekenen en logboek', () => {
   })
 
   it('logt een faseswitch op het project', async () => {
-    await als(MICHIEL, `update public.projecten set fase = 'uitvoering', afas_nummer = '12345' where id = $1`, [projectId])
+    await als(MICHIEL, `update public.projecten set fase = 'uitvoering', postcode = '7311 AB', plaats = 'Apeldoorn-Zuid' where id = $1`, [projectId])
     const log = await als<{ veld: string, nieuw: string }>(MICHIEL, `select veld, nieuw from public.logboek where tabel = 'projecten' and project_id = $1 order by id`, [projectId])
-    expect(log).toEqual([{ veld: 'fase', nieuw: 'uitvoering' }, { veld: 'afas_nummer', nieuw: '12345' }])
+    expect(log).toEqual([{ veld: 'fase', nieuw: 'uitvoering' }, { veld: 'postcode', nieuw: '7311 AB' }, { veld: 'plaats', nieuw: 'Apeldoorn-Zuid' }])
+  })
+
+  it('kent één projectnummer, uniek', async () => {
+    const kolommen = await db.query<{ column_name: string }>(`select column_name from information_schema.columns where table_name = 'projecten'`)
+    expect(kolommen.rows.map(r => r.column_name)).not.toContain('afas_nummer')
+    await expect(als(MICHIEL, `insert into public.projecten (slug, naam, nummer) values ('dubbel', 'Dubbel', 'P20038')`)).rejects.toThrow()
   })
 
   it('laat een medewerker een lead aanmaken en logt de slagingskans', async () => {

@@ -11,7 +11,7 @@ const regels = computed(() => logboek.value.map(r => ({ ...r, delen: beschrijf(r
     <div class="blokkop">
       <div>
         <h2>Wie wat wanneer veranderde</h2>
-        <p class="klein">Elke wijziging in status, eigenaar, document, klantakkoord en de projectgegevens. Zo weet je of iets is afgetekend, en door wie.</p>
+        <p class="klein">Elke wijziging in status, eigenaar, document en klantakkoord, elke opmerking en de projectgegevens. Zo weet je wie iets op Definitief zette, en wanneer.</p>
       </div>
     </div>
     <TransitionGroup v-if="regels.length" tag="ol" name="log" class="log">

@@ -8,7 +8,7 @@ const { weergave } = useWeergave()
 
 const rol = computed(() => faseInfo(project.value!.fase).rol)
 const eigenaar = computed(() => project.value?.[rol.value] ?? null)
-const label = computed(() => [project.value?.nummer, project.value?.afas_nummer && `AFAS ${project.value.afas_nummer}`, project.value?.plaats].filter(Boolean).join(' · '))
+const label = computed(() => [project.value?.nummer, project.value?.plaats].filter(Boolean).join(' · '))
 
 /** Wie de rol van deze fase kan hebben; ook iemand die er nu staat maar niet in de lijst. */
 const keuzes = computed(() => [...new Set([...MENSEN[rol.value], ...(eigenaar.value ? [eigenaar.value] : [])])])

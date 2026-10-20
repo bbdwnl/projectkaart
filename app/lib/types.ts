@@ -18,14 +18,25 @@ export interface ProjectDatums {
   datum_oplevering: IsoDatum | null
 }
 
-export interface Project extends ProjectDatums {
+/** De verwachting tijdens lead en haalbaarheid, naast de harde datums. */
+export interface ProjectPrognose {
+  prognose_casco: IsoDatum | null
+  prognose_afbouw: IsoDatum | null
+  prognose_oplevering: IsoDatum | null
+}
+
+export interface Project extends ProjectDatums, ProjectPrognose {
   id: string
   slug: string
+  /** Het projectnummer uit AFAS, bijvoorbeeld P20038. */
   nummer: string | null
-  afas_nummer: string | null
   naam: string
+  postcode: string | null
+  huisnummer: string | null
+  straat: string | null
   plaats: string | null
-  adres: string | null
+  /** Het BAG-object bij postcode en huisnummer; null als het adres (nog) niet in de BAG staat. */
+  bag_id: string | null
   fase: Fase
   prio: boolean
   soort: Soort[]
@@ -42,6 +53,8 @@ export interface Project extends ProjectDatums {
   gewijzigd_op: string | null
 }
 export type ProjectWijziging = Partial<Omit<Project, 'id' | 'slug' | 'gewijzigd_op'>>
+/** Een nieuw project: een lead, of een lopend project dat direct in zijn fase begint. De rest vul je op de kaart in. */
+export type NieuwProject = Pick<Project, 'slug' | 'naam' | 'fase'> & Partial<Pick<Project, 'nummer' | 'am' | 'po' | 'pm' | 'slagingskans'>>
 
 /** De stand van één taak in één project: een standaardtaak (lijst + sleutel) of een uitzondering. */
 export interface Taak {
@@ -55,7 +68,6 @@ export interface Taak {
   deadline: IsoDatum | null
   status: Status
   eigenaar: string | null
-  notitie: string | null
   reden_nvt: string | null
   aanleiding: string | null
   klantakkoord: boolean
@@ -69,7 +81,17 @@ export interface Taak {
   gewijzigd_door: string | null
 }
 export type TaakWijziging = Partial<Pick<Taak,
-  'status' | 'eigenaar' | 'notitie' | 'reden_nvt' | 'aanleiding' | 'klantakkoord' | 'document_url' | 'document_naam' | 'deadline'>>
+  'status' | 'eigenaar' | 'reden_nvt' | 'aanleiding' | 'klantakkoord' | 'document_url' | 'document_naam' | 'deadline'>>
+
+/** Een opmerking bij een taak. Project, wie en wanneer vult de database in; daarna ligt hij vast. */
+export interface Opmerking {
+  id: string
+  taak_id: string
+  project_id: string
+  tekst: string
+  door: string
+  op: string
+}
 
 /** Een soort uitzondering uit de gedeelde catalogus. */
 export interface Uitzondering {

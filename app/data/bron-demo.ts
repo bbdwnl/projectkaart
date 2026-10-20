@@ -3,7 +3,7 @@ import { BronFout } from './bron'
 import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import { leegProject } from '~/lib/leads'
-import { GEEN_MELDING, GEEN_PLEK, type Controlepunt, type Deellink, type DeellinkReden, type Fase, type LogRegel, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
+import { GEEN_MELDING, GEEN_PLEK, type Controlepunt, type Deellink, type DeellinkReden, type Fase, type LogRegel, type Opmerking, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
 import { bewaarBestand, leesBestand, wisAlleBestanden, wisBestand } from './demo-bestanden'
 import { VOORBEELDTEKENING } from './demo'
 import { fotoPad, gereedMelding, meldingNaWijziging } from '~/lib/controle'
@@ -13,10 +13,11 @@ import { plusMaand } from '~/lib/datum'
 import { naarDataUrl, verkleinFoto } from '~/utils/foto'
 
 // Dezelfde velden als de logboektriggers in de migratie.
-const PROJECT_VELDEN = ['fase', 'prio', 'nummer', 'afas_nummer', 'naam', 'adres', 'm2', 'soort', 'slagingskans', 'am', 'po', 'pm', 'opzichter',
+const PROJECT_VELDEN = ['fase', 'prio', 'nummer', 'naam', 'postcode', 'huisnummer', 'straat', 'plaats', 'm2', 'soort', 'slagingskans', 'am', 'po', 'pm', 'opzichter',
   'datum_casco', 'datum_voorbereiding', 'datum_inkoop', 'datum_afbouw', 'datum_oplevering',
+  'prognose_casco', 'prognose_afbouw', 'prognose_oplevering',
   'sharepoint_url', 'extern_url', 'notitieblok_url', 'tekeningen_locatie'] as const
-const TAAK_VELDEN = ['status', 'eigenaar', 'klantakkoord', 'document_url', 'document_naam', 'reden_nvt', 'deadline', 'notitie', 'aanleiding'] as const
+const TAAK_VELDEN = ['status', 'eigenaar', 'klantakkoord', 'document_url', 'document_naam', 'reden_nvt', 'deadline', 'aanleiding'] as const
 
 const kopie = <T>(o: T): T => JSON.parse(JSON.stringify(o))
 const alsTekst = (v: unknown): string | null => v === null || v === undefined ? null : Array.isArray(v) ? `{${v.join(',')}}` : String(v)
@@ -38,7 +39,7 @@ function laad(opslag: string): DemoGegevens | null {
 }
 
 /** Waar de proefversie de gegevens van een tester bewaart. Verhoog de versie als de vorm verandert. */
-export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v5'
+export const PROEF_OPSLAG = 'projectkaart_proefgegevens_v9'
 
 export function wisProefgegevens() {
   try { localStorage.removeItem(PROEF_OPSLAG) } catch { /* niets te wissen */ }
@@ -229,6 +230,7 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
     async bewaarProject(id, wijziging: ProjectWijziging) {
       await wacht()
       const p = projectVan(id)
+      if (wijziging.nummer && db.projecten.some(x => x.id !== id && x.nummer === wijziging.nummer)) throw new BronFout(`Er is al een project met projectnummer ${wijziging.nummer}.`)
       const oud = kopie(p)
       Object.assign(p, wijziging, { gewijzigd_op: new Date().toISOString() })
       for (const v of PROJECT_VELDEN) {
@@ -239,11 +241,11 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
       return kopie(p)
     },
 
-    async nieuweLead(invoer) {
+    async nieuwProject(invoer) {
       await wacht()
       if (db.projecten.some(p => p.slug === invoer.slug)) throw new BronFout('Er bestaat al een project met deze naam. Kies een andere naam.')
-      if (invoer.afas_nummer && db.projecten.some(p => p.afas_nummer === invoer.afas_nummer)) throw new BronFout(`Er is al een project met AFAS-nummer ${invoer.afas_nummer}.`)
-      const p = leegProject({ ...invoer, id: nieuwId('p'), fase: 'lead', gewijzigd_op: new Date().toISOString() })
+      if (invoer.nummer && db.projecten.some(p => p.nummer === invoer.nummer)) throw new BronFout(`Er is al een project met projectnummer ${invoer.nummer}.`)
+      const p = leegProject({ ...invoer, id: nieuwId('p'), gewijzigd_op: new Date().toISOString() })
       db.projecten.push(p)
       bewaar()
       return kopie(p)
@@ -298,8 +300,22 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
       const i = db.taken.findIndex(t => t.id === taakId)
       if (i < 0) return
       const [t] = db.taken.splice(i, 1)
+      db.opmerkingen = db.opmerkingen.filter(o => o.taak_id !== taakId)
       if (t!.uitzondering_id) log({ project_id: t!.project_id, tabel: 'taken', taak_id: t!.id, lijst: null, sleutel: null, uitzondering_id: t!.uitzondering_id, veld: 'verwijderd', oud: null, nieuw: null })
       bewaar()
+    },
+    async opmerkingen(projectId) {
+      return kopie(db.opmerkingen.filter(o => o.project_id === projectId).sort((a, b) => a.op.localeCompare(b.op)))
+    },
+    async plaatsOpmerking(taakId, tekst) {
+      await wacht()
+      const t = db.taken.find(x => x.id === taakId)
+      if (!t) throw new BronFout('Deze taak bestaat niet meer.')
+      const o: Opmerking = { id: nieuwId('o'), taak_id: taakId, project_id: t.project_id, tekst: tekst.trim(), door, op: new Date().toISOString() }
+      db.opmerkingen.push(o)
+      log({ project_id: t.project_id, tabel: 'taken', taak_id: t.id, lijst: t.lijst, sleutel: t.sleutel, uitzondering_id: t.uitzondering_id, veld: 'opmerking', oud: null, nieuw: o.tekst })
+      bewaar()
+      return kopie(o)
     },
 
     async zetUitzonderingStatus(id, status) {

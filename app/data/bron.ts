@@ -1,5 +1,4 @@
-import type { Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, ProjectLeverancier, LogRegel, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
-import type { NieuweLead } from '~/lib/leads'
+import type { Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { ExternAntwoord } from '~/lib/deellink'
 
 /**
@@ -17,13 +16,17 @@ export interface Bron {
   financien(projectId: string): Promise<Financien | null>
   logboek(projectId: string, limiet?: number): Promise<LogRegel[]>
   bewaarProject(id: string, wijziging: ProjectWijziging): Promise<Project>
-  /** Een nieuw project in de fase lead. */
-  nieuweLead(invoer: NieuweLead): Promise<Project>
+  /** Een nieuw project: een lead, of een lopend project in zijn fase. */
+  nieuwProject(invoer: NieuwProject): Promise<Project>
   /** Maakt de taakregel aan als die er nog niet is. */
   bewaarStandaardtaak(projectId: string, lijst: Fase, sleutel: string, wijziging: TaakWijziging): Promise<Taak>
   bewaarTaak(taakId: string, wijziging: TaakWijziging): Promise<Taak>
   voegUitzonderingToe(projectId: string, invoer: NieuweUitzondering): Promise<{ taak: Taak, uitzondering: Uitzondering }>
   verwijderTaak(taakId: string): Promise<void>
+  /** De opmerkingen bij de taken van één project, oudste eerst. */
+  opmerkingen(projectId: string): Promise<Opmerking[]>
+  /** Wie en wanneer vult de bron in (de ingelogde gebruiker). */
+  plaatsOpmerking(taakId: string, tekst: string): Promise<Opmerking>
   zetUitzonderingStatus(id: string, status: UitzonderingStatus): Promise<void>
 
   /** De tekeningen van één project, of van alle projecten. */

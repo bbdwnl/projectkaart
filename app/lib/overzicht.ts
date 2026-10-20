@@ -63,10 +63,10 @@ export function personen(kaartjes: Kaartje[], gekozen: string): { id: string, aa
     .map(id => ({ id, aantal: kaartjes.filter(k => (k.wie ?? 'geen') === id).length }))
 }
 
-/** Zoeken op naam, nummer, AFAS-nummer, plaats of wie verantwoordelijk is. */
+/** Zoeken op naam, projectnummer, plaats of wie verantwoordelijk is. */
 export function vindt(k: Kaartje, zoek: string): boolean {
   const z = zoek.trim().toLowerCase()
-  return !z || [k.p.naam, k.p.nummer, k.p.afas_nummer, k.p.plaats, k.wie].filter(Boolean).join(' ').toLowerCase().includes(z)
+  return !z || [k.p.naam, k.p.nummer, k.p.plaats, k.wie].filter(Boolean).join(' ').toLowerCase().includes(z)
 }
 
 /** De kleurenbalk in woorden: voor de tooltip en voor schermlezers (een stand nooit alleen als kleur). */

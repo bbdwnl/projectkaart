@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Project, Taak, Uitzondering } from '~/lib/types'
-import { kaartjesVan, pastWie, personen, sorteerKaartjes, SORTERINGEN, vindt } from '~/lib/overzicht'
+import { leadsVan } from '~/lib/leads'
 import { vandaag } from '~/lib/datum'
 
-// De projecten in haalbaarheid: na de lead, voor de ontwikkeling. Dezelfde kaartjes als op Projecten.
+// De projecten in haalbaarheid: na de lead, voor de ontwikkeling. Dezelfde lijst als bij Leads, en een
+// planningsoverzicht waarin de prognose over de lopende projecten heen valt, zodat je de overlap ziet.
 useHead({ title: 'Haalbaarheid · Projectkaart' })
 const bron = useBron()
 const { modus } = useGebruiker()
@@ -13,9 +14,8 @@ const fout = ref('')
 const projecten = ref<Project[]>([])
 const taken = ref<Taak[]>([])
 const catalogus = ref<Uitzondering[]>([])
-const zoek = ref('')
-const { sortering, wie } = useOverzichtKeuze('/haalbaarheid')
-const datumBij = (p: Project) => (sortering.value === 'inkoop' ? { naam: 'Inkoop gereed', waarde: p.datum_inkoop } : null)
+const TABS = [{ id: 'lijst', naam: 'Lijst' }, { id: 'planning', naam: 'Planningsoverzicht' }] as const
+const weergave = useTabblad<'lijst' | 'planning'>('lijst', ['lijst', 'planning'])
 
 async function laad() {
   stand.value = 'laden'
@@ -29,55 +29,33 @@ async function laad() {
 }
 onMounted(laad)
 
-const kaartjes = computed(() => sorteerKaartjes(kaartjesVan(projecten.value.filter(p => p.fase === 'haalbaarheid'), taken.value, catalogus.value, nu), sortering.value))
-/** Wat past bij het zoeken; daaruit tellen de knoppen van de verantwoordelijke. */
-const gezocht = computed(() => kaartjes.value.filter(k => vindt(k, zoek.value)))
-const mensen = computed(() => personen(gezocht.value, wie.value))
-const zichtbaar = computed(() => gezocht.value.filter(k => pastWie(k, wie.value)))
+const regels = computed(() => leadsVan(projecten.value, taken.value, catalogus.value, nu, 'haalbaarheid'))
 const zin = computed(() => {
-  const n = kaartjes.value.length
+  const n = regels.value.length
   if (!n) return 'Geen projecten in haalbaarheid.'
-  const laat = kaartjes.value.filter(k => k.t.telaat).length
-  return `${n} ${n === 1 ? 'project' : 'projecten'} in haalbaarheid. ${laat ? `${laat} ${laat === 1 ? 'heeft' : 'hebben'} taken die te laat zijn.` : 'Niets te laat.'}`
+  const zonder = regels.value.filter(l => !l.p.prognose_casco && !l.p.prognose_afbouw && !l.p.prognose_oplevering).length
+  const klaar = regels.value.filter(l => l.licht === 'klaar').length
+  return `${n} ${n === 1 ? 'project' : 'projecten'} in haalbaarheid${zonder ? `, ${zonder} nog zonder prognose` : ''}. ${klaar ? `${klaar} ${klaar === 1 ? 'is' : 'zijn'} klaar voor de overdracht.` : 'Nog geen enkele is klaar voor de overdracht.'}`
 })
 </script>
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'proef'" class="melding">Proefversie. De projecten en datums komen uit het prototype; statussen, mensen en documenten zijn voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
+    <p v-if="modus === 'proef'" class="melding">Proefversie. De projecten en datums komen uit het prototype; statussen, mensen, prognoses en documenten zijn voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
     <header class="paginakop">
       <p class="label">Na de lead, voor de ontwikkeling</p>
       <h1>Haalbaarheid</h1>
       <p v-if="stand === 'klaar'" class="zin">{{ zin }}</p>
     </header>
 
+    <PaginaTabs v-model="weergave" :tabs="[...TABS]" label="Weergave van haalbaarheid" />
     <div v-if="stand === 'laden'" class="laden" aria-busy="true"><span class="laden-regel" /><span class="laden-regel" /></div>
     <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad">Probeer het opnieuw</button></div>
-    <template v-else-if="kaartjes.length">
-      <div class="filters projectfilters">
-        <input v-model="zoek" class="veld zoekveld" type="search" placeholder="Zoek op naam, nummer, plaats of persoon" aria-label="Zoek een project">
-        <div class="filtergroep">
-          <span class="label">Sorteer</span>
-          <div class="seg" role="group" aria-label="Sorteer">
-            <button v-for="s in SORTERINGEN" :key="s.id" type="button" :aria-pressed="sortering === s.id" @click="sortering = s.id">{{ s.naam }}</button>
-          </div>
-        </div>
-      </div>
-      <div class="filters">
-        <div class="filtergroep">
-          <span class="label">Verantwoordelijke</span>
-          <div class="seg" role="group" aria-label="Verantwoordelijke">
-            <button type="button" :aria-pressed="wie === 'alle'" @click="wie = 'alle'">Iedereen <span class="n">{{ gezocht.length }}</span></button>
-            <button v-for="m in mensen" :key="m.id" type="button" :aria-pressed="wie === m.id" @click="wie = m.id">{{ m.id === 'geen' ? 'Zonder' : m.id }} <span class="n">{{ m.aantal }}</span></button>
-          </div>
-        </div>
-      </div>
-      <div class="projectgrid">
-        <ProjectKaartje v-for="(k, i) in zichtbaar" :key="k.p.id" :k="k" :volgorde="i" :datum="datumBij(k.p)" />
-      </div>
-      <p v-if="!zichtbaar.length" class="leeg-staat">Geen project in deze selectie.</p>
+    <template v-else-if="weergave === 'lijst'">
+      <ProjectLijst v-if="regels.length" fase="haalbaarheid" :regels="regels" />
+      <p v-else class="leeg-staat leadfilters">Nog geen projecten in haalbaarheid. Een lead komt hier zodra je op de kaart de fase op Haalbaarheid zet.</p>
     </template>
-    <p v-else class="leeg-staat projectfilters">Nog geen projecten in haalbaarheid. Een lead komt hier zodra je op de kaart de fase op Haalbaarheid zet.</p>
-    <footer>Projectkaart BbDW · een project gaat naar Projecten zodra je op de kaart de fase op Ontwikkeling zet.</footer>
+    <PlanningOverzicht v-else :projecten="projecten" :lagen="['prognose', 'lopend']" />
+    <footer>Projectkaart BbDW · de prognose vul je op de kaart in onder Proces &amp; Planning. Een project gaat naar Projecten zodra je de fase op Ontwikkeling zet.</footer>
   </main>
 </template>

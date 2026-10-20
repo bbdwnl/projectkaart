@@ -88,9 +88,9 @@ describe('deellink: wat de leverancier ziet', () => {
     leverancier: { naam: 'Klimaattechniek Oost', vak: 'Installateur' },
     punten,
     projecten: [
-      { id: 'p1', naam: 'Apeldoorn Vlijtseweg', plaats: 'Apeldoorn', adres: 'Vlijtseweg' },
-      { id: 'p2', naam: 'Almere Zorgplein', plaats: 'Almere', adres: null },
-      { id: 'p3', naam: 'Oss Molenwijk', plaats: 'Oss', adres: null },
+      { id: 'p1', naam: 'Apeldoorn Vlijtseweg', postcode: null, huisnummer: null, straat: 'Vlijtseweg', plaats: 'Apeldoorn' },
+      { id: 'p2', naam: 'Almere Zorgplein', postcode: '1315 RA', huisnummer: '4', straat: 'Stadhuisplein', plaats: 'Almere' },
+      { id: 'p3', naam: 'Oss Molenwijk', postcode: null, huisnummer: null, straat: null, plaats: 'Oss' },
     ],
     tekeningen: [{ id: 't1', project_id: 'p1', naam: 'Begane grond' }, { id: 't2', project_id: 'p1', naam: 'Dak' }, { id: 't3', project_id: 'p1', naam: 'Gevels' }],
     fotoUrl: pad => `https://opslag/${pad}`,
@@ -101,7 +101,7 @@ describe('deellink: wat de leverancier ziet', () => {
     expect(inhoud.punten.find(p => p.id === 'open')).toMatchObject({ foto: 'https://opslag/p1/open.jpg', tekening_id: 't1', tekening_x: 0.4 })
   })
   it('toont alleen de projecten waarop hij open punten heeft, en alleen tekeningen met zijn punten', () => {
-    expect(inhoud.projecten.map(p => p.naam)).toEqual(['Almere Zorgplein', 'Apeldoorn Vlijtseweg'])
+    expect(inhoud.projecten.map(p => [p.naam, p.adres])).toEqual([['Almere Zorgplein', 'Stadhuisplein 4, 1315 RA Almere'], ['Apeldoorn Vlijtseweg', 'Vlijtseweg, Apeldoorn']])
     expect(inhoud.tekeningen.map(t => t.id)).toEqual(['t1'])
   })
   it('geeft geen interne velden mee', () => {

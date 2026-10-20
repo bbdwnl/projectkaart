@@ -13,7 +13,7 @@ export const statusNaam = (s: string | null | undefined) => STATUSSEN.find(x => 
 export function leegTaak(extra: Partial<Taak> & Pick<Taak, 'id' | 'project_id' | 'fase'>): Taak {
   return {
     lijst: null, sleutel: null, uitzondering_id: null, deadline: null, status: 'niet_gestart', eigenaar: null,
-    notitie: null, reden_nvt: null, aanleiding: null, klantakkoord: false, klantakkoord_door: null, klantakkoord_op: null,
+    reden_nvt: null, aanleiding: null, klantakkoord: false, klantakkoord_door: null, klantakkoord_op: null,
     document_url: null, document_naam: null, afgetekend_door: null, afgetekend_op: null, gewijzigd_op: null, gewijzigd_door: null,
     ...extra,
   }

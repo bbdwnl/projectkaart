@@ -1,7 +1,8 @@
 import type { Licht, Project, Taak, Uitzondering } from './types'
 import { samen, takenVan } from './stoplicht'
+import { adresRegel } from './adres'
 
-// Het leadsoverzicht: alle projecten in de fase lead, met filters en sortering.
+// Het overzicht van Leads en van Haalbaarheid: alle projecten in die fase, met filters en sortering.
 // Relatieve imports: de proefversie maakt hiermee ook voorbeeldleads op de server.
 
 /** De slagingskans zoals de database hem toestaat. */
@@ -23,7 +24,7 @@ export function kansGroep(kans: number | null): KansGroep {
 /** Eén regel in het overzicht. */
 export interface Lead {
   p: Project
-  /** De stand van de overdracht naar haalbaarheid: de taken van de fase lead samen. */
+  /** De stand van de overdracht naar de volgende fase: de taken van deze fase samen. */
   licht: Licht
   /** Wat nog niet klaar is voor de overdracht. */
   open: string[]
@@ -31,10 +32,12 @@ export interface Lead {
   laatst: string | null
 }
 
-export function leadsVan(projecten: Project[], taken: Taak[], catalogus: Uitzondering[], nu: Date): Lead[] {
-  return projecten.filter(p => p.fase === 'lead').map((p) => {
+export type LijstFase = 'lead' | 'haalbaarheid'
+
+export function leadsVan(projecten: Project[], taken: Taak[], catalogus: Uitzondering[], nu: Date, fase: LijstFase = 'lead'): Lead[] {
+  return projecten.filter(p => p.fase === fase).map((p) => {
     const eigen = taken.filter(t => t.project_id === p.id)
-    const regels = takenVan('lead', p, eigen, catalogus, nu)
+    const regels = takenVan(fase, p, eigen, catalogus, nu)
     const momenten = [p.gewijzigd_op, ...eigen.map(t => t.gewijzigd_op)].filter((m): m is string => !!m)
     return {
       p,
@@ -51,7 +54,7 @@ export interface LeadFilter {
   am: string
   kans: KansGroep | 'alle'
   prio: boolean
-  /** Alleen leads die klaar zijn voor de overdracht naar haalbaarheid. */
+  /** Alleen projecten die klaar zijn voor de overdracht naar de volgende fase. */
   klaar: boolean
 }
 
@@ -61,7 +64,7 @@ export const amVan = (l: Lead) => l.p.am ?? 'geen'
 
 export function past(l: Lead, f: LeadFilter): boolean {
   const z = f.zoek.trim().toLowerCase()
-  if (z && ![l.p.naam, l.p.plaats, l.p.nummer, l.p.afas_nummer, l.p.adres, l.p.am].filter(Boolean).join(' ').toLowerCase().includes(z)) return false
+  if (z && ![l.p.naam, l.p.nummer, adresRegel(l.p), l.p.am].filter(Boolean).join(' ').toLowerCase().includes(z)) return false
   if (f.am !== 'alle' && amVan(l) !== f.am) return false
   if (f.kans !== 'alle' && kansGroep(l.p.slagingskans) !== f.kans) return false
   if (f.prio && !l.p.prio) return false
@@ -69,11 +72,11 @@ export function past(l: Lead, f: LeadFilter): boolean {
   return true
 }
 
-export type LeadKolom = 'kans' | 'naam' | 'am' | 'm2' | 'laatst'
+export type LeadKolom = 'kans' | 'naam' | 'am' | 'm2' | 'prognose' | 'laatst'
 export interface Sortering { kolom: LeadKolom, af: boolean }
 
-/** De richting als je een kolom kiest: kans, oppervlakte en laatste wijziging met de hoogste of nieuwste eerst. */
-export const AFLOPEND: Record<LeadKolom, boolean> = { kans: true, naam: false, am: false, m2: true, laatst: true }
+/** De richting als je een kolom kiest: kans, oppervlakte en laatste wijziging met de hoogste of nieuwste eerst; de prognose het eerst. */
+export const AFLOPEND: Record<LeadKolom, boolean> = { kans: true, naam: false, am: false, m2: true, prognose: false, laatst: true }
 const KOLOMMEN = Object.keys(AFLOPEND) as LeadKolom[]
 export const STANDAARD_SORTERING: Readonly<Sortering> = { kolom: 'kans', af: true }
 
@@ -85,6 +88,7 @@ export function sorteer(leads: Lead[], s: Sortering): Lead[] {
       case 'naam': return l.p.naam
       case 'am': return l.p.am
       case 'm2': return l.p.m2
+      case 'prognose': return l.p.prognose_casco
       case 'laatst': return l.laatst ? Date.parse(l.laatst) : null
     }
   }
@@ -142,14 +146,13 @@ export function maakSlug(naam: string, bestaand: string[]): string {
   return slug
 }
 
-export type NieuweLead = Pick<Project, 'slug' | 'naam' | 'plaats' | 'afas_nummer' | 'am' | 'slagingskans'>
-
-/** Een volledig project in de fase lead, voor de proefversie. */
+/** Een volledig project, standaard in de fase lead, voor de proefversie. */
 export function leegProject(extra: Partial<Project> & Pick<Project, 'id' | 'slug' | 'naam'>): Project {
   return {
-    nummer: null, afas_nummer: null, plaats: null, adres: null, fase: 'lead', prio: false, soort: [], m2: null,
+    nummer: null, postcode: null, huisnummer: null, straat: null, plaats: null, bag_id: null, fase: 'lead', prio: false, soort: [], m2: null,
     slagingskans: null, am: null, po: null, pm: null, opzichter: null,
     datum_casco: null, datum_voorbereiding: null, datum_inkoop: null, datum_afbouw: null, datum_oplevering: null,
+    prognose_casco: null, prognose_afbouw: null, prognose_oplevering: null,
     sharepoint_url: null, extern_url: null, notitieblok_url: null, tekeningen_locatie: null, gewijzigd_op: null,
     ...extra,
   }
