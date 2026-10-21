@@ -59,6 +59,21 @@ describe('planningsoverzicht', () => {
     expect(m['2027-7']).toEqual([0, 0])
   })
 
+  it('laat een afbouw zonder opleverdatum vervagend doorlopen', () => {
+    const s = segmentenVan(project({ fase: 'uitvoering', datum_inkoop: '2026-11-01', datum_afbouw: '2026-12-01' }), 'lopend', nu)
+    expect(s.at(-1)).toMatchObject({ naam: 'Start afbouw → nog geen opleverdatum', stap: 2, open: true, van: new Date(2026, 11, 1) })
+    expect(segmentenVan(project({ fase: 'haalbaarheid', prognose_casco: '2027-03-01', prognose_afbouw: '2027-08-01' }), 'prognose', nu).at(-1)!.open).toBe(true)
+  })
+
+  it('zet de buddy er licht bij, en telt hem niet mee', () => {
+    const r = planRegels([project({ id: 'a', fase: 'haalbaarheid', am: 'Jeroen', buddy: 'Michiel', prognose_casco: '2027-01-10', prognose_oplevering: '2027-06-01' })], nu)
+    expect(r.map(x => [x.wie, !!x.buddy])).toEqual([['Jeroen', false], ['Michiel', true]])
+    const as = tijdas(r, nu)
+    expect(bezetting(r, as.maanden).find(m => m.maand.getFullYear() === 2027 && m.maand.getMonth() === 2)!.prognose).toBe(1)
+    // Is de buddy ook de verantwoordelijke, dan geen tweede regel.
+    expect(planRegels([project({ fase: 'haalbaarheid', am: 'Jeroen', buddy: 'Jeroen' })], nu)).toHaveLength(1)
+  })
+
   it('heeft in de proefversie prognoses die samenvallen met lopende projecten, ook bij dezelfde persoon', () => {
     const g = maakDemoGegevens(nu, projecten)
     const r = planRegels(g.projecten, nu)

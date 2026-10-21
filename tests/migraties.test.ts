@@ -126,6 +126,43 @@ describe('aftekenen en logboek', () => {
     await expect(als(MICHIEL, `insert into public.opmerkingen (taak_id, tekst) values ($1, '   ')`, [taak!.id])).rejects.toThrow()
   })
 
+  it('vult bij een actie wie en wanneer in, en wie hem gereed meldde', async () => {
+    const [a] = await als<{ id: string, aangemaakt_door: string, gereed_door: string | null }>(MICHIEL,
+      `insert into public.acties (project_id, tekst, actiehouder, aangemaakt_door, gereed_door) values ($1, 'Kozijnmaten controleren', 'Carlo', 'Vervalst', 'Vervalst') returning id, aangemaakt_door, gereed_door`, [projectId])
+    expect(a).toMatchObject({ aangemaakt_door: 'Michiel', gereed_door: null })
+    const [gereed] = await als<{ gereed_door: string, aangemaakt_door: string }>(BENNO, `update public.acties set gereed = true, aangemaakt_door = 'Ander' where id = $1 returning gereed_door, aangemaakt_door`, [a!.id])
+    expect(gereed).toEqual({ gereed_door: 'Benno van Bergen', aangemaakt_door: 'Michiel' })
+    const [open] = await als<{ gereed_door: string | null }>(MICHIEL, `update public.acties set gereed = false where id = $1 returning gereed_door`, [a!.id])
+    expect(open!.gereed_door).toBeNull()
+    expect(await als(VREEMD, `select id from public.acties`)).toHaveLength(0)
+  })
+
+  it('houdt per discipline een leverancier van het project bij, en laat de discipline leeg als hij van het project gaat', async () => {
+    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam) values ('Liften Zuid') returning id`)
+    // Niet op het project: mag niet.
+    await expect(als(MICHIEL, `insert into public.project_disciplines (project_id, discipline, leverancier_id) values ($1, 'lift', $2)`, [projectId, l!.id])).rejects.toThrow()
+    await als(MICHIEL, `insert into public.project_leveranciers (project_id, leverancier_id) values ($1, $2)`, [projectId, l!.id])
+    await als(MICHIEL, `insert into public.project_disciplines (project_id, discipline, leverancier_id, contact) values ($1, 'lift', $2, 'Kees · 06 1234 5678')`, [projectId, l!.id])
+    await expect(als(MICHIEL, `insert into public.project_disciplines (project_id, discipline) values ($1, 'liften')`, [projectId])).rejects.toThrow()
+    await als(MICHIEL, `delete from public.project_leveranciers where project_id = $1 and leverancier_id = $2`, [projectId, l!.id])
+    const [d] = await als<{ leverancier_id: string | null, contact: string }>(MICHIEL, `select leverancier_id, contact from public.project_disciplines where project_id = $1 and discipline = 'lift'`, [projectId])
+    expect(d).toEqual({ leverancier_id: null, contact: 'Kees · 06 1234 5678' })
+  })
+
+  it('bewaart e-mailadressen van actiehouders, alleen geldige', async () => {
+    await als(MICHIEL, `insert into public.adressen (naam, email) values ('Carlo', 'carlo@bbdw.nl')`)
+    await expect(als(MICHIEL, `insert into public.adressen (naam, email) values ('Hugo', 'geen-adres')`)).rejects.toThrow()
+    expect(await als(VREEMD, `select naam from public.adressen`)).toHaveLength(0)
+  })
+
+  it('logt wachtkamer, subfase en buddy op het project', async () => {
+    const [p] = await als<{ id: string }>(MICHIEL, `insert into public.projecten (slug, naam) values ('wachtend', 'Wachtend') returning id`)
+    await als(MICHIEL, `update public.projecten set wachtkamer = true, buddy = 'Ad' where id = $1`, [p!.id])
+    await expect(als(MICHIEL, `update public.projecten set subfase = 'xo' where id = $1`, [p!.id])).rejects.toThrow()
+    const log = await als<{ veld: string, nieuw: string }>(MICHIEL, `select veld, nieuw from public.logboek where project_id = $1 order by id`, [p!.id])
+    expect(log).toEqual([{ veld: 'wachtkamer', nieuw: 'true' }, { veld: 'buddy', nieuw: 'Ad' }])
+  })
+
   it('logt een uitzondering die erbij komt en weer weggaat', async () => {
     const [u] = await als<{ id: string, aangemaakt_door: string }>(MICHIEL,
       `insert into public.uitzonderingen (titel, fase) values ('Extra bodemonderzoek (PFAS)', 'ontwikkeling') returning id, aangemaakt_door`)
@@ -207,7 +244,7 @@ describe('controle', () => {
     expect(p!.leverancier_id).toBeNull()
     const [na] = await als<{ leverancier_id: string }>(MICHIEL, `update public.controlepunten set leverancier_id = $2 where id = $1 returning leverancier_id`, [p!.id, leverancier])
     expect(na!.leverancier_id).toBe(leverancier)
-    const [los] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam, globaal) values ('Liftservice Brabant', true) returning id`)
+    const [los] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam) values ('Liften Zuid') returning id`)
     await expect(als(MICHIEL, `update public.controlepunten set leverancier_id = $2 where id = $1`, [p!.id, los!.id])).rejects.toThrow()
     await als(MICHIEL, `delete from public.controlepunten where id = $1`, [p!.id])
   })

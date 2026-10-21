@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Fase, Project } from '~/lib/types'
-import { faseInfo, ROLLEN } from '~/lib/fasen'
+import { faseInfo, ROLLEN, SUBFASEN } from '~/lib/fasen'
 import { begin, bezetting, LAAG_FASEN, planRegels, STAPPEN, tijdas, type Laag, type PlanRegel, type Segment } from '~/lib/planning'
 import { fmt, vandaag } from '~/lib/datum'
 
@@ -37,24 +37,27 @@ const mensen = computed(() => {
   if (wie.value !== 'alle') namen.add(wie.value)
   return [...namen]
     .sort((a, b) => Number(a === 'geen') - Number(b === 'geen') || a.localeCompare(b, 'nl'))
-    .map(id => ({ id, naam: id === 'geen' ? 'Zonder' : id, aantal: metDatums.value.filter(r => wieVan(r) === id).length }))
+    .map(id => ({
+      id, naam: id === 'geen' ? 'Zonder' : id,
+      aantal: metDatums.value.filter(r => wieVan(r) === id && !r.buddy).length,
+      buddy: metDatums.value.filter(r => wieVan(r) === id && r.buddy).length,
+    }))
 })
 const fasen = computed(() => LAAG_FASEN.lopend.map(f => ({ id: f, naam: faseInfo(f).naam, aantal: alle.value.filter(r => r.p.fase === f && r.segmenten.length).length })))
 
 const vanWie = (r: PlanRegel) => wie.value === 'alle' || wieVan(r) === wie.value
 const gekozen = computed(() => metDatums.value.filter(vanWie))
-const zonderDatums = computed(() => inBeeld.value.filter(r => !r.segmenten.length && vanWie(r)))
+const zonderDatums = computed(() => inBeeld.value.filter(r => !r.segmenten.length && !r.buddy && vanWie(r)))
 const opStart = (a: PlanRegel, b: PlanRegel) => begin(a) - begin(b) || a.p.naam.localeCompare(b.p.naam, 'nl')
 /** Bij iedereen: per persoon een groep; bij één persoon: alles onder elkaar, op start. */
 const groepen = computed(() => {
   if (wie.value !== 'alle') return [{ id: wie.value, naam: '', regels: [...gekozen.value].sort(opStart) }]
-  return mensen.value.filter(m => m.aantal).map(m => ({ id: m.id, naam: m.naam === 'Zonder' ? 'Nog niemand gekozen' : m.naam, regels: gekozen.value.filter(r => wieVan(r) === m.id).sort(opStart) }))
+  return mensen.value.filter(m => m.aantal + m.buddy).map(m => ({ id: m.id, naam: m.naam === 'Zonder' ? 'Nog niemand gekozen' : m.naam, regels: gekozen.value.filter(r => wieVan(r) === m.id).sort(opStart) }))
 })
-const telling = (regels: PlanRegel[]) => props.lagen
-  .map(l => [l, regels.filter(r => r.laag === l).length] as const)
-  .filter(([, n]) => n)
-  .map(([l, n]) => `${n} ${l}`)
-  .join(' · ')
+const telling = (regels: PlanRegel[]) => [
+  ...props.lagen.map(l => [l, regels.filter(r => r.laag === l && !r.buddy).length] as const),
+  ['als buddy', regels.filter(r => r.buddy).length] as const,
+].filter(([, n]) => n).map(([l, n]) => `${n} ${l}`).join(' · ')
 
 const maanden = computed(() => bezetting(gekozen.value, as.value.maanden))
 const hoogste = computed(() => Math.max(1, ...maanden.value.map(m => m.lopend + m.prognose)))
@@ -63,7 +66,12 @@ const maandNaam = (d: Date) => (d.getMonth() === 0 ? `${MAAND[0]} ’${String(d.
 const breedte = (d: Date) => as.value.pos(new Date(d.getFullYear(), d.getMonth() + 1, 1)) - as.value.pos(d)
 const vandaagPos = computed(() => as.value.pos(nu))
 
-const onder = (r: PlanRegel) => [faseInfo(r.p.fase).naam, r.laag === 'prognose' ? 'prognose' : null, ROLLEN[r.rol].kort].filter(Boolean).join(' · ')
+const onder = (r: PlanRegel) => [
+  faseInfo(r.p.fase).naam + (r.p.subfase ? ` ${SUBFASEN.find(s => s.id === r.p.subfase)?.naam}` : ''),
+  r.laag === 'prognose' ? 'prognose' : null,
+  r.buddy ? `buddy, ${ROLLEN[r.rol].kort} ${r.p[r.rol] ?? 'nog niemand'}` : ROLLEN[r.rol].kort,
+  r.p.prio ? 'prio' : null,
+].filter(Boolean).join(' · ')
 const segTekst = (r: PlanRegel, s: Segment) => `${r.p.naam}, ${r.laag === 'prognose' ? 'prognose ' : ''}${s.naam.toLowerCase()}: ${fmt(s.van)} tot ${fmt(s.tot)}`
 
 // Eén tooltip voor het hele overzicht, bij de muis.
@@ -74,7 +82,7 @@ function toon(e: PointerEvent, kop: string, waarde: string, onder: string) {
   if (r) tip.value = { x: e.clientX - r.left, y: e.clientY - r.top, kop, waarde, onder }
 }
 const toonSeg = (e: PointerEvent, r: PlanRegel, s: Segment) =>
-  toon(e, r.p.naam, `${fmt(s.van)} – ${fmt(s.tot)}`, `${r.laag === 'prognose' ? 'Prognose · ' : ''}${s.naam}`)
+  toon(e, `${r.p.naam}${r.buddy ? ` · ${r.wie} als buddy` : ''}`, s.open ? `vanaf ${fmt(s.van)}` : `${fmt(s.van)} – ${fmt(s.tot)}`, `${r.laag === 'prognose' ? 'Prognose · ' : ''}${s.naam}`)
 const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: number }) =>
   toon(e, `${MAAND[m.maand.getMonth()]} ${m.maand.getFullYear()}`, `${m.lopend + m.prognose} ${m.lopend + m.prognose === 1 ? 'project' : 'projecten'}`,
     props.lagen.length > 1 ? `${m.lopend} lopend · ${m.prognose} prognose in de bouw` : 'lopend in deze maand')
@@ -87,7 +95,7 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
         <span class="label">Verantwoordelijke</span>
         <div class="seg" role="group" aria-label="Verantwoordelijke">
           <button type="button" :aria-pressed="wie === 'alle'" @click="wie = 'alle'">Iedereen <span class="n">{{ metDatums.length }}</span></button>
-          <button v-for="m in mensen" :key="m.id" type="button" :aria-pressed="wie === m.id" @click="wie = m.id">{{ m.naam }} <span class="n">{{ m.aantal }}</span></button>
+          <button v-for="m in mensen" :key="m.id" type="button" :aria-pressed="wie === m.id" @click="wie = m.id">{{ m.naam }} <span class="n">{{ m.aantal }}{{ m.buddy ? ` +${m.buddy}` : '' }}</span></button>
         </div>
       </div>
       <div v-if="fasefilter" class="filtergroep">
@@ -110,6 +118,9 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
           <span v-for="(naam, i) in STAPPEN[l]" :key="i"><i :class="`plan-${l}-${i}`" />{{ naam }}</span>
         </span>
       </template>
+      <span><i class="plan-legenda-open" />Nog geen opleverdatum</span>
+      <span><i class="plan-legenda-buddy" />Als buddy (telt niet mee)</span>
+      <span><i class="plan-legenda-prio" />Prio</span>
       <span><i class="plan-legenda-vandaag" />Vandaag</span>
     </div>
 
@@ -145,7 +156,7 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
 
         <template v-for="g in groepen" :key="g.id">
           <div v-if="g.naam" class="plan-groep">{{ g.naam }}<small>{{ telling(g.regels) }}</small></div>
-          <div v-for="r in g.regels" :key="r.p.id" class="plan-rij" :class="`laag-${r.laag}`">
+          <div v-for="r in g.regels" :key="`${r.p.id}${r.buddy ? '-buddy' : ''}`" class="plan-rij" :class="[`laag-${r.laag}`, { buddy: r.buddy, prio: r.p.prio }]">
             <div class="plan-lbl">
               <NuxtLink :to="`/projecten/${r.p.slug}#proces`">{{ r.p.naam }}</NuxtLink>
               <small>{{ onder(r) }}</small>
@@ -154,7 +165,7 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
               <i v-for="m in as.maanden" :key="m.getTime()" class="plan-raster" :class="{ jaar: m.getMonth() === 0 }" :style="{ left: `${as.pos(m)}%` }" />
               <i class="plan-vandaag" :style="{ left: `${vandaagPos}%` }" />
               <i
-                v-for="(s, i) in r.segmenten.filter(x => x.tot > as.van)" :key="i" class="plan-seg" :class="`plan-${r.laag}-${s.stap}`"
+                v-for="(s, i) in r.segmenten.filter(x => x.tot > as.van)" :key="i" class="plan-seg" :class="[`plan-${r.laag}-${s.stap}`, { open: s.open }]"
                 :style="{ left: `${as.pos(s.van)}%`, width: `max(3px, calc(${as.pos(s.tot) - as.pos(s.van)}% - 2px))` }"
                 role="img" :aria-label="segTekst(r, s)"
                 @pointermove="e => toonSeg(e, r, s)" @pointerleave="tip = null"

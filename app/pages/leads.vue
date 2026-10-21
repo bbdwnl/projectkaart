@@ -16,17 +16,20 @@ const projecten = ref<Project[]>([])
 const taken = ref<Taak[]>([])
 const catalogus = ref<Uitzondering[]>([])
 
-async function laad() {
-  stand.value = 'laden'
+async function laad(stil = false) {
+  if (!stil) stand.value = 'laden'
   try {
     ;[projecten.value, taken.value, catalogus.value] = await Promise.all([bron.projecten(), bron.taken(), bron.uitzonderingen()])
     stand.value = 'klaar'
   } catch (e) {
+    if (stil) return
     fout.value = foutTekst(e)
     stand.value = 'fout'
   }
 }
-onMounted(laad)
+onMounted(() => laad())
+// Live: wat een ander wijzigt, verschijnt vanzelf.
+useLive(() => [{ tabel: 'projecten' }, { tabel: 'taken' }], () => laad(true))
 
 const leads = computed(() => leadsVan(projecten.value, taken.value, catalogus.value, nu))
 
@@ -96,7 +99,7 @@ async function maakLead() {
     </Transition>
 
     <div v-if="stand === 'laden'" class="laden" aria-busy="true"><span class="laden-regel" /><span class="laden-regel" /></div>
-    <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad">Probeer het opnieuw</button></div>
+    <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad()">Probeer het opnieuw</button></div>
     <div v-else-if="!leads.length" class="leeg-staat leadfilters">Nog geen leads. Voeg er een toe met Nieuwe lead, of zet een project op de kaart op de fase Lead.</div>
     <ProjectLijst v-else fase="lead" :regels="leads" />
     <footer>Projectkaart BbDW · een lead gaat naar Haalbaarheid zodra je op de kaart de fase op Haalbaarheid zet.</footer>

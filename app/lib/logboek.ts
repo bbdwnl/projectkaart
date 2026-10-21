@@ -1,5 +1,5 @@
 import type { LogRegel, Uitzondering } from './types'
-import { DATUMVELDEN, faseInfo, PROGNOSEVELDEN, ROLLEN } from './fasen'
+import { DATUMVELDEN, faseInfo, PROGNOSEVELDEN, ROLLEN, SUBFASEN } from './fasen'
 import { vindStandaardtaak } from './taken'
 import { statusNaam } from './taak'
 import { fmt, naarDatum } from './datum'
@@ -50,6 +50,9 @@ export function beschrijf(r: LogRegel, catalogus: Uitzondering[]): LogDeel[] {
     case 'plaats': return [t('zette de plaats op '), n(r.nieuw || '—')]
     case 'soort': return [t('paste de '), n('soort project'), t(' aan')]
     case 'slagingskans': return [t('zette de '), n('slagingskans'), t(` op ${r.nieuw ? `${r.nieuw}%` : 'onbekend'}`)]
+    case 'subfase': return [t('zette de subfase op '), n(SUBFASEN.find(s => s.id === r.nieuw)?.naam ?? '—')]
+    case 'wachtkamer': return r.nieuw === 'true' ? [t('zette het project in de '), n('wachtkamer')] : [t('haalde het project uit de '), n('wachtkamer')]
+    case 'buddy': return r.nieuw ? [t(`maakte ${r.nieuw} `), n('buddy')] : [t('haalde de '), n('buddy'), t(' weg')]
     case 'prio': return [t(r.nieuw === 'true' ? 'gaf het project ' : 'haalde '), n('prio'), t(r.nieuw === 'true' ? '' : ' weg')]
     case 'sharepoint_url': case 'extern_url': case 'notitieblok_url': return [t('paste een '), n('link'), t(' aan')]
     case 'tekeningen_locatie': return [t('paste de '), n('locatie van de tekeningen'), t(' aan')]

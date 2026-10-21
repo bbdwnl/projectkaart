@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Leverancier } from '~/lib/types'
+import type { Discipline, Leverancier } from '~/lib/types'
+import { DISCIPLINES } from '~/lib/fasen'
 
 // De leveranciers van dit project: gekozen uit de globale lijst, of alleen voor dit project aangemaakt.
 // Onder Controle koppel je een aandachtspunt aan een van deze leveranciers.
-const { leveranciers, globaleLeveranciers, controlepunten, nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal } = useKaart()
+const { leveranciers, globaleLeveranciers, controlepunten, nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, disciplineVan, kiesDiscipline, bewaarDiscipline } = useKaart()
 const { toon } = useToast()
 const gekozen = ref('')
 const naam = ref('')
@@ -21,6 +22,17 @@ const punten = (id: string) => {
 const puntenTekst = (id: string) => {
   const { totaal, open } = punten(id)
   return totaal ? `${open} open, ${totaal - open} opgelost` : 'Geen'
+}
+
+// Per discipline één leverancier (uit dit project of de globale lijst) en een contactpersoon of telefoon.
+const ingevuld = computed(() => DISCIPLINES.filter(d => disciplineVan(d.id)?.leverancier_id).length)
+async function kiesVoor(d: Discipline, e: Event) {
+  const el = e.target as HTMLSelectElement
+  if (!(await kiesDiscipline(d, el.value || null))) el.value = disciplineVan(d)?.leverancier_id ?? ''
+}
+function contact(d: Discipline, e: Event) {
+  const waarde = (e.target as HTMLInputElement).value.trim() || null
+  if (waarde !== (disciplineVan(d)?.contact ?? null)) bewaarDiscipline(d, { contact: waarde })
 }
 
 async function kies() {
@@ -56,6 +68,34 @@ async function weg(l: Leverancier) {
         <p class="klein">Wie op dit project levert of bouwt. Kies uit de globale lijst, of maak er een alleen voor dit project. Onder Controle koppel je een aandachtspunt aan de leverancier die het oplost. De globale lijst beheer je onder <NuxtLink to="/instellingen#leveranciers">Instellingen</NuxtLink>.</p>
       </div>
     </div>
+    <div class="disciplines">
+      <div class="disciplines-kop">
+        <h3>Per discipline</h3>
+        <span class="klein n">{{ ingevuld }} / {{ DISCIPLINES.length }} ingevuld</span>
+        <span class="voortgang"><i :style="{ width: `${ingevuld / DISCIPLINES.length * 100}%` }" /></span>
+      </div>
+      <div class="lijst disciplinelijst">
+        <div class="kolkop"><span>Discipline</span><span>Leverancier</span><span>Contactpersoon, telefoon, notitie</span></div>
+        <div v-for="d in DISCIPLINES" :key="d.id" class="rij" :class="{ ingevuld: disciplineVan(d.id)?.leverancier_id }">
+          <div class="rij-hoofd">
+            <label class="titel" :for="`disc-${d.id}`">{{ d.naam }}</label>
+            <select :id="`disc-${d.id}`" class="veld" :value="disciplineVan(d.id)?.leverancier_id ?? ''" @change="e => kiesVoor(d.id, e)">
+              <option value="">— kies —</option>
+              <optgroup v-if="leveranciers.length" label="Op dit project">
+                <option v-for="l in leveranciers" :key="l.id" :value="l.id">{{ l.naam }}</option>
+              </optgroup>
+              <optgroup v-if="tekiezen.length" label="Uit de globale lijst">
+                <option v-for="l in tekiezen" :key="l.id" :value="l.id">{{ l.naam }}{{ l.vak ? ` · ${l.vak}` : '' }}</option>
+              </optgroup>
+            </select>
+            <input class="veld" :value="disciplineVan(d.id)?.contact ?? ''" placeholder="Bijvoorbeeld Jan de Vries · 06 1234 5678" :aria-label="`Contact ${d.naam}`" @change="e => contact(d.id, e)">
+          </div>
+        </div>
+      </div>
+      <p class="klein">Staat de leverancier er niet bij, maak hem hieronder aan; daarna kies je hem hier.</p>
+    </div>
+
+    <h3 class="leveranciers-kop">Alle leveranciers op dit project</h3>
     <div v-if="leveranciers.length" class="lijst leverancierlijst">
       <div class="kolkop"><span>Leverancier</span><span>Wat ze doen</span><span>Globale lijst</span><span>Aandachtspunten</span><span /></div>
       <div v-for="l in leveranciers" :key="l.id" class="rij">

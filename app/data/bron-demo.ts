@@ -1,9 +1,9 @@
-import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
+import type { Bron, Luister, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
 import { LEGE_GEGEVENS, type DemoGegevens } from './demo'
 import { leegTaak } from '~/lib/taak'
 import { leegProject } from '~/lib/leads'
-import { GEEN_MELDING, GEEN_PLEK, type Controlepunt, type Deellink, type DeellinkReden, type Fase, type LogRegel, type Opmerking, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
+import { GEEN_MELDING, GEEN_PLEK, type Controlepunt, type Deellink, type DeellinkReden, type Fase, type LogRegel, type Opmerking, type Actie, type ProjectDiscipline, type Project, type ProjectWijziging, type Taak, type TaakWijziging, type Tekening } from '~/lib/types'
 import { bewaarBestand, leesBestand, wisAlleBestanden, wisBestand } from './demo-bestanden'
 import { VOORBEELDTEKENING } from './demo'
 import { fotoPad, gereedMelding, meldingNaWijziging } from '~/lib/controle'
@@ -31,6 +31,15 @@ function laad(opslag: string): DemoGegevens | null {
     if (!(d && Array.isArray(d.projecten) && Array.isArray(d.taken) && Array.isArray(d.controlepunten) && Array.isArray(d.projectLeveranciers) && Array.isArray(d.tekeningen))) return null
     // Bewaard vóór er deellinks en meldingen waren: de wijzigingen van de tester blijven staan.
     d.deellinks ??= []
+    // Bewaard vóór de disciplines, de actielijst, de wachtkamer, de subfase en de buddy: die komen er leeg bij.
+    d.disciplines ??= []
+    d.acties ??= []
+    d.adressen ??= []
+    for (const p of d.projecten) {
+      p.wachtkamer ??= false
+      p.subfase ??= null
+      p.buddy ??= null
+    }
     for (const c of d.controlepunten) for (const k of Object.keys(GEEN_MELDING) as (keyof typeof GEEN_MELDING)[]) c[k] ??= null
     return d
   } catch {
@@ -394,6 +403,8 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
         throw new BronFout('Deze leverancier heeft aandachtspunten onder Controle. Haal die eerst weg, of kies er een andere leverancier bij.')
       }
       db.projectLeveranciers = db.projectLeveranciers.filter(k => !(k.project_id === projectId && k.leverancier_id === leverancier.id))
+      // Zoals de database: de discipline blijft staan, zonder leverancier.
+      for (const d of db.disciplines) if (d.project_id === projectId && d.leverancier_id === leverancier.id) d.leverancier_id = null
       if (!leverancier.globaal && !db.projectLeveranciers.some(k => k.leverancier_id === leverancier.id)) {
         db.leveranciers = db.leveranciers.filter(l => l.id !== leverancier.id)
       }
@@ -418,6 +429,81 @@ export function maakDemoBron({ door = 'Demo', naam = door, opslag, gegevens, ser
       db.leveranciers = db.leveranciers.filter(l => l.id !== id)
       bewaar()
     },
+    async disciplines(projectId) {
+      return kopie(db.disciplines.filter(d => d.project_id === projectId))
+    },
+    async bewaarDiscipline(projectId, discipline, w) {
+      await wacht()
+      if (w.leverancier_id && !db.projectLeveranciers.some(k => k.project_id === projectId && k.leverancier_id === w.leverancier_id)) {
+        throw new BronFout('Zet de leverancier eerst op dit project.')
+      }
+      let d = db.disciplines.find(x => x.project_id === projectId && x.discipline === discipline)
+      if (!d) {
+        d = { project_id: projectId, discipline, leverancier_id: null, contact: null } satisfies ProjectDiscipline
+        db.disciplines.push(d)
+      }
+      Object.assign(d, w)
+      bewaar()
+      return kopie(d)
+    },
+
+    async acties(projectId) {
+      return kopie((projectId ? db.acties.filter(a => a.project_id === projectId) : db.acties).sort((a, b) => a.aangemaakt_op.localeCompare(b.aangemaakt_op)))
+    },
+    async nieuweActie(projectId, w = {}) {
+      await wacht()
+      const nu = new Date().toISOString()
+      const a: Actie = {
+        id: nieuwId('a'), project_id: projectId, tekst: '', actiehouder: null, deadline: null, gereed: false, gereed_door: null, gereed_op: null,
+        aangemaakt_door: door, aangemaakt_op: nu, ...w,
+      }
+      if (a.gereed) Object.assign(a, { gereed_door: door, gereed_op: nu })
+      db.acties.push(a)
+      bewaar()
+      return kopie(a)
+    },
+    async bewaarActie(id, w) {
+      await wacht()
+      const a = db.acties.find(x => x.id === id)
+      if (!a) throw new BronFout('Deze actie bestaat niet meer.')
+      const was = a.gereed
+      Object.assign(a, w)
+      if (a.gereed && !was) Object.assign(a, { gereed_door: door, gereed_op: new Date().toISOString() })
+      if (!a.gereed) Object.assign(a, { gereed_door: null, gereed_op: null })
+      bewaar()
+      return kopie(a)
+    },
+    async verwijderActie(id) {
+      await wacht()
+      db.acties = db.acties.filter(a => a.id !== id)
+      bewaar()
+    },
+    async adressen() {
+      return kopie([...db.adressen].sort((a, b) => a.naam.localeCompare(b.naam, 'nl')))
+    },
+    async bewaarAdres(naam, email) {
+      await wacht()
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new BronFout(`${email} is geen geldig e-mailadres.`)
+      const a = db.adressen.find(x => x.naam === naam)
+      if (a) a.email = email
+      else db.adressen.push({ naam, email })
+      bewaar()
+    },
+
+    // De proefversie staat in de browser: live bijwerken werkt tussen tabbladen van dezelfde browser.
+    luister(_wat: Luister[], bij: () => void) {
+      if (!opslag || typeof window === 'undefined') return () => {}
+      const opVerandering = (e: StorageEvent) => {
+        if (e.key !== opslag) return
+        const nieuw = laad(opslag)
+        if (!nieuw) return
+        Object.assign(db, nieuw)
+        bij()
+      }
+      window.addEventListener('storage', opVerandering)
+      return () => window.removeEventListener('storage', opVerandering)
+    },
+
     async controlepunten(projectId) {
       return kopie(projectId ? db.controlepunten.filter(p => p.project_id === projectId) : db.controlepunten)
     },

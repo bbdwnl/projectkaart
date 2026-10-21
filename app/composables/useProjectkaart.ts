@@ -1,6 +1,6 @@
 import type { InjectionKey } from 'vue'
 import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
-import type { Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
+import type { Actie, ActieWijziging, Discipline, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
 import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, type TaakRegel } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
@@ -34,6 +34,10 @@ function maakKaart(slug: string) {
   const leveranciers = ref<Leverancier[]>([])
   const globaleLeveranciers = ref<Leverancier[]>([])
   const controlepunten = ref<Controlepunt[]>([])
+  /** Per discipline de leverancier en het contact. */
+  const disciplines = ref<ProjectDiscipline[]>([])
+  /** De actielijst van het overleg, oudste eerst. */
+  const acties = ref<Actie[]>([])
   const tekeningen = ref<Tekening[]>([])
   const stand = ref<'laden' | 'klaar' | 'niet-gevonden' | 'fout'>('laden')
   const fout = ref('')
@@ -43,21 +47,25 @@ function maakKaart(slug: string) {
   /** De taak waar net naartoe is gesprongen: die komt in beeld en licht even op. */
   const nadruk = ref<string | null>(null)
 
-  async function laad() {
-    stand.value = 'laden'
+  /** stil: opnieuw laden zonder laadscherm (live bijwerken); dan blijft het tabblad van de fase staan. */
+  async function laad(stil = false) {
+    if (!stil) stand.value = 'laden'
     try {
       const p = await bron.project(slug)
       if (!p) {
-        stand.value = 'niet-gevonden'
+        if (!stil) stand.value = 'niet-gevonden'
         return
       }
-      const [t, c, f, l, alle, ps, lev, glob, cp, tek, opm] = await Promise.all([
+      const [t, c, f, l, alle, ps, lev, glob, cp, tek, opm, dis, act] = await Promise.all([
         bron.taken(p.id), bron.uitzonderingen(), bron.financien(p.id), bron.logboek(p.id), bron.taken(), bron.projecten(),
         bron.leveranciers(p.id), bron.globaleLeveranciers(), bron.controlepunten(p.id), bron.tekeningen(p.id), bron.opmerkingen(p.id),
+        bron.disciplines(p.id), bron.acties(p.id),
       ])
       project.value = p
       taken.value = t
       opmerkingen.value = opm
+      disciplines.value = dis
+      acties.value = act
       catalogus.value = c
       financien.value = f
       logboek.value = l
@@ -67,13 +75,22 @@ function maakKaart(slug: string) {
       tekeningen.value = tek
       gebruik.value = aantalPerUitzondering(alle)
       projecten.value = ps.map(x => ({ id: x.id, fase: x.fase }))
-      tabFase.value = p.fase
+      if (!stil) tabFase.value = p.fase
       stand.value = 'klaar'
     } catch (e) {
+      if (stil) return
       fout.value = foutTekst(e)
       stand.value = 'fout'
     }
   }
+
+  // Live: wat een ander op deze kaart wijzigt, verschijnt vanzelf.
+  useLive(() => {
+    const id = project.value?.id
+    return id
+      ? (['projecten', 'taken', 'opmerkingen', 'acties', 'controlepunten', 'project_leveranciers', 'project_disciplines', 'tekeningen'] as const).map(tabel => ({ tabel, projectId: id }))
+      : null
+  }, () => laad(true))
 
   const regelsPerFase = computed(() => {
     const p = project.value
@@ -147,6 +164,70 @@ function maakKaart(slug: string) {
     } catch (e) {
       toon(foutTekst(e), 'fout')
       return false
+    }
+  }
+
+  // ---------- leveranciers per discipline ----------
+  const disciplineVan = (d: Discipline) => disciplines.value.find(x => x.discipline === d)
+  /** Een leverancier voor een discipline; staat hij nog niet op het project, dan komt hij er eerst bij. */
+  async function kiesDiscipline(d: Discipline, leverancierId: string | null): Promise<boolean> {
+    const p = project.value
+    if (!p) return false
+    if (leverancierId && !leveranciers.value.some(l => l.id === leverancierId)) {
+      const l = globaleLeveranciers.value.find(x => x.id === leverancierId)
+      if (!l || !(await koppelLeverancier(l))) return false
+    }
+    return bewaarDiscipline(d, { leverancier_id: leverancierId })
+  }
+  async function bewaarDiscipline(d: Discipline, w: { leverancier_id?: string | null, contact?: string | null }): Promise<boolean> {
+    const p = project.value
+    if (!p) return false
+    try {
+      const nieuw = await bron.bewaarDiscipline(p.id, d, w)
+      disciplines.value = [...disciplines.value.filter(x => x.discipline !== d), nieuw]
+      toon('Opgeslagen')
+      return true
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+      return false
+    }
+  }
+
+  // ---------- actielijst van het overleg ----------
+  const openActies = computed(() => acties.value.filter(a => !a.gereed))
+  async function nieuweActie(): Promise<Actie | null> {
+    if (!project.value) return null
+    try {
+      const a = await bron.nieuweActie(project.value.id)
+      acties.value = [...acties.value, a]
+      return a
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+      return null
+    }
+  }
+  /** Meteen op het scherm; bij een fout terug. */
+  async function wijzigActie(a: Actie, w: ActieWijziging) {
+    const vorige = kopie(acties.value)
+    acties.value = acties.value.map(x => (x.id === a.id ? { ...x, ...w } : x))
+    try {
+      const nieuw = await bron.bewaarActie(a.id, w)
+      acties.value = acties.value.map(x => (x.id === a.id ? nieuw : x))
+      toon(w.gereed === true ? 'Actie gereed' : w.gereed === false ? 'Actie weer open' : 'Opgeslagen')
+    } catch (e) {
+      acties.value = vorige
+      toon(foutTekst(e), 'fout')
+    }
+  }
+  async function verwijderActie(a: Actie) {
+    const vorige = kopie(acties.value)
+    acties.value = acties.value.filter(x => x.id !== a.id)
+    try {
+      await bron.verwijderActie(a.id)
+      toon('Actie weggehaald')
+    } catch (e) {
+      acties.value = vorige
+      toon(foutTekst(e), 'fout')
     }
   }
 
@@ -349,6 +430,7 @@ function maakKaart(slug: string) {
     project, taken, catalogus, gebruik, financien, logboek, leveranciers, globaleLeveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
     regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
     laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering, opmerkingenVan, plaatsOpmerking,
+    disciplines, disciplineVan, kiesDiscipline, bewaarDiscipline, acties, openActies, nieuweActie, wijzigActie, verwijderActie,
     nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, keurAf, kiesLeverancier, verwijderControlepunt,
     tekeningen, nummers, uploadTekening, hernoemTekening, verwijderTekening, zetPlek,
   }

@@ -54,6 +54,19 @@ export function sorteerKaartjes(kaartjes: Kaartje[], op: Sortering): Kaartje[] {
 /** Filter op wie verantwoordelijk is: een voornaam, 'geen' (nog niemand gekozen) of 'alle'. */
 export const pastWie = (k: Kaartje, wie: string) => wie === 'alle' || (k.wie ?? 'geen') === wie
 
+/** Filter op projectleider of opzichter: een voornaam, 'geen' of 'alle'. */
+export const pastPersoon = (naam: string | null | undefined, filter: string) => filter === 'alle' || (voornaam(naam) ?? 'geen') === filter
+
+/** De namen in een veld (projectleider, opzichter), met hoeveel projecten; "geen" achteraan. De gekozen naam staat er altijd bij. */
+export function namenVan(kaartjes: Kaartje[], veld: 'pm' | 'opzichter', gekozen: string): { id: string, aantal: number }[] {
+  const van = (k: Kaartje) => voornaam(k.p[veld]) ?? 'geen'
+  const namen = new Set(kaartjes.map(van))
+  if (gekozen !== 'alle') namen.add(gekozen)
+  return [...namen]
+    .sort((a, b) => Number(a === 'geen') - Number(b === 'geen') || a.localeCompare(b, 'nl'))
+    .map(id => ({ id, aantal: kaartjes.filter(k => van(k) === id).length }))
+}
+
 /** De mensen om op te filteren, op naam, met hoeveel projecten; "zonder" achteraan. De gekozen naam staat er altijd bij. */
 export function personen(kaartjes: Kaartje[], gekozen: string): { id: string, aantal: number }[] {
   const namen = new Set(kaartjes.map(k => k.wie ?? 'geen'))

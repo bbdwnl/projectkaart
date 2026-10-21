@@ -1,7 +1,7 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
-import type { Bron, NieuwControlepunt, NieuweUitzondering } from './bron'
+import type { Bron, Luister, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import type { Controlepunt, Deellink, Financien, Leverancier, LogRegel, Opmerking, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
+import type { Actie, Adres, ProjectDiscipline, Controlepunt, Deellink, Financien, Leverancier, LogRegel, Opmerking, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
 import { fotoPad } from '~/lib/controle'
 import type { ExternAntwoord } from '~/lib/deellink'
 
@@ -197,6 +197,48 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       if (res.error?.code === IN_GEBRUIK) throw new BronFout('Deze leverancier staat nog op een project. Haal hem alleen uit de globale lijst, of eerst van die projecten af.')
       if (res.error) throw new BronFout(`De leverancier weghalen is niet gelukt. ${res.error.message}`)
     },
+    async disciplines(projectId) {
+      return uitkomst(await sb.from('project_disciplines').select('*').eq('project_id', projectId), 'de disciplines laden') as ProjectDiscipline[]
+    },
+    async bewaarDiscipline(projectId, discipline, wijziging) {
+      return uitkomst(await sb.from('project_disciplines').upsert({ project_id: projectId, discipline, ...wijziging }, { onConflict: 'project_id,discipline' })
+        .select().single(), 'opslaan') as ProjectDiscipline
+    },
+
+    async acties(projectId) {
+      let q = sb.from('acties').select('*').order('aangemaakt_op')
+      if (projectId) q = q.eq('project_id', projectId)
+      return uitkomst(await q, 'de acties laden') as Actie[]
+    },
+    async nieuweActie(projectId, wijziging = {}) {
+      return uitkomst(await sb.from('acties').insert({ project_id: projectId, ...wijziging }).select().single(), 'de actie toevoegen') as Actie
+    },
+    async bewaarActie(id, wijziging) {
+      return uitkomst(await sb.from('acties').update(wijziging).eq('id', id).select().single(), 'opslaan') as Actie
+    },
+    async verwijderActie(id) {
+      const res = await sb.from('acties').delete().eq('id', id)
+      if (res.error) uitkomst(res, 'de actie weghalen')
+    },
+    async adressen() {
+      return uitkomst(await sb.from('adressen').select('naam, email').order('naam'), 'de e-mailadressen laden') as Adres[]
+    },
+    async bewaarAdres(naam, email) {
+      const res = await sb.from('adressen').upsert({ naam, email, gewijzigd_op: new Date().toISOString() }, { onConflict: 'naam' })
+      if (res.error?.code === '23514') throw new BronFout(`${email} is geen geldig e-mailadres.`)
+      if (res.error) uitkomst(res, 'het e-mailadres bewaren')
+    },
+
+    luister(wat: Luister[], bij: () => void) {
+      const kanaal = sb.channel(`live-${Math.random().toString(36).slice(2)}`)
+      for (const w of wat) {
+        const filter = w.projectId ? `${w.tabel === 'projecten' ? 'id' : 'project_id'}=eq.${w.projectId}` : undefined
+        kanaal.on('postgres_changes', { event: '*', schema: 'public', table: w.tabel, ...(filter ? { filter } : {}) }, () => bij())
+      }
+      kanaal.subscribe()
+      return () => { sb.removeChannel(kanaal) }
+    },
+
     async controlepunten(projectId) {
       let q = sb.from('controlepunten').select('*').order('aangemaakt_op', { ascending: false })
       if (projectId) q = q.eq('project_id', projectId)

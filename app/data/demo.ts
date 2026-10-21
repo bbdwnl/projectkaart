@@ -2,7 +2,7 @@
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
 // Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
 // JavaScript van de browser zitten. Daarom relatieve imports.
-import { GEEN_MELDING, type Controlepunt, type Deellink, type Fase, type Financien, type Leverancier, type LogRegel, type Opmerking, type ProjectLeverancier, type Tekening, type Project, type Soort, type Status, type Taak, type Uitzondering } from '../lib/types'
+import { GEEN_MELDING, type Controlepunt, type Deellink, type Fase, type Financien, type Leverancier, type LogRegel, type Opmerking, type ProjectLeverancier, type ProjectDiscipline, type Actie, type Adres, type Discipline, type Tekening, type Project, type Soort, type Status, type Taak, type Uitzondering } from '../lib/types'
 import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
 import { LIJSTEN } from '../lib/taken'
 import { deadlineVan } from '../lib/stoplicht'
@@ -26,7 +26,7 @@ export interface ProjectBasis {
   datum_oplevering: string | null
 }
 
-export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], opmerkingen: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], controlepunten: [], fotos: {}, tekeningen: [], deellinks: [] })
+export const LEGE_GEGEVENS = (): DemoGegevens => ({ projecten: [], taken: [], opmerkingen: [], uitzonderingen: [], financien: [], logboek: [], leveranciers: [], projectLeveranciers: [], disciplines: [], acties: [], adressen: [], controlepunten: [], fotos: {}, tekeningen: [], deellinks: [] })
 
 export interface DemoGegevens {
   projecten: Project[]
@@ -37,6 +37,9 @@ export interface DemoGegevens {
   logboek: LogRegel[]
   leveranciers: Leverancier[]
   projectLeveranciers: ProjectLeverancier[]
+  disciplines: ProjectDiscipline[]
+  acties: Actie[]
+  adressen: Adres[]
   controlepunten: Controlepunt[]
   /** De foto's van de aandachtspunten per pad: een data-URL (alleen in de browser van de tester) of de voorbeeldfoto. */
   fotos: Record<string, string>
@@ -107,6 +110,28 @@ const LEVERANCIERS: [string, string][] = [
   ['Schildersbedrijf Jansen', 'Schilderwerk'],
   ['Glaszetterij Veenstra', 'Glas'],
   ['Liftservice Brabant', 'Liften'],
+]
+
+/** Welke discipline de leveranciers hierboven doen, en een verzonnen contact. */
+const DISCIPLINE_VAN: Record<string, [Discipline, string]> = {
+  'lev-1': ['casco', 'Erik van Wijk · 06 1234 5601'],
+  'lev-2': ['klimaat', 'Sandra Oost · 06 1234 5602'],
+  'lev-3': ['e', 'Kantoor · 0412 123 456'],
+  'lev-4': ['wanden', 'Mark de Lange · 06 1234 5604'],
+  'lev-5': ['schilder', 'Rob Jansen · 06 1234 5605'],
+  'lev-vlijtseweg-hovenier': ['terrein', 'Ilse de Linde · 06 1234 5606'],
+}
+
+// Voorbeeldacties uit het overleg (verzonnen).
+const ACTIES = [
+  'Kozijnmaten controleren op de bouw',
+  'Offerte meerwerk elektra beoordelen',
+  'Planning afbouw delen met de huurders',
+  'Sluitplan afstemmen met de huurder',
+  'Monsters vloerafwerking laten goedkeuren',
+  'Brandweer uitnodigen voor de schouw',
+  'Opleverdatum bevestigen aan de huurders',
+  'Meer- en minderwerk bijwerken in de lijst',
 ]
 
 // Voorbeeldaandachtspunten. Ze delen één foto (public/voorbeeld-aandachtspunt.jpg), zodat de opslag van de browser klein blijft.
@@ -213,6 +238,7 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
       po: j.po,
       pm: faseIndex(fase) >= faseIndex('uitvoering') ? kies(MENSEN.pm, j.slug + 'pm') : null,
       opzichter: faseIndex(fase) >= faseIndex('uitvoering') ? kies(MENSEN.opzichter, j.slug + 'oz') : null,
+      buddy: null, subfase: null, wachtkamer: false,
       datum_casco: j.datum_casco, datum_voorbereiding: j.datum_voorbereiding, datum_inkoop: j.datum_inkoop,
       datum_afbouw: j.datum_afbouw, datum_oplevering: j.datum_oplevering,
       prognose_casco: null, prognose_afbouw: null, prognose_oplevering: null,
@@ -242,6 +268,12 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
     })
     p.slagingskans ??= 75
   }
+  // Haalbaarheid: een subfase en bij een paar een buddy. Twee leads staan in de wachtkamer.
+  for (const [i, p] of projecten.filter(x => x.fase === 'haalbaarheid').entries()) {
+    p.subfase = i % 3 === 1 ? 'vo' : 'so'
+    p.buddy = ({ 'p14041-mijdrecht': 'Michiel', 'gezondheidscentrum-veldhoven-zuid': 'Benno', 'gezondheidshuis-zeist-noord': 'Ad' } as Record<string, string>)[p.slug] ?? null
+  }
+  for (const p of projecten.filter(x => x.fase === 'lead' && ['Gezondheidshuis Molenwijk', 'Apotheek en huisartsen Oosterpark'].includes(x.naam))) p.wachtkamer = true
 
   const taken: Taak[] = []
   const opmerkingen: Opmerking[] = []
@@ -342,6 +374,31 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
   leveranciers.push({ id: 'lev-vlijtseweg-hovenier', naam: 'Hoveniersbedrijf De Linde', vak: 'Terrein', globaal: false })
   projectLeveranciers.push({ project_id: vlijtseweg.id, leverancier_id: 'lev-vlijtseweg-hovenier' })
 
+  // Per discipline de leveranciers die op het project staan; Vlijtseweg ook met een paar lege vakken met alleen een contact.
+  const disciplines: ProjectDiscipline[] = projectLeveranciers.flatMap((k) => {
+    const d = DISCIPLINE_VAN[k.leverancier_id]
+    return d ? [{ project_id: k.project_id, discipline: d[0], leverancier_id: k.leverancier_id, contact: d[1] }] : []
+  })
+  disciplines.push({ project_id: vlijtseweg.id, discipline: 'lift', leverancier_id: null, contact: 'Nog uitvragen bij Liftservice Brabant' })
+
+  // Acties uit het overleg op Vlijtseweg en de projecten in uitvoering: een paar te laat, een paar gereed.
+  const acties: Actie[] = []
+  for (const p of projecten.filter(p => p === vlijtseweg || p.fase === 'uitvoering')) {
+    const aantal = 2 + Math.floor(kans(p.slug + 'acties') * 4)
+    for (let i = 0; i < aantal; i++) {
+      const r = kans(`${p.slug}actie${i}`)
+      const gemaakt = 30 - i * 6 - Math.round(r * 4)
+      const gereed = r < 0.3
+      acties.push({
+        id: `a-${p.slug}-${i}`, project_id: p.id, tekst: ACTIES[Math.floor(r * ACTIES.length)]!,
+        actiehouder: [p.pm, p.opzichter, 'Architect', 'Aannemer'][Math.floor(kans(`${p.slug}ah${i}`) * 4)] ?? p.pm,
+        deadline: naarIso(plusDagen(nu, -gemaakt + 7 + Math.round(r * 30))),
+        gereed, gereed_door: gereed ? p.pm : null, gereed_op: gereed ? plusDagen(nu, -1).toISOString() : null,
+        aangemaakt_door: p.pm ?? 'Michiel', aangemaakt_op: plusDagen(nu, -gemaakt).toISOString(),
+      })
+    }
+  }
+
   // Aandachtspunten op Vlijtseweg en de projecten in uitvoering en nazorg; een paar nog zonder leverancier, een paar opgelost.
   const opMoment = (dagenTerug: number, sleutel: string) => {
     const d = plusDagen(nu, -dagenTerug)
@@ -387,7 +444,7 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
   }]
 
   return {
-    projecten, taken, opmerkingen, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, controlepunten, tekeningen, deellinks: [],
+    projecten, taken, opmerkingen, uitzonderingen, financien, logboek, leveranciers, projectLeveranciers, disciplines, acties, adressen: [], controlepunten, tekeningen, deellinks: [],
     fotos: { [VOORBEELDFOTO]: '/voorbeeld-aandachtspunt.jpg' },
   }
 }

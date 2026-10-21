@@ -56,9 +56,11 @@ export interface LeadFilter {
   prio: boolean
   /** Alleen projecten die klaar zijn voor de overdracht naar de volgende fase. */
   klaar: boolean
+  /** Leads: alle, niet in de wachtkamer, of alleen de wachtkamer. */
+  wacht: 'alle' | 'nee' | 'ja'
 }
 
-export const GEEN_FILTER: Readonly<LeadFilter> = { zoek: '', am: 'alle', kans: 'alle', prio: false, klaar: false }
+export const GEEN_FILTER: Readonly<LeadFilter> = { zoek: '', am: 'alle', kans: 'alle', prio: false, klaar: false, wacht: 'alle' }
 
 export const amVan = (l: Lead) => l.p.am ?? 'geen'
 
@@ -69,6 +71,7 @@ export function past(l: Lead, f: LeadFilter): boolean {
   if (f.kans !== 'alle' && kansGroep(l.p.slagingskans) !== f.kans) return false
   if (f.prio && !l.p.prio) return false
   if (f.klaar && l.licht !== 'klaar') return false
+  if (f.wacht !== 'alle' && l.p.wachtkamer !== (f.wacht === 'ja')) return false
   return true
 }
 
@@ -109,6 +112,7 @@ const tekst = (v: unknown): string => typeof v === 'string' ? v : Array.isArray(
 /** Filters en sortering uit de adresbalk. Onbekende waarden worden de standaard. */
 export function leesQuery(q: Record<string, unknown>): { filter: LeadFilter, sortering: Sortering } {
   const kans = tekst(q.kans)
+  const wacht = tekst(q.wacht)
   const kolom = KOLOMMEN.find(k => k === tekst(q.sort)) ?? STANDAARD_SORTERING.kolom
   const richting = tekst(q.richting)
   return {
@@ -118,6 +122,7 @@ export function leesQuery(q: Record<string, unknown>): { filter: LeadFilter, sor
       kans: KANSGROEPEN.find(k => k.id === kans)?.id ?? 'alle',
       prio: tekst(q.prio) === '1',
       klaar: tekst(q.klaar) === '1',
+      wacht: wacht === 'ja' || wacht === 'nee' ? wacht : 'alle',
     },
     sortering: { kolom, af: richting === 'op' ? false : richting === 'af' ? true : AFLOPEND[kolom] },
   }
@@ -131,6 +136,7 @@ export function naarQuery(f: LeadFilter, s: Sortering): Record<string, string> {
   if (f.kans !== 'alle') q.kans = f.kans
   if (f.prio) q.prio = '1'
   if (f.klaar) q.klaar = '1'
+  if (f.wacht !== 'alle') q.wacht = f.wacht
   if (s.kolom !== STANDAARD_SORTERING.kolom) q.sort = s.kolom
   if (s.af !== AFLOPEND[s.kolom]) q.richting = s.af ? 'af' : 'op'
   return q
@@ -149,8 +155,8 @@ export function maakSlug(naam: string, bestaand: string[]): string {
 /** Een volledig project, standaard in de fase lead, voor de proefversie. */
 export function leegProject(extra: Partial<Project> & Pick<Project, 'id' | 'slug' | 'naam'>): Project {
   return {
-    nummer: null, postcode: null, huisnummer: null, straat: null, plaats: null, bag_id: null, fase: 'lead', prio: false, soort: [], m2: null,
-    slagingskans: null, am: null, po: null, pm: null, opzichter: null,
+    nummer: null, postcode: null, huisnummer: null, straat: null, plaats: null, bag_id: null, fase: 'lead', subfase: null, prio: false, wachtkamer: false, soort: [], m2: null,
+    slagingskans: null, am: null, po: null, pm: null, opzichter: null, buddy: null,
     datum_casco: null, datum_voorbereiding: null, datum_inkoop: null, datum_afbouw: null, datum_oplevering: null,
     prognose_casco: null, prognose_afbouw: null, prognose_oplevering: null,
     sharepoint_url: null, extern_url: null, notitieblok_url: null, tekeningen_locatie: null, gewijzigd_op: null,

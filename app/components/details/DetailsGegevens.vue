@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MENSEN, ROLLEN, SOORTEN } from '~/lib/fasen'
+import { BUDDIES, MENSEN, ROLLEN, SOORTEN } from '~/lib/fasen'
 import { SLAGINGSKANSEN } from '~/lib/leads'
 import { adresRegel, bagViewer, normaalHuisnummer, normaalPostcode, zoekAdres } from '~/lib/adres'
 import type { Project, ProjectWijziging, Rol, Soort } from '~/lib/types'
@@ -13,6 +13,7 @@ const opties = (rol: Rol) => {
   const huidig = project.value?.[rol]
   return huidig && !MENSEN[rol].includes(huidig) ? [...MENSEN[rol], huidig] : MENSEN[rol]
 }
+const buddies = computed(() => project.value?.buddy && !BUDDIES.includes(project.value.buddy) ? [...BUDDIES, project.value.buddy] : BUDDIES)
 const route = computed(() => project.value?.straat || project.value?.postcode
   ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(KANTOOR)}&destination=${encodeURIComponent(adresRegel(project.value)!)}`
   : null)
@@ -113,6 +114,16 @@ async function kopieer() {
               </select>
             </dd>
           </div>
+          <div>
+            <dt><label for="rol-buddy">Buddy · kijkt mee</label></dt>
+            <dd>
+              <select id="rol-buddy" class="veld" :value="project.buddy ?? ''" @change="e => tekst('buddy', e)">
+                <option value="">geen</option>
+                <option v-for="m in buddies" :key="m" :value="m">{{ m }}</option>
+              </select>
+            </dd>
+            <dd class="klein">Staat licht in het planningsoverzicht en telt daar niet mee.</dd>
+          </div>
         </dl>
       </div>
 
@@ -155,6 +166,10 @@ async function kopieer() {
             </dd>
           </div>
           <div><label class="schakel"><input type="checkbox" :checked="project.prio" @change="e => wijzigProject({ prio: (e.target as HTMLInputElement).checked })"><span />Prio</label></div>
+          <div v-if="project.fase === 'lead' || project.wachtkamer">
+            <label class="schakel"><input type="checkbox" :checked="project.wachtkamer" @change="e => wijzigProject({ wachtkamer: (e.target as HTMLInputElement).checked })"><span />In de wachtkamer</label>
+            <dd class="klein">Een lead die nog niet actief is, wel in beeld. Staat onder Leads apart onderaan.</dd>
+          </div>
         </dl>
       </div>
 

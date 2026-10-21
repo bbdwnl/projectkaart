@@ -1,4 +1,4 @@
-import type { Fase, ProjectDatums, ProjectPrognose, Rol } from './types'
+import type { Discipline, Fase, ProjectDatums, ProjectPrognose, Rol, Subfase } from './types'
 
 export interface FaseInfo {
   id: Fase
@@ -92,6 +92,33 @@ export const EISEN: Record<Fase, { kop: string, items: { titel: string, taken: s
     { titel: 'Financiële afhandeling < 6 weken', taken: ['nazorg:fin_afhandeling'] },
   ] },
 }
+
+export const SUBFASEN: { id: Subfase, naam: string }[] = [
+  { id: 'so', naam: 'SO' },
+  { id: 'vo', naam: 'Ontwikkeling VO' },
+]
+
+/** Wie buddy kan zijn bij een project (uit het prototype). */
+export const BUDDIES = ['Michiel', 'Benno', 'Ad', 'Jeroen', 'Peter']
+
+/** De vaste disciplines in de uitvoering, elk met één leverancier (uit het prototype). */
+export const DISCIPLINES: { id: Discipline, naam: string }[] = [
+  { id: 'casco', naam: 'Casco / hoofdaannemer' },
+  { id: 'sloop', naam: 'Sloop' },
+  { id: 'w', naam: 'Installaties W (werktuigbouwkundig)' },
+  { id: 'e', naam: 'Installaties E (elektrotechnisch)' },
+  { id: 'klimaat', naam: 'Klimaat / luchtbehandeling' },
+  { id: 'lift', naam: 'Lift' },
+  { id: 'zon', naam: 'Zonnepanelen' },
+  { id: 'wanden', naam: 'Wanden & plafonds' },
+  { id: 'vloeren', naam: 'Vloeren' },
+  { id: 'kozijnen', naam: 'Kozijnen, deuren & glas' },
+  { id: 'schilder', naam: 'Schilderwerk' },
+  { id: 'sanitair', naam: 'Sanitair & tegelwerk' },
+  { id: 'brand', naam: 'Brandwerende voorzieningen' },
+  { id: 'terrein', naam: 'Terrein & riolering' },
+  { id: 'overig', naam: 'Overig' },
+]
 
 export const SOORTEN: { id: 'adv' | 'ont' | 'tk', naam: string }[] = [
   { id: 'adv', naam: 'Alleen adviseur' },

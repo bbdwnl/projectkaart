@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Licht, Project } from '~/lib/types'
-import { SOORTEN } from '~/lib/fasen'
+import { SOORTEN, SUBFASEN } from '~/lib/fasen'
 import {
   AFLOPEND, amVan, GEEN_FILTER, kansGroep, KANSGROEPEN, leesQuery, naarQuery, past, sorteer,
   type Lead, type LeadFilter, type LeadKolom, type LijstFase,
@@ -20,7 +20,7 @@ const woord = computed(() => isLead.value ? { een: 'lead', meer: 'leads', kop: '
 
 // Filters <-> adresbalk. Klik je in het menu op de pagina terwijl je er al bent, dan gaan ze terug naar de standaard.
 // Andere sleutels in de adresbalk (zoals het tabblad) blijven staan.
-const EIGEN = ['zoek', 'am', 'kans', 'prio', 'klaar', 'sort', 'richting']
+const EIGEN = ['zoek', 'am', 'kans', 'prio', 'klaar', 'wacht', 'sort', 'richting']
 const begin = leesQuery(route.query)
 const filter = reactive<LeadFilter>({ ...begin.filter })
 const sortering = reactive({ ...begin.sortering })
@@ -39,6 +39,10 @@ watch(() => route.query, (q) => {
 })
 
 const zichtbaar = computed(() => sorteer(props.regels.filter(l => past(l, filter)), sortering))
+/** Leads in de wachtkamer staan onderaan, apart (zoals in het prototype). */
+const actief = computed(() => zichtbaar.value.filter(l => !l.p.wachtkamer))
+const inWachtkamer = computed(() => zichtbaar.value.filter(l => l.p.wachtkamer))
+const aantalWacht = computed(() => zonder('wacht').filter(l => l.p.wachtkamer).length)
 /** De regels die door alle filters komen behalve deze: zo zegt het getal op een knop wat je krijgt. */
 const zonder = (k: keyof LeadFilter) => props.regels.filter(l => past(l, { ...filter, [k]: GEEN_FILTER[k] }))
 const gefilterd = computed(() => !zelfde({ ...filter, zoek: filter.zoek.trim() }, GEEN_FILTER))
@@ -73,6 +77,8 @@ const soortTekst = (p: Project) => SOORTEN.filter(s => p.soort.includes(s.id)).m
 const m2Tekst = (p: Project) => p.m2 ? `${p.m2.toLocaleString('nl-NL')} m²` : '—'
 const kansTekst = (p: Project) => p.slagingskans === null ? 'Kans onbekend' : `${p.slagingskans}%`
 const prognose = (p: Project) => p.prognose_casco ? fmt(naarDatum(p.prognose_casco)) : null
+const subfase = (p: Project) => SUBFASEN.find(s => s.id === p.subfase)?.naam ?? null
+const onder = (l: Lead) => [isLead.value ? null : subfase(l.p), l.p.plaats || 'Nog geen plaats', l.p.buddy && `buddy ${l.p.buddy}`, overdracht(l)].filter(Boolean).join(' · ')
 const mobiel = (l: Lead) => [
   l.p.nummer, kansTekst(l.p), l.p.am ?? 'Zonder AM', !isLead.value && prognose(l.p) && `casco ${prognose(l.p)}`, l.laatst && geleden(l.laatst, nu),
 ].filter(Boolean).join(' · ')
@@ -98,6 +104,14 @@ const mobiel = (l: Lead) => [
           <button v-for="k in kansen" :key="k.id" type="button" :aria-pressed="filter.kans === k.id" @click="filter.kans = k.id">{{ k.naam }} <span class="n">{{ k.aantal }}</span></button>
         </div>
       </div>
+      <div v-if="isLead" class="filtergroep">
+        <span class="label">Wachtkamer</span>
+        <div class="seg" role="group" aria-label="Wachtkamer">
+          <button type="button" :aria-pressed="filter.wacht === 'alle'" @click="filter.wacht = 'alle'">Alle</button>
+          <button type="button" :aria-pressed="filter.wacht === 'nee'" @click="filter.wacht = 'nee'">Niet in wachtkamer</button>
+          <button type="button" :aria-pressed="filter.wacht === 'ja'" @click="filter.wacht = 'ja'">Alleen wachtkamer <span class="n">{{ aantalWacht }}</span></button>
+        </div>
+      </div>
       <div class="filtergroep">
         <label class="schakel"><input v-model="filter.prio" type="checkbox"><span />Alleen prio <small class="n">{{ aantalPrio }}</small></label>
         <label class="schakel"><input v-model="filter.klaar" type="checkbox"><span />Klaar voor overdracht <small class="n">{{ aantalKlaar }}</small></label>
@@ -121,12 +135,14 @@ const mobiel = (l: Lead) => [
         <button type="button" class="sorteer" :aria-pressed="sortering.kolom === 'laatst'" @click="sorteerOp('laatst')">Laatst gewijzigd{{ pijl('laatst') }}</button>
       </div>
       <div class="lijst-in">
-        <NuxtLink v-for="(l, i) in zichtbaar" :key="l.p.id" :to="`/projecten/${l.p.slug}`" class="rij leadrij" :style="{ '--i': Math.min(i, 12) }">
+        <template v-for="(groep, g) in (isLead ? [actief, inWachtkamer] : [zichtbaar])" :key="g">
+        <div v-if="g === 1 && groep.length" class="lijst-scheiding" role="separator">Wachtkamer · {{ groep.length }}</div>
+        <NuxtLink v-for="(l, i) in groep" :key="l.p.id" :to="`/projecten/${l.p.slug}`" class="rij leadrij" :class="{ wachtkamer: l.p.wachtkamer }" :style="{ '--i': Math.min(i, 12) }">
           <div class="rij-hoofd">
             <span><StatusTab :licht="l.licht" :woord="WOORD[l.licht]" /></span>
             <span class="titel">
-              {{ l.p.naam }}<span v-if="l.p.prio" class="tab telaat prio">Prio</span>
-              <small>{{ l.p.plaats || 'Nog geen plaats' }} · {{ overdracht(l) }}</small>
+              {{ l.p.naam }}<span v-if="l.p.prio" class="tab telaat prio">Prio</span><span v-if="l.p.wachtkamer" class="tab prio">Wachtkamer</span>
+              <small>{{ onder(l) }}</small>
               <small class="mobiel">{{ mobiel(l) }}</small>
             </span>
             <span class="n">{{ l.p.nummer ?? '—' }}</span>
@@ -138,6 +154,7 @@ const mobiel = (l: Lead) => [
             <span class="deadline">{{ l.laatst ? geleden(l.laatst, nu) : '—' }}<small v-if="l.laatst">{{ fmt(new Date(l.laatst)) }}</small></span>
           </div>
         </NuxtLink>
+        </template>
       </div>
     </div>
     <p v-else class="leeg-staat">Geen {{ woord.een }} past bij deze filters. <button type="button" class="link" @click="wis">Wis de filters</button></p>

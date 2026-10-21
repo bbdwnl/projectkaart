@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { FASEN, faseInfo, MENSEN, ROLLEN } from '~/lib/fasen'
-import type { Fase } from '~/lib/types'
+import { FASEN, faseInfo, MENSEN, ROLLEN, SUBFASEN } from '~/lib/fasen'
+import type { Fase, Subfase } from '~/lib/types'
 
 const emit = defineEmits<{ lamp: [licht: 'telaat' | 'letop' | 'klaar'], planning: [] }>()
 const { project, zin, wijzigProject } = useKaart()
@@ -17,6 +17,11 @@ function kiesEigenaar(e: Event) {
   wijzigProject({ [rol.value]: naam }, naam ? `${ROLLEN[rol.value].kort}: ${naam}` : `${ROLLEN[rol.value].kort} weggehaald`)
 }
 
+function kiesSubfase(e: Event) {
+  const subfase = ((e.target as HTMLSelectElement).value || null) as Subfase | null
+  wijzigProject({ subfase }, subfase ? `Subfase: ${SUBFASEN.find(s => s.id === subfase)!.naam}` : 'Subfase weggehaald')
+}
+
 function kiesFase(e: Event) {
   const fase = (e.target as HTMLSelectElement).value as Fase
   wijzigProject({ fase }, `Fase aangepast: ${faseInfo(fase).naam}`)
@@ -29,6 +34,7 @@ function kiesFase(e: Event) {
       <div class="label">
         <span>{{ label }}</span>
         <span v-if="project.prio" class="tab telaat">Prio</span>
+        <span v-if="project.wachtkamer && project.fase === 'lead'" class="tab">Wachtkamer</span>
       </div>
       <h1>{{ project.naam }}</h1>
       <StandZin :delen="zin" />
@@ -36,6 +42,12 @@ function kiesFase(e: Event) {
         <label class="chip"><span class="label">Fase</span>
           <select :value="project.fase" aria-label="Fase van het project" @change="kiesFase">
             <option v-for="f in FASEN" :key="f.id" :value="f.id">{{ f.naam }}</option>
+          </select>
+        </label>
+        <label v-if="project.fase === 'haalbaarheid'" class="chip" :class="{ leeg: !project.subfase }"><span class="label">Subfase</span>
+          <select :value="project.subfase ?? ''" aria-label="Subfase van haalbaarheid" @change="kiesSubfase">
+            <option value="">nog niet gekozen</option>
+            <option v-for="s in SUBFASEN" :key="s.id" :value="s.id">{{ s.naam }}</option>
           </select>
         </label>
         <label class="chip" :class="{ leeg: !eigenaar }"><span class="label">{{ ROLLEN[rol].kort }}</span>

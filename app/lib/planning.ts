@@ -1,6 +1,6 @@
 import type { Fase, Project, Rol } from './types'
 import { DATUMVELDEN, faseInfo, PROGNOSEVELDEN } from './fasen'
-import { naarDatum } from './datum'
+import { naarDatum, plusDagen } from './datum'
 import { voornaam } from './overzicht'
 
 // Het planningsoverzicht van Projecten en Haalbaarheid: per project een balk in de tijd, per verantwoordelijke onder
@@ -19,15 +19,21 @@ export const STAPPEN: Record<Laag, [string, string, string]> = {
   prognose: ['Haalbaarheid', 'Casco', 'Afbouw → oplevering'],
 }
 
-export interface Segment { van: Date, tot: Date, stap: Stap, naam: string }
+/** open: de afbouw heeft nog geen opleverdatum; de balk loopt vervagend door. */
+export interface Segment { van: Date, tot: Date, stap: Stap, naam: string, open?: boolean }
 export interface PlanRegel {
   p: Project
   laag: Laag
   rol: Rol
-  /** Voornaam van wie in deze fase verantwoordelijk is, of null. */
+  /** Voornaam van wie in deze fase verantwoordelijk is (of van de buddy), of null. */
   wie: string | null
+  /** De regel van de buddy: licht in beeld, telt niet mee. */
+  buddy?: boolean
   segmenten: Segment[]
 }
+
+/** Hoe lang de balk van een afbouw zonder opleverdatum vervagend doorloopt. */
+const OPEN_DAGEN = 120
 
 const STAP_VANAF: Record<string, Stap> = {
   datum_casco: 0, datum_voorbereiding: 0, datum_inkoop: 1, datum_afbouw: 2,
@@ -51,13 +57,23 @@ function punten(p: Project, velden: { veld: string, naam: string }[]) {
   })
 }
 
+/** Is de afbouw de laatste datum (geen oplevering erna), dan loopt de balk vervagend door. */
+function metOpenAfbouw(s: Segment[], pts: { veld: string, datum: Date }[]): Segment[] {
+  const laatste = [...pts].sort((a, b) => b.datum.getTime() - a.datum.getTime())[0]
+  if (!laatste || !laatste.veld.endsWith('afbouw')) return s
+  return [...s, { van: laatste.datum, tot: plusDagen(laatste.datum, OPEN_DAGEN), stap: 2, naam: 'Start afbouw → nog geen opleverdatum', open: true }]
+}
+
 /** Lopend: de harde datums. Prognose: haalbaarheid tot de eerste prognosedatum, daarna casco en afbouw. */
 export function segmentenVan(p: Project, laag: Laag, nu: Date): Segment[] {
-  if (laag === 'lopend') return tussen(punten(p, DATUMVELDEN))
+  if (laag === 'lopend') {
+    const pts = punten(p, DATUMVELDEN)
+    return metOpenAfbouw(tussen(pts), pts)
+  }
   const prognose = punten(p, PROGNOSEVELDEN)
   const eerste = prognose.reduce<(typeof prognose)[number] | null>((m, x) => (!m || x.datum < m.datum ? x : m), null)
   const nog = eerste && eerste.datum > nu ? [{ van: nu, tot: eerste.datum, stap: 0 as Stap, naam: `Haalbaarheid → ${eerste.naam.toLowerCase()}` }] : []
-  return [...nog, ...tussen(prognose)]
+  return metOpenAfbouw([...nog, ...tussen(prognose)], prognose)
 }
 
 export function planRegels(projecten: Project[], nu: Date): PlanRegel[] {
@@ -65,7 +81,9 @@ export function planRegels(projecten: Project[], nu: Date): PlanRegel[] {
     const laag = (Object.keys(LAAG_FASEN) as Laag[]).find(l => LAAG_FASEN[l].includes(p.fase))
     if (!laag) return []
     const rol = faseInfo(p.fase).rol
-    return [{ p, laag, rol, wie: voornaam(p[rol]), segmenten: segmentenVan(p, laag, nu) }]
+    const r: PlanRegel = { p, laag, rol, wie: voornaam(p[rol]), segmenten: segmentenVan(p, laag, nu) }
+    const buddy = voornaam(p.buddy)
+    return buddy && buddy !== r.wie ? [r, { ...r, wie: buddy, buddy: true }] : [r]
   })
 }
 
@@ -97,7 +115,7 @@ export function tijdas(regels: PlanRegel[], nu: Date) {
 export function bezetting(regels: PlanRegel[], maanden: Date[]): { maand: Date, lopend: number, prognose: number }[] {
   return maanden.map((m) => {
     const volgend = maand(m.getFullYear(), m.getMonth() + 1)
-    const loopt = regels.filter(r => r.segmenten.some(s => s.van < volgend && s.tot > m && (r.laag === 'lopend' || s.stap > 0)))
+    const loopt = regels.filter(r => !r.buddy && r.segmenten.some(s => s.van < volgend && s.tot > m && (r.laag === 'lopend' || s.stap > 0)))
     return { maand: m, lopend: loopt.filter(r => r.laag === 'lopend').length, prognose: loopt.filter(r => r.laag === 'prognose').length }
   })
 }

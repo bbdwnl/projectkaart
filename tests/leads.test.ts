@@ -37,9 +37,14 @@ describe('filteren', () => {
   const leads = [
     lead('De Brink', { am: 'Jeroen', slagingskans: 75, prio: true, plaats: 'Zwolle', straat: 'Brinkweg', nummer: 'P26014' }, 'klaar'),
     lead('Het Anker', { am: 'Peter', slagingskans: 50 }),
-    lead('Molenwijk', { slagingskans: null }),
+    lead('Molenwijk', { slagingskans: null, wachtkamer: true }),
   ]
   const namen = (f: Partial<typeof GEEN_FILTER>) => leads.filter(l => past(l, { ...GEEN_FILTER, ...f })).map(l => l.p.naam)
+
+  it('filtert op de wachtkamer', () => {
+    expect(namen({ wacht: 'ja' })).toEqual(['Molenwijk'])
+    expect(namen({ wacht: 'nee' })).toEqual(['De Brink', 'Het Anker'])
+  })
 
   it('laat zonder filter alles zien', () => expect(namen({})).toHaveLength(3))
   it('zoekt in naam, adres en projectnummer, zonder op hoofdletters te letten', () => {
@@ -89,9 +94,9 @@ describe('adresbalk', () => {
     expect(naarQuery({ ...GEEN_FILTER }, { ...STANDAARD_SORTERING })).toEqual({})
   })
   it('schrijft en leest dezelfde filters en sortering', () => {
-    const filter = { zoek: 'de brink', am: 'Jeroen', kans: 'hoog' as const, prio: true, klaar: true }
+    const filter = { zoek: 'de brink', am: 'Jeroen', kans: 'hoog' as const, prio: true, klaar: true, wacht: 'nee' as const }
     const q = naarQuery(filter, { kolom: 'naam', af: true })
-    expect(q).toEqual({ zoek: 'de brink', am: 'Jeroen', kans: 'hoog', prio: '1', klaar: '1', sort: 'naam', richting: 'af' })
+    expect(q).toEqual({ zoek: 'de brink', am: 'Jeroen', kans: 'hoog', prio: '1', klaar: '1', wacht: 'nee', sort: 'naam', richting: 'af' })
     expect(leesQuery(q)).toEqual({ filter, sortering: { kolom: 'naam', af: true } })
   })
   it('maakt van onbekende waarden de standaard', () => {

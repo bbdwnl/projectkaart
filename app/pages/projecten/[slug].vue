@@ -4,11 +4,11 @@ import { dagen } from '~/lib/datum'
 
 const route = useRoute()
 const kaart = useProjectkaart(String(route.params.slug))
-const { project, stand, fout, lichten, mijlpaal, tabFase, filter, openPunten } = kaart
+const { project, stand, fout, lichten, mijlpaal, tabFase, filter, openPunten, openActies, nu } = kaart
 const { weergave } = useWeergave()
 const { modus } = useGebruiker()
 
-// Een link met #taken, #proces of #details opent dat tabblad; anders het laatst gebruikte.
+// Een link met #taken, #proces, #acties, #controle of #details opent dat tabblad; anders het laatst gebruikte.
 const uitLink = route.hash.slice(1) as Tab
 if (TABS.includes(uitLink)) weergave.value.tab = uitLink
 const richting = ref(1)
@@ -38,6 +38,12 @@ const pilProces = computed(() => {
   return m ? (m.dagen >= 0 ? dagen(m.dagen) : `${dagen(-m.dagen)} geleden`) : null
 })
 
+const pilActies = computed(() => {
+  const n = openActies.value.length
+  if (!n) return null
+  const laat = openActies.value.filter(a => a.deadline && new Date(a.deadline) < nu).length
+  return { licht: laat ? 'telaat' as const : 'open' as const, tekst: laat ? `${laat} te laat` : `${n} open` }
+})
 const pilControle = computed(() => openPunten.value ? `${openPunten.value} open` : null)
 
 function naarTabs() {
@@ -78,10 +84,11 @@ function planning() {
     <template v-else-if="project">
       <KaartKop @lamp="lamp" @planning="planning" />
       <div id="tabanker" />
-      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-proces="pilProces" :pil-controle="pilControle" />
+      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-proces="pilProces" :pil-acties="pilActies" :pil-controle="pilControle" />
       <Transition :name="richting > 0 ? 'paneel-vooruit' : 'paneel-terug'" mode="out-in">
         <KaartTaken v-if="weergave.tab === 'taken'" key="taken" />
         <KaartProces v-else-if="weergave.tab === 'proces'" key="proces" />
+        <KaartActies v-else-if="weergave.tab === 'acties'" key="acties" />
         <KaartControle v-else-if="weergave.tab === 'controle'" key="controle" />
         <KaartDetails v-else key="details" />
       </Transition>

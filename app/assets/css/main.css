@@ -475,6 +475,9 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .projectfilters .seg button{flex:none;white-space:nowrap}
 .zoekveld{width:min(380px,100%);height:38px;border-radius:var(--rond);padding:0 16px}
 .zoekregel{justify-content:flex-end}
+.filterkeuze{display:inline-flex;align-items:center;gap:8px}
+.filterkeuze>.label{margin:0}
+.filterkeuze select.veld.pil{height:34px;min-width:120px}
 .projectgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:28px 18px;padding-top:22px}
 .projectkaartje{display:flex;flex-direction:column;gap:6px;text-decoration:none;padding:18px 18px 16px;animation:binnen-zacht .5s var(--uit) both;animation-delay:calc(var(--i,0)*35ms)}
 .projectkaartje .label{margin:0}
@@ -517,6 +520,9 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .kolkop .sorteer[aria-pressed="true"]{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}
 .leadrij{display:block;text-decoration:none}
 .leadrij .titel .prio{height:18px;padding:0 7px;font-size:9px;margin-left:8px;vertical-align:2px}
+.lijst-scheiding{padding:16px 14px 8px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--stil);border-top:var(--rand);background:var(--grijs-2)}
+.leadrij.wachtkamer .titel{color:var(--stil)}
+.leadrij .titel .tab.prio:not(.telaat){background:var(--wit);color:var(--zwart)}
 .leadrij .titel .mobiel{display:none}
 .leadlijst .kans .voortgang{width:48px}
 @media (max-width:1100px){
@@ -528,6 +534,62 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 @media (max-width:760px){
   .nieuw-formulier{grid-template-columns:1fr}
 }
+
+/* aandachtspunten in de planning (Projecten) */
+.signalen{margin-top:44px}
+.signalen ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.signalen li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:baseline;font-size:14.5px;line-height:21px}
+.signalen li a{font-weight:700;text-underline-offset:3px}
+.signalen>.link{margin-top:14px;font-size:14px}
+@media (max-width:760px){.signalen li{grid-template-columns:1fr;gap:4px}}
+
+/* leveranciers per discipline (Details) */
+.disciplines{margin-bottom:30px}
+.disciplines-kop{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.disciplines-kop h3,.leveranciers-kop{font-size:17px;font-weight:900;letter-spacing:-.01em;margin:0}
+.leveranciers-kop{margin:0 0 10px}
+.disciplines-kop .voortgang{width:120px;margin-left:0}
+.disciplinelijst .kolkop,.disciplinelijst .rij-hoofd{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.3fr);gap:12px;align-items:center}
+.disciplinelijst .rij-hoofd{min-height:52px;padding-top:8px;padding-bottom:8px;grid-template-areas:none}
+.disciplinelijst .titel{font-weight:700;font-size:14.5px}
+.disciplinelijst .rij:not(.ingevuld) .titel{color:var(--stil);font-weight:400}
+.disciplinelijst .veld{width:100%}
+.disciplines>.klein{margin:8px 0 0}
+@media (max-width:760px){.disciplinelijst .kolkop{display:none}.disciplinelijst .rij-hoofd{grid-template-columns:1fr;gap:6px}}
+
+/* actielijst overleg (kaart, tabblad Acties) */
+.actielijst .kolkop,.actielijst .rij-hoofd{grid-template-columns:34px minmax(0,1fr) 150px 96px 150px 56px 32px;gap:10px;align-items:center;grid-template-areas:none}
+.actielijst .rij-hoofd{min-height:54px;padding-top:8px;padding-bottom:8px}
+.actielijst .veld{width:100%}
+.actielijst .nr{font-weight:700;color:var(--stil)}
+.actielijst .deadline{display:grid;gap:2px}
+.actielijst .deadline small{font-size:11.5px;font-weight:700}
+.actielijst .deadline small.telaat{color:var(--baksteen-diep)}
+.actielijst .rij.gereed .veld{color:var(--stil);text-decoration:line-through;text-decoration-thickness:1px}
+.actielijst .rij.te-laat{box-shadow:inset 4px 0 0 var(--baksteen)}
+.actie-weg{border:0;background:none;color:var(--stil);font-size:14px;cursor:pointer;width:28px;height:28px;border-radius:50%}
+.actie-weg:hover{background:var(--grijs);color:var(--zwart)}
+.actie-toevoegen{margin-top:14px}
+.te-laat{color:var(--baksteen-diep)}
+@media (max-width:1100px){
+  .actielijst .rij-hoofd{grid-template-columns:28px minmax(0,1fr) 32px;grid-template-areas:"nr tekst weg" ". houder houder" ". deadline deadline" ". gereed gereed";gap:6px 10px}
+  .actielijst .rij-hoofd>.nr{grid-area:nr}.actielijst .rij-hoofd>input.veld{grid-area:tekst}.actielijst .rij-hoofd>select{grid-area:houder}
+  .actielijst .rij-hoofd>.klein{display:none}.actielijst .rij-hoofd>.deadline{grid-area:deadline}.actielijst .rij-hoofd>.akkoord{grid-area:gereed}.actielijst .rij-hoofd>.actie-weg{grid-area:weg}
+}
+
+/* mail actiehouders (Projecten) */
+.kop-knoppen{display:flex;gap:10px;flex-wrap:wrap}
+.mail-actiehouders{margin-top:34px;padding-top:26px}
+.mail-kop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-bottom:14px}
+.mail-kop>.klein{margin:0;max-width:52em}
+.mail-keuzes{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.maillijst .kolkop,.maillijst .rij-hoofd{grid-template-columns:minmax(0,.9fr) minmax(0,1.2fr) minmax(0,1fr) 250px;gap:12px;align-items:center;grid-template-areas:none}
+.maillijst .rij-hoofd{min-height:56px;padding-top:8px;padding-bottom:8px}
+.maillijst .titel{font-weight:700}
+.maillijst .veld{width:100%}
+.maillijst .acties{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.maillijst .acties .link{font-size:14px}
+@media (max-width:1100px){.maillijst .rij-hoofd{grid-template-columns:1fr;gap:6px}.maillijst .acties{justify-content:flex-start}}
 
 /* tabbladen op een overzicht (Lijst, Planningsoverzicht) */
 .paginatabs{display:flex;gap:6px;margin-top:34px;border-bottom:var(--rand);overflow-x:auto;scrollbar-width:none}
@@ -548,6 +610,9 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .plan-legenda b{color:var(--zwart);font-weight:700}
 .plan-legenda i{display:inline-block;width:16px;height:10px;border-radius:3px}
 .plan-legenda i.plan-legenda-vandaag{width:2px;height:14px;border-radius:0;background:var(--zwart)}
+.plan-legenda i.plan-legenda-open{background:linear-gradient(90deg,#184f95 25%,transparent)}
+.plan-legenda i.plan-legenda-buddy{background:#2a78d6;opacity:.32}
+.plan-legenda i.plan-legenda-prio{width:4px;height:14px;border-radius:0;background:var(--baksteen)}
 .plan-scroll{overflow-x:auto;border:var(--rand);border-radius:var(--radius);background:var(--wit);box-shadow:var(--zacht)}
 .plan-in{min-width:880px;padding-bottom:4px}
 .plan-rij{display:grid;grid-template-columns:var(--plan-lbl) minmax(0,1fr);align-items:stretch;border-bottom:var(--lijn-dun)}
@@ -561,6 +626,11 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .plan-vandaag{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--zwart);z-index:2;pointer-events:none}
 .plan-seg{position:absolute;top:50%;height:14px;margin-top:-7px;border-radius:4px;z-index:1;transition:filter .15s}
 .plan-seg:hover{filter:brightness(1.15)}
+/* Afbouw zonder opleverdatum: de balk vervaagt. Buddy: licht, telt niet mee. Prio: een streep links, zoals Prio elders. */
+.plan-seg.open{-webkit-mask-image:linear-gradient(90deg,#000 25%,transparent);mask-image:linear-gradient(90deg,#000 25%,transparent);border-radius:4px 0 0 4px}
+.plan-rij.buddy .plan-seg{opacity:.32}
+.plan-rij.buddy .plan-lbl a{font-weight:400}
+.plan-rij.prio .plan-lbl{box-shadow:inset 4px 0 0 var(--baksteen)}
 .plan-kop{border-bottom:var(--rand)}
 .plan-kop .plan-spoor{min-height:36px}
 .plan-maand{position:absolute;bottom:7px;padding-left:4px;font-size:11px;color:var(--stil);white-space:nowrap}

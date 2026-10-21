@@ -17,17 +17,20 @@ const catalogus = ref<Uitzondering[]>([])
 const TABS = [{ id: 'lijst', naam: 'Lijst' }, { id: 'planning', naam: 'Planningsoverzicht' }] as const
 const weergave = useTabblad<'lijst' | 'planning'>('lijst', ['lijst', 'planning'])
 
-async function laad() {
-  stand.value = 'laden'
+async function laad(stil = false) {
+  if (!stil) stand.value = 'laden'
   try {
     ;[projecten.value, taken.value, catalogus.value] = await Promise.all([bron.projecten(), bron.taken(), bron.uitzonderingen()])
     stand.value = 'klaar'
   } catch (e) {
+    if (stil) return
     fout.value = foutTekst(e)
     stand.value = 'fout'
   }
 }
-onMounted(laad)
+onMounted(() => laad())
+// Live: wat een ander wijzigt, verschijnt vanzelf.
+useLive(() => [{ tabel: 'projecten' }, { tabel: 'taken' }], () => laad(true))
 
 const regels = computed(() => leadsVan(projecten.value, taken.value, catalogus.value, nu, 'haalbaarheid'))
 const zin = computed(() => {
@@ -50,7 +53,7 @@ const zin = computed(() => {
 
     <PaginaTabs v-model="weergave" :tabs="[...TABS]" label="Weergave van haalbaarheid" />
     <div v-if="stand === 'laden'" class="laden" aria-busy="true"><span class="laden-regel" /><span class="laden-regel" /></div>
-    <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad">Probeer het opnieuw</button></div>
+    <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad()">Probeer het opnieuw</button></div>
     <template v-else-if="weergave === 'lijst'">
       <ProjectLijst v-if="regels.length" fase="haalbaarheid" :regels="regels" />
       <p v-else class="leeg-staat leadfilters">Nog geen projecten in haalbaarheid. Een lead komt hier zodra je op de kaart de fase op Haalbaarheid zet.</p>

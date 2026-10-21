@@ -6,6 +6,9 @@ export type Status = 'niet_gestart' | 'loopt' | 'concept' | 'definitief' | 'volg
 export type Licht = 'telaat' | 'letop' | 'open' | 'klaar' | 'later'
 export type Rol = 'am' | 'po' | 'pm' | 'opzichter'
 export type Soort = 'adv' | 'ont' | 'tk'
+/** De subfase van haalbaarheid: SO of ontwikkeling VO. */
+export type Subfase = 'so' | 'vo'
+export type Discipline = 'casco' | 'sloop' | 'w' | 'e' | 'klimaat' | 'lift' | 'zon' | 'wanden' | 'vloeren' | 'kozijnen' | 'schilder' | 'sanitair' | 'brand' | 'terrein' | 'overig'
 export type UitzonderingStatus = 'uitzondering' | 'voorgesteld' | 'standaard'
 /** Datum als 'YYYY-MM-DD'. */
 export type IsoDatum = string
@@ -38,7 +41,11 @@ export interface Project extends ProjectDatums, ProjectPrognose {
   /** Het BAG-object bij postcode en huisnummer; null als het adres (nog) niet in de BAG staat. */
   bag_id: string | null
   fase: Fase
+  /** Alleen in haalbaarheid. */
+  subfase: Subfase | null
   prio: boolean
+  /** Een lead in de wachtkamer: nog niet actief, wel in beeld. */
+  wachtkamer: boolean
   soort: Soort[]
   m2: number | null
   slagingskans: number | null
@@ -46,6 +53,8 @@ export interface Project extends ProjectDatums, ProjectPrognose {
   po: string | null
   pm: string | null
   opzichter: string | null
+  /** Kijkt mee; staat licht in het planningsoverzicht en telt daar niet mee. */
+  buddy: string | null
   sharepoint_url: string | null
   extern_url: string | null
   notitieblok_url: string | null
@@ -232,3 +241,33 @@ export type PlekVeld = 'tekening_id' | 'tekening_blad' | 'tekening_x' | 'tekenin
 /** Een plek op een tekening: blad (vanaf 1) en x, y van 0 tot 1 vanaf linksboven. */
 export interface Plek { tekening_id: string, tekening_blad: number, tekening_x: number, tekening_y: number }
 export const GEEN_PLEK: Record<PlekVeld, null> = { tekening_id: null, tekening_blad: null, tekening_x: null, tekening_y: null }
+
+/** Per project en discipline één leverancier (die ook op het project staat), met contactpersoon of telefoon. */
+export interface ProjectDiscipline {
+  project_id: string
+  discipline: Discipline
+  leverancier_id: string | null
+  contact: string | null
+}
+export type DisciplineWijziging = Partial<Pick<ProjectDiscipline, 'leverancier_id' | 'contact'>>
+
+/** Een actie uit het overleg. Wie hem maakte en wie hem gereed meldde, vult de database in. */
+export interface Actie {
+  id: string
+  project_id: string
+  tekst: string
+  actiehouder: string | null
+  deadline: IsoDatum | null
+  gereed: boolean
+  gereed_door: string | null
+  gereed_op: string | null
+  aangemaakt_door: string | null
+  aangemaakt_op: string
+}
+export type ActieWijziging = Partial<Pick<Actie, 'tekst' | 'actiehouder' | 'deadline' | 'gereed'>>
+
+/** Het e-mailadres van een actiehouder, één keer ingevuld. */
+export interface Adres {
+  naam: string
+  email: string | null
+}

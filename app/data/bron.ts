@@ -1,4 +1,4 @@
-import type { Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Actie, ActieWijziging, Adres, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { ExternAntwoord } from '~/lib/deellink'
 
 /**
@@ -54,6 +54,26 @@ export interface Bron {
   wijzigLeverancier(id: string, wijziging: LeverancierWijziging): Promise<Leverancier>
   /** Helemaal weg; lukt alleen als hij op geen enkel project staat. */
   verwijderLeverancier(id: string): Promise<void>
+  /** Per discipline de leverancier en het contact van dit project. */
+  disciplines(projectId: string): Promise<ProjectDiscipline[]>
+  /** Leverancier en contact van één discipline; de leverancier moet op het project staan. */
+  bewaarDiscipline(projectId: string, discipline: Discipline, wijziging: DisciplineWijziging): Promise<ProjectDiscipline>
+
+  /** De acties uit het overleg van één project, of van alle projecten; oudste eerst. */
+  acties(projectId?: string): Promise<Actie[]>
+  nieuweActie(projectId: string, wijziging?: ActieWijziging): Promise<Actie>
+  bewaarActie(id: string, wijziging: ActieWijziging): Promise<Actie>
+  verwijderActie(id: string): Promise<void>
+  /** De e-mailadressen van actiehouders. */
+  adressen(): Promise<Adres[]>
+  bewaarAdres(naam: string, email: string | null): Promise<void>
+
+  /**
+   * Live bijwerken: roept bij aan als iemand anders iets wijzigt in deze tabellen (met projectId: alleen van dat
+   * project). Geeft een functie terug om te stoppen.
+   */
+  luister(wat: Luister[], bij: () => void): () => void
+
   /** De aandachtspunten van één project, of van alle projecten. */
   controlepunten(projectId?: string): Promise<Controlepunt[]>
   /** Adressen waarop de browser de foto's kan tonen, per pad. Tijdelijk geldig. */
@@ -75,6 +95,11 @@ export interface Bron {
   externeTekeningUrl(token: string, code: string, tekeningId: string): Promise<string>
   /** De leverancier vinkt op zijn pagina een open punt af als opgelost, of draait dat terug. BbDW tekent daarna af. */
   meldGereed(token: string, code: string, puntId: string, gereed: boolean): Promise<void>
+}
+
+export interface Luister {
+  tabel: 'projecten' | 'taken' | 'opmerkingen' | 'acties' | 'controlepunten' | 'project_leveranciers' | 'project_disciplines' | 'tekeningen'
+  projectId?: string
 }
 
 export interface NieuwControlepunt {
