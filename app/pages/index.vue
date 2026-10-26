@@ -4,9 +4,10 @@ import { FASEN, faseInfo, MENSEN, ROLLEN } from '~/lib/fasen'
 import { maakSlug } from '~/lib/leads'
 import { kaartjesVan, KOLOMMEN, namenVan, pastPersoon, pastWie, personen, sorteerKaartjes, SORTERINGEN, vindt, type Kaartje } from '~/lib/overzicht'
 import { vandaag } from '~/lib/datum'
+import { signalen, SOORTEN } from '~/lib/signalen'
 
 // De lopende projecten in drie kolommen: ontwikkeling, uitvoering en nazorg. Per kolom het dringendste bovenaan.
-// Daarnaast een planningsoverzicht, te filteren op fase. Leads en haalbaarheid hebben een eigen pagina.
+// Daarnaast een planningsoverzicht, te filteren op fase, en wat daarin opvalt. Leads en haalbaarheid hebben een eigen pagina.
 useHead({ title: 'Projecten · Projectkaart' })
 const bron = useBron()
 const { modus } = useGebruiker()
@@ -19,8 +20,14 @@ const taken = ref<Taak[]>([])
 const catalogus = ref<Uitzondering[]>([])
 const zoek = ref('')
 const { sortering, wie, pl, oz, prio } = useOverzichtKeuze('/')
-const TABS = [{ id: 'kolommen', naam: 'Kolommen' }, { id: 'planning', naam: 'Planningsoverzicht' }] as const
-const weergave = useTabblad<'kolommen' | 'planning'>('kolommen', ['kolommen', 'planning'])
+const weergave = useTabblad<'kolommen' | 'planning' | 'aandachtspunten'>('kolommen', ['kolommen', 'planning', 'aandachtspunten'])
+/** Wat opvalt in de planning, het ernstigste eerst; de pil op het tabblad krijgt de kleur daarvan. */
+const punten = computed(() => signalen(projecten.value, nu))
+const tabs = computed(() => [
+  { id: 'kolommen' as const, naam: 'Kolommen' },
+  { id: 'planning' as const, naam: 'Planningsoverzicht' },
+  { id: 'aandachtspunten' as const, naam: 'Aandachtspunten', pil: punten.value.length ? { licht: SOORTEN[punten.value[0]!.soort].licht, tekst: String(punten.value.length) } : null },
+])
 const datumBij = (p: Project) => (sortering.value === 'inkoop' ? { naam: 'Inkoop gereed', waarde: p.datum_inkoop } : null)
 
 async function laad(stil = false) {
@@ -130,10 +137,11 @@ async function maakProject() {
       </form>
     </Transition>
 
-    <PaginaTabs v-model="weergave" :tabs="[...TABS]" label="Weergave van de projecten" />
+    <PaginaTabs v-model="weergave" :tabs="tabs" label="Weergave van de projecten" />
     <div v-if="stand === 'laden'" class="laden" aria-busy="true"><span class="laden-regel" /><span class="laden-regel" /></div>
     <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad()">Probeer het opnieuw</button></div>
     <PlanningOverzicht v-else-if="weergave === 'planning'" :projecten="projecten" :lagen="['lopend']" fasefilter />
+    <PlanningSignalen v-else-if="weergave === 'aandachtspunten'" :lijst="punten" />
     <template v-else>
       <div class="filters projectfilters">
         <div class="filtergroep">
@@ -181,7 +189,6 @@ async function maakProject() {
         </section>
       </div>
     </template>
-    <PlanningSignalen v-if="stand === 'klaar'" :projecten="projecten" />
     <footer>Projectkaart BbDW · het volledige overzicht met kaart en financieel komt in de volgende fase.</footer>
   </main>
 </template>

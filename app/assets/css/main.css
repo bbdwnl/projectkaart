@@ -535,12 +535,12 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .nieuw-formulier{grid-template-columns:1fr}
 }
 
-/* aandachtspunten in de planning (Projecten) */
-.signalen{margin-top:44px}
+/* aandachtspunten in de planning (Projecten, tabblad naast het planningsoverzicht) */
+.signalen{margin-top:22px}
+.signalen>.klein{margin:0 0 18px;max-width:52em}
 .signalen ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .signalen li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:baseline;font-size:14.5px;line-height:21px}
 .signalen li a{font-weight:700;text-underline-offset:3px}
-.signalen>.link{margin-top:14px;font-size:14px}
 @media (max-width:760px){.signalen li{grid-template-columns:1fr;gap:4px}}
 
 /* leveranciers per discipline (Details) */
@@ -591,10 +591,11 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .maillijst .acties .link{font-size:14px}
 @media (max-width:1100px){.maillijst .rij-hoofd{grid-template-columns:1fr;gap:6px}.maillijst .acties{justify-content:flex-start}}
 
-/* tabbladen op een overzicht (Lijst, Planningsoverzicht) */
+/* tabbladen op een overzicht (Lijst, Planningsoverzicht, Aandachtspunten) */
 .paginatabs{display:flex;gap:6px;margin-top:34px;border-bottom:var(--rand);overflow-x:auto;scrollbar-width:none}
-.paginatabs button{position:relative;background:none;border:0;padding:12px 16px 14px;font-weight:900;font-size:18px;letter-spacing:-.02em;color:#7c7c7c;cursor:pointer;white-space:nowrap;transition:color .25s}
+.paginatabs button{position:relative;display:flex;align-items:center;gap:8px;background:none;border:0;padding:12px 16px 14px;font-weight:900;font-size:18px;letter-spacing:-.02em;color:#7c7c7c;cursor:pointer;white-space:nowrap;transition:color .25s}
 .paginatabs button:hover,.paginatabs button[aria-selected="true"]{color:var(--zwart)}
+.paginatabs button .tab{height:18px;padding:0 8px;font-size:9.5px}
 .paginatabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--zwart);border-radius:6px 6px 0 0}
 .paginatabs+*>.filters:first-child,.paginatabs+.filters,.paginatabs+*>.leadfilters:first-child{margin-top:22px}
 

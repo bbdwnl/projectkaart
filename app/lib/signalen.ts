@@ -1,4 +1,4 @@
-import type { Project, ProjectDatums } from './types'
+import type { Licht, Project, ProjectDatums } from './types'
 import { DATUMVELDEN, faseInfo, ROLLEN } from './fasen'
 import { fmt, naarDatum } from './datum'
 
@@ -10,6 +10,13 @@ export interface Signaal {
   soort: 'vraag' | 'ontbreekt' | 'klopt-niet'
   tekst: string
   projecten: Pick<Project, 'slug' | 'naam'>[]
+}
+
+/** Het woord en de kleur van elke soort; de lijst begint met de ernstigste. */
+export const SOORTEN: Record<Signaal['soort'], { woord: string, licht: Licht }> = {
+  'klopt-niet': { woord: 'Klopt niet', licht: 'telaat' },
+  'vraag': { woord: 'Vraag', licht: 'letop' },
+  'ontbreekt': { woord: 'Ontbreekt', licht: 'open' },
 }
 
 const LOPEND = ['ontwikkeling', 'uitvoering', 'nazorg']

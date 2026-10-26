@@ -1,7 +1,10 @@
 <script setup lang="ts" generic="T extends string">
-// Tabbladen op een overzicht, zoals Lijst en Planningsoverzicht. Pijltjestoetsen wisselen.
+import type { Licht } from '~/lib/types'
+
+// Tabbladen op een overzicht, zoals Lijst, Planningsoverzicht en Aandachtspunten. Een tab kan een pil met een getal
+// hebben, zoals op de kaart. Pijltjestoetsen wisselen.
 const tab = defineModel<T>({ required: true })
-const props = defineProps<{ tabs: { id: T, naam: string }[], label: string }>()
+const props = defineProps<{ tabs: { id: T, naam: string, pil?: { licht: Licht, tekst: string } | null }[], label: string }>()
 const knoppen = ref<HTMLElement[]>([])
 
 function toets(e: KeyboardEvent) {
@@ -21,6 +24,7 @@ function toets(e: KeyboardEvent) {
       :aria-selected="tab === t.id" :tabindex="tab === t.id ? 0 : -1" @click="tab = t.id"
     >
       {{ t.naam }}
+      <span v-if="t.pil" class="tab" :class="t.pil.licht">{{ t.pil.tekst }}</span>
     </button>
   </div>
 </template>
