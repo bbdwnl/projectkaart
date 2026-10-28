@@ -1,9 +1,22 @@
 import type { EmailOtpType, Session, SupabaseClient } from '@supabase/supabase-js'
 import type { Gebruiker } from '~/lib/types'
-import { inlogMoment, naamUitEmail, vanDomein, veiligPad, verlooptOp } from '~/lib/inlog'
+import { FOUT_ADRES, GEEN_POGINGEN, inlogMoment, leesPogingen, naamUitEmail, naFoutAdres, vanDomein, veiligPad, verlooptOp, type Pogingen } from '~/lib/inlog'
 
 /** Waar je was toen je de inloglink aanvroeg; de link zelf brengt je naar /login. */
 const TERUG_SLEUTEL = 'projectkaart_terug'
+/** De foute adressen op rij en de blokkade, zodat herladen het veld niet weer opent. */
+const POGINGEN_SLEUTEL = 'projectkaart_inlogpogingen'
+/** Als de browser niets mag bewaren (privévenster): alleen in het geheugen. */
+let pogingenNu: Pogingen = GEEN_POGINGEN
+
+function leesBewaard(): Pogingen {
+  try { pogingenNu = leesPogingen(localStorage.getItem(POGINGEN_SLEUTEL)) } catch { /* dan wat er in het geheugen staat */ }
+  return pogingenNu
+}
+function bewaar(p: Pogingen) {
+  pogingenNu = p
+  try { localStorage.setItem(POGINGEN_SLEUTEL, JSON.stringify(p)) } catch { /* dan alleen in het geheugen */ }
+}
 
 // Eén Supabase-client en één domein per app, gezet door de plugin.
 let sb: SupabaseClient | null = null
@@ -13,6 +26,8 @@ let verloopKlok: ReturnType<typeof setTimeout> | undefined
 export function useGebruiker() {
   const gebruiker = useState<Gebruiker | null>('gebruiker', () => null)
   const melding = useState('inlogmelding', () => '')
+  /** Tot wanneer het adresveld dicht is na vijf foute adressen op rij (ms; 0 = open). Het scherm zegt het niet. */
+  const geblokkeerdTot = useState('inlogblokkade', () => leesBewaard().tot)
   const router = useRouter()
 
   /** Wie bij deze sessie hoort. Een ander domein of een inlog van meer dan een week geleden: uitloggen. */
@@ -24,7 +39,7 @@ export function useGebruiker() {
     }
     const email = sessie.user.email ?? ''
     if (!vanDomein(email, domein)) {
-      melding.value = `${email || 'Dit account'} heeft geen toegang. Log in met je e-mailadres van ${domein}.`
+      melding.value = 'Dit account heeft geen toegang.'
       gebruiker.value = null
       await sb.auth.signOut({ scope: 'local' })
       return
@@ -62,12 +77,19 @@ export function useGebruiker() {
     })
   }
 
-  /** Stuurt een inloglink naar dit adres. Alleen het eigen domein; de database weigert de rest ook. */
+  /**
+   * Stuurt een inloglink naar dit adres. Alleen het eigen domein; de database weigert de rest ook. De melding zegt
+   * niet welk domein wel mag. Na vijf foute adressen op rij gaat het veld vijf minuten dicht, zonder melding.
+   */
   async function stuurLink(email: string, terug = '/'): Promise<boolean> {
+    if (leesBewaard().tot > Date.now()) return false
     melding.value = ''
     const adres = email.trim().toLowerCase()
     if (!vanDomein(adres, domein)) {
-      melding.value = `Alleen e-mailadressen van ${domein} kunnen inloggen.`
+      melding.value = FOUT_ADRES
+      const p = naFoutAdres(pogingenNu, Date.now())
+      bewaar(p)
+      geblokkeerdTot.value = p.tot
       return false
     }
     if (!sb) return false
@@ -76,9 +98,11 @@ export function useGebruiker() {
     if (error) {
       melding.value = error.status === 429
         ? 'Er is net al een link gestuurd. Wacht een minuut en probeer het dan opnieuw.'
-        : `Versturen lukte niet: ${error.message}`
+        : 'Versturen lukte niet. Probeer het later opnieuw.'
       return false
     }
+    bewaar(GEEN_POGINGEN)
+    geblokkeerdTot.value = 0
     return true
   }
 
@@ -141,5 +165,5 @@ export function useGebruiker() {
   const initialen = computed(() => (gebruiker.value?.naam ?? '')
     .split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join(''))
 
-  return { gebruiker, melding, start, stuurLink, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, uitloggen, initialen }
+  return { gebruiker, melding, geblokkeerdTot, start, stuurLink, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, uitloggen, initialen }
 }

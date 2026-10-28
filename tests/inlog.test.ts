@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { inlogMoment, naamUitEmail, vanDomein, veiligPad, verlooptOp } from '~/lib/inlog'
+import { FOUT_ADRES, GEEN_POGINGEN, inlogMoment, leesPogingen, naamUitEmail, naFoutAdres, vanDomein, veiligPad, verlooptOp } from '~/lib/inlog'
 
 /** Een access token zoals Supabase het geeft; alleen het middelste deel telt hier. */
 const token = (claims: object) => `kop.${btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}.handtekening`
@@ -27,6 +27,30 @@ describe('inloggen met een link', () => {
     expect(inlogMoment(token({ amr: [{ method: 'oauth', timestamp: 100 }] }))).toBeNull()
     expect(inlogMoment(token({ amr: [{ timestamp: 100 }] }))).toBeNull()
     for (const method of ['otp', 'magiclink', 'email/signup', 'invite']) expect(inlogMoment(token({ amr: [{ method, timestamp: 100 }] }))).toEqual(new Date(100_000))
+  })
+
+  it('zegt bij een fout adres niet welk domein wel mag', () => {
+    expect(FOUT_ADRES).toBe('Foutief of onbekend e-mailadres.')
+    expect(FOUT_ADRES).not.toMatch(/bbdw/i)
+  })
+
+  it('zet het adresveld na vijf foute adressen op rij vijf minuten dicht, en telt daarna opnieuw', () => {
+    const nu = 1_000_000
+    let p = GEEN_POGINGEN
+    for (let i = 1; i <= 4; i++) {
+      p = naFoutAdres(p, nu)
+      expect(p).toEqual({ fout: i, tot: 0 })
+    }
+    p = naFoutAdres(p, nu)
+    expect(p).toEqual({ fout: 0, tot: nu + 5 * 60_000 })
+    expect(naFoutAdres(p, nu + 6 * 60_000)).toEqual({ fout: 1, tot: nu + 5 * 60_000 })
+  })
+
+  it('leest de bewaarde pogingen, en iets anders als geen', () => {
+    expect(leesPogingen(JSON.stringify({ fout: 3, tot: 42 }))).toEqual({ fout: 3, tot: 42 })
+    expect(leesPogingen(null)).toEqual(GEEN_POGINGEN)
+    expect(leesPogingen('{"fout":"x"}')).toEqual(GEEN_POGINGEN)
+    expect(leesPogingen('kapot')).toEqual(GEEN_POGINGEN)
   })
 
   it('stuurt na het inloggen alleen terug naar een pad binnen de app', () => {

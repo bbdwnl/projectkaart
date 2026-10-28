@@ -2,14 +2,14 @@
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { veiligPad } from '~/lib/inlog'
 
-// Inloggen met een link per mail: je vult je adres van bbdw.nl in, krijgt een link, en blijft een week ingelogd.
+// Inloggen met een link per mail: je vult je adres in, krijgt een link, en blijft een week ingelogd. Het scherm zegt
+// niet welk domein mag. Na vijf foute adressen op rij gaat het adresveld vijf minuten dicht, ook dat zonder melding.
 // De link brengt je hier terug met token_hash. Pas met een klik op Inloggen wordt hij gebruikt: de linkscanner van
 // Outlook opent links in de mail vooraf, en zou hem anders opmaken voordat jij erop klikt.
 useHead({ title: 'Inloggen · Projectkaart' })
 const route = useRoute()
 const router = useRouter()
-const { gebruiker, stuurLink, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, melding } = useGebruiker()
-const domein = useRuntimeConfig().public.emailDomein
+const { gebruiker, stuurLink, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, melding, geblokkeerdTot } = useGebruiker()
 const bezig = ref(false)
 const email = ref('')
 const naam = ref('')
@@ -22,6 +22,16 @@ const stap = computed(() => {
   if (tokenHash.value) return 'link'
   return verstuurd.value ? 'verstuurd' : 'adres'
 })
+// Het veld gaat vanzelf weer open als de vijf minuten om zijn.
+const nuMs = ref(Date.now())
+let openKlok: ReturnType<typeof setTimeout> | undefined
+watch(geblokkeerdTot, (tot) => {
+  clearTimeout(openKlok)
+  nuMs.value = Date.now()
+  if (tot > nuMs.value) openKlok = setTimeout(() => { nuMs.value = Date.now() }, tot - nuMs.value + 50)
+}, { immediate: true })
+onBeforeUnmount(() => clearTimeout(openKlok))
+const dicht = computed(() => geblokkeerdTot.value > nuMs.value)
 const terug = () => (typeof route.query.terug === 'string' ? veiligPad(route.query.terug) : terugNaInloggen())
 
 // Een oude link via Supabase zelf (zonder token_hash) die niet meer werkt, komt terug met een foutmelding.
@@ -72,10 +82,10 @@ const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['', ''], 
       <h1>{{ stap === 'naam' ? 'Welkom.' : stap === 'verstuurd' ? 'Kijk in je mail.' : 'Eén plek voor elk project.' }}</h1>
 
       <template v-if="stap === 'adres'">
-        <p class="lead">Vul je e-mailadres van {{ domein }} in. Je krijgt een link per mail; daarmee blijf je op dit apparaat een week ingelogd.</p>
+        <p class="lead">Vul je e-mailadres in. Je krijgt een link per mail; daarmee blijf je op dit apparaat een week ingelogd.</p>
         <div class="login-veld">
           <label for="email">E-mailadres</label>
-          <input id="email" v-model="email" class="veld" type="email" autocomplete="email" inputmode="email" :placeholder="`naam@${domein}`" required>
+          <input id="email" v-model="email" class="veld" type="email" autocomplete="email" inputmode="email" required :disabled="dicht">
         </div>
       </template>
       <template v-else-if="stap === 'verstuurd'">
@@ -93,7 +103,7 @@ const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['', ''], 
         </div>
       </template>
 
-      <button v-if="stap !== 'verstuurd'" type="submit" class="knop zwart groot" :disabled="bezig">{{ KNOP[stap][bezig ? 1 : 0] }}</button>
+      <button v-if="stap !== 'verstuurd'" type="submit" class="knop zwart groot" :disabled="bezig || (stap === 'adres' && dicht)">{{ KNOP[stap][bezig ? 1 : 0] }}</button>
       <p v-if="melding" class="fout-melding" role="alert">{{ melding }}</p>
     </form>
   </main>

@@ -37,6 +37,33 @@ export function inlogMoment(accessToken: string): Date | null {
 /** Tot wanneer een inlog van dit moment geldt. */
 export const verlooptOp = (moment: Date) => new Date(moment.getTime() + INLOGDUUR_DAGEN * 24 * 3600 * 1000)
 
+/** De melding bij een adres dat niet mag: hij zegt niet welk domein wel mag. */
+export const FOUT_ADRES = 'Foutief of onbekend e-mailadres.'
+
+/** Na zoveel foute adressen op rij gaat het adresveld dicht, zonder melding. */
+export const MAX_FOUTE_ADRESSEN = 5
+export const BLOKKADE_MINUTEN = 5
+
+/** Hoeveel foute adressen er op rij waren, en tot wanneer het veld dicht is (ms sinds 1970, 0 = open). */
+export interface Pogingen { fout: number, tot: number }
+export const GEEN_POGINGEN: Pogingen = { fout: 0, tot: 0 }
+
+/** Een fout adres erbij. Bij de vijfde op rij: dicht voor vijf minuten, en daarna begint de telling opnieuw. */
+export function naFoutAdres(p: Pogingen, nu: number): Pogingen {
+  const fout = p.fout + 1
+  return fout >= MAX_FOUTE_ADRESSEN ? { fout: 0, tot: nu + BLOKKADE_MINUTEN * 60_000 } : { fout, tot: p.tot }
+}
+
+/** Wat er bewaard stond; iets dat er niet uitziet als pogingen telt als geen. */
+export function leesPogingen(tekst: string | null): Pogingen {
+  try {
+    const p = JSON.parse(tekst ?? '') as Partial<Pogingen>
+    return Number.isFinite(p.fout) && Number.isFinite(p.tot) ? { fout: p.fout!, tot: p.tot! } : GEEN_POGINGEN
+  } catch {
+    return GEEN_POGINGEN
+  }
+}
+
 /** Alleen een pad binnen de app, zodat een link je niet naar een andere site kan sturen. */
 export const veiligPad = (pad: unknown) => (typeof pad === 'string' && pad.startsWith('/') && !pad.startsWith('//') && !pad.startsWith('/\\') ? pad : '/')
 
