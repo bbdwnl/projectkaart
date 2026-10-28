@@ -7,7 +7,6 @@ import { vandaag } from '~/lib/datum'
 // Alle leads in één lijst (ProjectLijst): wie ze heeft, hoe kansrijk ze zijn en wat er nog nodig is voor de overdracht.
 useHead({ title: 'Leads · Projectkaart' })
 const bron = useBron()
-const { modus } = useGebruiker()
 const { toon } = useToast()
 const nu = vandaag()
 const stand = ref<'laden' | 'klaar' | 'fout'>('laden')
@@ -70,7 +69,6 @@ async function maakLead() {
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'proef'" class="melding">Proefversie. De leads zijn verzonnen voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
     <header class="paginakop kop-met-knop">
       <div>
         <p class="label">Kansen in beeld, nog voor de haalbaarheid</p>

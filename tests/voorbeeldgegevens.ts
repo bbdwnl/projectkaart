@@ -1,14 +1,12 @@
-// Voorbeeldgegevens voor de proefversie. Projectnamen, nummers en datums komen uit het
+// Voorbeeldgegevens voor de tests (vroeger de proefversie). Projectnamen, nummers en datums komen uit het
 // prototype (projecten.json); statussen, mensen, documenten, bedragen en de leads zijn verzonnen.
-// Draait op de server (server/api/proef/gegevens.get.ts), zodat de projectnamen niet in de
-// JavaScript van de browser zitten. Daarom relatieve imports.
-import { GEEN_MELDING, type Controlepunt, type Deellink, type Fase, type Financien, type Leverancier, type LogRegel, type Opmerking, type ProjectLeverancier, type ProjectDiscipline, type Actie, type Adres, type Discipline, type Tekening, type Project, type Soort, type Status, type Taak, type Uitzondering } from '../lib/types'
-import { FASEN, faseIndex, MENSEN } from '../lib/fasen'
-import { LIJSTEN } from '../lib/taken'
-import { deadlineVan } from '../lib/stoplicht'
-import { dagenTussen, naarIso, plusDagen } from '../lib/datum'
-import { leegTaak } from '../lib/taak'
-import { leegProject, maakSlug } from '../lib/leads'
+import { GEEN_MELDING, type Controlepunt, type Deellink, type Fase, type Financien, type Leverancier, type LogRegel, type Opmerking, type ProjectLeverancier, type ProjectDiscipline, type Actie, type Adres, type Discipline, type Tekening, type Project, type Soort, type Status, type Taak, type Uitzondering } from '../app/lib/types'
+import { FASEN, faseIndex, MENSEN } from '../app/lib/fasen'
+import { LIJSTEN } from '../app/lib/taken'
+import { deadlineVan } from '../app/lib/stoplicht'
+import { dagenTussen, naarIso, plusDagen } from '../app/lib/datum'
+import { leegTaak } from '../app/lib/taak'
+import { leegProject, maakSlug } from '../app/lib/leads'
 
 /** Eén regel uit projecten.json. */
 export interface ProjectBasis {
@@ -41,14 +39,11 @@ export interface DemoGegevens {
   acties: Actie[]
   adressen: Adres[]
   controlepunten: Controlepunt[]
-  /** De foto's van de aandachtspunten per pad: een data-URL (alleen in de browser van de tester) of de voorbeeldfoto. */
+  /** De foto's van de aandachtspunten per pad. */
   fotos: Record<string, string>
-  /** De pdf's zelf staan in IndexedDB (demo-bestanden.ts), behalve de voorbeeldtekening (public/). */
   tekeningen: Tekening[]
-  /** Links voor leveranciers. Een kopie staat op de server, zodat ze ook op een ander apparaat werken. */
+  /** Links voor leveranciers. */
   deellinks: Deellink[]
-  /** Welke eigen tekeningen van de tester al bij een link op de server staan: '<token>/<tekening-id>'. */
-  proefUploads?: string[]
 }
 
 /** Vaste "toeval" per sleutel, zodat de demo elke keer hetzelfde is. */

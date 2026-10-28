@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { wisProefbestanden, wisProefgegevens } from '~/data/bron-demo'
 
-const { gebruiker, modus, initialen, uitloggen } = useGebruiker()
+const { gebruiker, initialen, uitloggen } = useGebruiker()
 const route = useRoute()
 const kruimel = useState<{ naam: string, groep: 'leads' | 'haalbaarheid' | 'projecten' } | null>('kruimel', () => null)
 /** De projectnaam achter dit menu-item, als je op een kaart bent. */
@@ -35,13 +34,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', sluit)
   document.removeEventListener('keydown', toets)
 })
-
-/** Proefversie: gooit je eigen wijzigingen weg en laadt de voorbeeldgegevens opnieuw. */
-async function opnieuw() {
-  wisProefgegevens()
-  await wisProefbestanden()
-  location.reload()
-}
 </script>
 
 <template>
@@ -59,15 +51,13 @@ async function opnieuw() {
         </template>
       </nav>
       <div class="rechts">
-        <span v-if="modus === 'proef'" class="tab later alleen-breed" title="Microsoft is nog niet gekoppeld. Voorbeeldgegevens; je wijzigingen blijven in deze browser.">Proefversie</span>
         <div v-if="gebruiker" ref="menu" class="gebruiker-menu alleen-breed">
           <button type="button" class="avatar" :aria-expanded="menuOpen" aria-haspopup="true" :title="gebruiker.naam" @click="menuOpen = !menuOpen">{{ initialen || '?' }}</button>
           <Transition name="pop">
             <div v-if="menuOpen" class="menu-paneel">
               <b>{{ gebruiker.naam }}</b>
-              <span class="klein">{{ gebruiker.email ?? 'Proefversie, zonder account' }}{{ gebruiker.isMt ? ' · MT' : '' }}</span>
+              <span class="klein">{{ gebruiker.email }}{{ gebruiker.isMt ? ' · MT' : '' }}</span>
               <NuxtLink to="/instellingen" class="link">Instellingen</NuxtLink>
-              <button v-if="modus === 'proef'" type="button" class="link" @click="opnieuw">Opnieuw beginnen met de voorbeeldgegevens</button>
               <button type="button" class="link" @click="uitloggen">Uitloggen</button>
             </div>
           </Transition>
@@ -91,9 +81,7 @@ async function opnieuw() {
               </section>
               <section class="mm-groep mm-account">
                 <b>{{ gebruiker.naam }}</b>
-                <span class="klein">{{ gebruiker.email ?? 'Proefversie, zonder account' }}{{ gebruiker.isMt ? ' · MT' : '' }}</span>
-                <span v-if="modus === 'proef'" class="klein">Proefversie: voorbeeldgegevens, je wijzigingen blijven in deze browser.</span>
-                <button v-if="modus === 'proef'" type="button" class="link" @click="opnieuw">Opnieuw beginnen met de voorbeeldgegevens</button>
+                <span class="klein">{{ gebruiker.email }}{{ gebruiker.isMt ? ' · MT' : '' }}</span>
                 <button type="button" class="link" @click="uitloggen">Uitloggen</button>
               </section>
             </div>

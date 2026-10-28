@@ -10,7 +10,6 @@ import { fmt, fmtMoment, vandaag } from '~/lib/datum'
 // Delen: de pdf via de telefoon, of een link voor een leverancier naar een eigen pagina (ControleDelen).
 useHead({ title: 'Controle · Projectkaart' })
 const bron = useBron()
-const { modus } = useGebruiker()
 const { toon } = useToast()
 const route = useRoute()
 const router = useRouter()
@@ -201,7 +200,6 @@ const gedeeld = computed(() => (keuze.indeling === 'leverancier' && keuze.gekoze
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'proef'" class="melding">Proefversie. De aandachtspunten zijn voorbeeldgegevens, allemaal met dezelfde foto. Je wijzigingen blijven alleen in deze browser.</p>
     <header class="paginakop">
       <p class="label">Over alle projecten</p>
       <h1>Controle</h1>

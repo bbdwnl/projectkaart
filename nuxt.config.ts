@@ -13,7 +13,7 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
 
   // Client-side only: the Supabase login session lives in localStorage and
-  // every page sits behind the Microsoft login.
+  // every page sits behind the login (a link by e-mail).
   ssr: false,
 
   // Fonts are self-hosted from npm (no request to Google on page load).
@@ -46,18 +46,11 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    // Tijdelijk: wachtwoord voor de proefversie (NUXT_PROEF_WACHTWOORD). Leeg = geen wachtwoord.
-    // Wordt op de server gecontroleerd; komt nooit in de browser.
-    proefWachtwoord: '',
     // De service-sleutel van Supabase (NUXT_SUPABASE_SERVICE_KEY), alleen op de server: daarmee leest
     // server/api/punten de open punten voor de pagina van een leverancier. Leeg = delen werkt nog niet.
     supabaseServiceKey: '',
     public: {
-      // Proefversie: Microsoft is nog niet gekoppeld. De inlogknop laat je zonder account
-      // binnen en alles draait op voorbeeldgegevens in de browser van de tester.
-      // Zet op false (NUXT_PUBLIC_PROEFVERSIE=false) zodra de Microsoft-login werkt.
-      proefversie: true,
-      // Leeg = ook de proefversie.
+      // Supabase (NUXT_PUBLIC_SUPABASE_URL en _KEY). Verplicht: zonder start de app niet.
       supabaseUrl: '',
       supabaseKey: '',
       // Alleen accounts met dit e-maildomein komen erin (ook afgedwongen in RLS).

@@ -1,4 +1,4 @@
-import { GEEN_MELDING, type Controlepunt, type ControlepuntWijziging } from './types'
+import type { Controlepunt } from './types'
 
 // Controle: de lijst met aandachtspunten op de projectkaart.
 
@@ -27,25 +27,6 @@ const VOLGORDE: Record<PuntStand, number> = { controleren: 0, afgekeurd: 1, open
 /** Wat BbDW moet controleren eerst, dan de open punten, dan opgelost; daarbinnen het nieuwste bovenaan. */
 export function sorteerPunten(punten: Controlepunt[]): Controlepunt[] {
   return [...punten].sort((a, b) => VOLGORDE[puntStand(a)] - VOLGORDE[puntStand(b)] || Date.parse(b.aangemaakt_op) - Date.parse(a.aangemaakt_op))
-}
-
-/**
- * Zoals de trigger controlepunt_bijwerken: wat er met de meldingen van een punt gebeurt bij een wijziging door BbDW.
- * Voor de proefversie, zodat die hetzelfde doet als de database.
- */
-export function meldingNaWijziging(p: Controlepunt, w: ControlepuntWijziging, wie: string, nu: Date): Partial<Controlepunt> {
-  const opgelost = w.opgelost ?? p.opgelost
-  if (p.opgelost && !opgelost) return { ...GEEN_MELDING }
-  if (p.gereed_op && w.gereed_op === null && !opgelost) {
-    return { gereed_op: null, gereed_door: null, afgekeurd_op: nu.toISOString(), afgekeurd_door: wie, afgekeurd_reden: w.afgekeurd_reden?.trim() || null }
-  }
-  return {}
-}
-
-/** De leverancier meldt een open punt opgelost, of draait dat terug (zoals de trigger bij de server). null: kan niet. */
-export function gereedMelding(p: Controlepunt, gereed: boolean, leverancier: string, nu: Date): Partial<Controlepunt> | null {
-  if (p.opgelost) return null
-  return gereed ? { gereed_op: p.gereed_op ?? nu.toISOString(), gereed_door: leverancier } : { gereed_op: null, gereed_door: null }
 }
 
 /** Waar de foto van een nieuw punt komt te staan: een eigen map per project. */

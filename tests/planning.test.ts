@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import projecten from '~/data/projecten.json'
-import { maakDemoGegevens } from '~/data/demo'
 import { leegProject } from '~/lib/leads'
 import { bezetting, planRegels, segmentenVan, tijdas } from '~/lib/planning'
 import type { Project } from '~/lib/types'
@@ -72,17 +70,5 @@ describe('planningsoverzicht', () => {
     expect(bezetting(r, as.maanden).find(m => m.maand.getFullYear() === 2027 && m.maand.getMonth() === 2)!.prognose).toBe(1)
     // Is de buddy ook de verantwoordelijke, dan geen tweede regel.
     expect(planRegels([project({ fase: 'haalbaarheid', am: 'Jeroen', buddy: 'Jeroen' })], nu)).toHaveLength(1)
-  })
-
-  it('heeft in de proefversie prognoses die samenvallen met lopende projecten, ook bij dezelfde persoon', () => {
-    const g = maakDemoGegevens(nu, projecten)
-    const r = planRegels(g.projecten, nu)
-    const as = tijdas(r, nu)
-    expect(bezetting(r, as.maanden).filter(x => x.lopend > 0 && x.prognose > 0).length).toBeGreaterThanOrEqual(6)
-    for (const wie of ['Michiel', 'Benno']) {
-      const eigen = r.filter(x => x.wie === wie)
-      expect(eigen.some(x => x.laag === 'prognose'), wie).toBe(true)
-      expect(bezetting(eigen, as.maanden).some(x => x.lopend > 0 && x.prognose > 0), wie).toBe(true)
-    }
   })
 })

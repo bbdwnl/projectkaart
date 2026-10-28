@@ -142,8 +142,10 @@ export interface LogRegel {
 
 export interface Gebruiker {
   naam: string
-  email: string | null
+  email: string
   isMt: boolean
+  /** Nog geen naam opgegeven (een link per mail geeft er geen mee): de loginpagina vraagt hem eerst. */
+  naamNodig?: boolean
 }
 
 /**
@@ -233,8 +235,6 @@ export interface Deellink {
   bekeken_op: string | null
   aangemaakt_door: string | null
   aangemaakt_op: string
-  /** Alleen in de proefversie: de kopie staat op de server, dus de link werkt ook op een ander apparaat. */
-  op_server?: boolean
 }
 
 export type PlekVeld = 'tekening_id' | 'tekening_blad' | 'tekening_x' | 'tekening_y'

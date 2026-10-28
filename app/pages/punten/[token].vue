@@ -14,7 +14,6 @@ import { fmt } from '~/lib/datum'
 definePageMeta({ extern: true })
 useHead({ title: 'Open punten · BbDW', meta: [{ name: 'referrer', content: 'no-referrer' }] })
 const bron = useBron()
-const { modus } = useGebruiker()
 const { toon } = useToast()
 const route = useRoute()
 const token = String(route.params.token ?? '')
@@ -259,7 +258,6 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
 
     <div v-else-if="stand === 'code'" class="poort">
       <form class="kaart poort-kaart" novalidate @submit.prevent="verstuur">
-        <span v-if="modus === 'proef'" class="tab later">Proefversie</span>
         <BbdwLogo class="login-logo" />
         <p class="label">Open punten</p>
         <h1>Vul je code in.</h1>
@@ -273,7 +271,6 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
         </label>
         <button type="submit" class="knop zwart groot" :disabled="bezig">{{ bezig ? 'Openen…' : 'Openen' }}</button>
         <p v-if="codeMelding" id="code-melding" class="fout-melding" role="alert">{{ codeMelding }}</p>
-        <p v-if="modus === 'proef'" class="proef-uitleg">Proefversie van de projectkaart van BbDW. Wie de link maakte, vindt de code onder Controle → Delen met extern.</p>
       </form>
     </div>
 
@@ -295,7 +292,6 @@ onBeforeUnmount(() => document.removeEventListener('visibilitychange', terugGeko
             <BbdwLogo class="extern-logo" />
             <span class="tab nu">Geldig tot {{ geldigTot }}</span>
           </div>
-          <p v-if="modus === 'proef'" class="melding">Proefversie van de projectkaart: dit zijn voorbeeldgegevens.</p>
           <p class="label">Open punten voor<template v-if="inhoud.leverancier.vak"> · {{ inhoud.leverancier.vak }}</template></p>
           <h1>{{ inhoud.leverancier.naam }}</h1>
           <p class="zin extern-zin">{{ zin }}</p>

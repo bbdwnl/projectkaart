@@ -60,7 +60,6 @@ textarea.veld{height:auto;min-height:64px;padding:8px 10px;resize:vertical;width
 .nav a[aria-current]{border-color:var(--zwart)}
 .balk .rechts{margin-left:auto;display:flex;align-items:center;gap:14px}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--verloop-zwart);color:var(--wit);display:grid;place-items:center;font-size:12px;font-weight:700;letter-spacing:.04em}
-.melding{font-size:13px;color:var(--stil);padding:10px 0 0}
 
 section.blok{padding:58px 0 0}
 .blokkop{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap}
@@ -901,11 +900,12 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .velden .naast{grid-template-columns:1fr}
 }
 
-/* proefversie op de inlogpagina */
-.proef-uitleg{margin:20px 0 0;padding:14px 16px;border-radius:var(--radius);background:var(--grijs-2);font-size:14px;line-height:21px;color:#3d3d3d}
-.wachtwoord{display:grid;gap:6px;margin:0 0 16px;max-width:320px}
-.wachtwoord label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.wachtwoord .veld{height:42px;font-size:15px}
+.login-veld{display:grid;gap:6px;margin:0 0 16px;max-width:360px}
+.login-veld label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.login-veld .veld{height:42px;font-size:15px}
+.login-kaart .lead b{font-weight:700;overflow-wrap:anywhere}
+.login-kaart .klein{margin:0;color:var(--stil)}
+.login-kaart .klein .link{font-size:inherit}
 
 /* controle: delen met extern (de pdf, en een link voor een leverancier) */
 .delen{width:min(620px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:0;border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog);background:var(--wit);color:var(--zwart);overscroll-behavior:contain}
@@ -918,7 +918,6 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .delen-deel{display:grid;gap:12px;margin-top:20px;padding-top:20px;border-top:var(--lijn-dun)}
 .delen-deel h3{font-weight:900;font-size:20px;letter-spacing:-.02em}
 .delen-deel>p.klein{margin:-4px 0 0}
-.delen-deel .melding{padding:0}
 .delen-veld{display:grid;gap:6px}
 .delen-veld .label{margin:0}
 .delen-veld .veld{width:100%;height:40px}
@@ -953,7 +952,6 @@ a.knop{text-decoration:none}
 .extern-kop{padding:28px 0 8px}
 .extern-balk{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:44px}
 .extern-logo{display:block;width:130px;height:auto}
-.extern-kop .melding{padding:0 0 14px}
 .extern-kop .label{margin:0 0 14px}
 .extern-zin{min-height:0;margin-top:18px}
 .extern-uitleg{margin:12px 0 0;max-width:36em;color:#3d3d3d}

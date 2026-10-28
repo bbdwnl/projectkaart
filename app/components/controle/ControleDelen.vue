@@ -17,7 +17,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ sluit: [], link: [link: Deellink] }>()
 const bron = useBron()
-const { gebruiker, modus } = useGebruiker()
+const { gebruiker } = useGebruiker()
 const { toon } = useToast()
 const venster = ref<HTMLDialogElement>()
 onMounted(() => venster.value?.showModal())
@@ -177,10 +177,6 @@ async function deelLink() {
             </div>
           </div>
         </template>
-        <p v-if="modus === 'proef'" class="melding">
-          <template v-if="actief && !actief.op_server">Proefversie: deze link werkt nu alleen in deze browser, want de server kon hem (nog) niet opslaan. Open dit venster later opnieuw; dan probeert hij het nog eens.</template>
-          <template v-else>Proefversie: wat de leverancier ziet, gaat als kopie uit deze browser naar de server, zodat de link ook op een ander apparaat werkt. Verander je iets, dan gaat de kopie mee.</template>
-        </p>
       </section>
     </div>
   </dialog>

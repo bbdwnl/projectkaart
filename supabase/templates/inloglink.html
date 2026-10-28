@@ -1,0 +1,13 @@
+<!-- De mail met de inloglink. In Supabase: Authentication → Emails → Templates, bij "Magic link" én "Confirm signup"
+     (de eerste keer is je account nieuw). Onderwerp: Je inloglink voor de Projectkaart.
+     De link gaat naar de loginpagina van de app, niet naar Supabase: pas met een klik op Inloggen wordt hij gebruikt.
+     Zo maakt de linkscanner van Outlook hem niet op, en werkt hij ook in een andere browser dan waar je hem aanvroeg. -->
+<div style="font-family: Arial, Helvetica, sans-serif; font-size: 15px; line-height: 22px; color: #111; max-width: 480px">
+  <p>Hallo,</p>
+  <p>Met deze link log je in op de Projectkaart van BbDW. Daarna blijf je een week ingelogd op dat apparaat.</p>
+  <p style="margin: 28px 0">
+    <a href="{{ .SiteURL }}/login?token_hash={{ .TokenHash }}&type=email"
+       style="background: #111; color: #fff; padding: 12px 22px; border-radius: 999px; text-decoration: none; font-weight: bold">Inloggen op de Projectkaart</a>
+  </p>
+  <p style="color: #555; font-size: 13px; line-height: 19px">De link werkt één keer en een uur lang. Heb je hem niet aangevraagd? Dan kun je deze mail negeren.</p>
+</div>

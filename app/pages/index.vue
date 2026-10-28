@@ -10,7 +10,6 @@ import { signalen, SOORTEN } from '~/lib/signalen'
 // Daarnaast een planningsoverzicht, te filteren op fase, en wat daarin opvalt. Leads en haalbaarheid hebben een eigen pagina.
 useHead({ title: 'Projecten · Projectkaart' })
 const bron = useBron()
-const { modus } = useGebruiker()
 const { toon } = useToast()
 const nu = vandaag()
 const stand = ref<'laden' | 'klaar' | 'fout'>('laden')
@@ -102,7 +101,6 @@ async function maakProject() {
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'proef'" class="melding">Proefversie. De projecten en datums komen uit het prototype; statussen, mensen en documenten zijn voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
     <header class="paginakop kop-met-knop">
       <div>
         <p class="label">Ontwikkeling, uitvoering en nazorg</p>

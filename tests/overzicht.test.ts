@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import projecten from '~/data/projecten.json'
-import { maakDemoGegevens } from '~/data/demo'
+import { maakDemoGegevens } from './voorbeeldgegevens'
 import { balkTekst, kaartjesVan, KOLOMMEN, leesSortering, pastWie, personen, sorteerKaartjes, vindt, voornaam } from '~/lib/overzicht'
 import { ORDE } from '~/lib/stoplicht'
 

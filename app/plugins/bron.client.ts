@@ -1,28 +1,14 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { Bron } from '~/data/bron'
-import type { DemoGegevens } from '~/data/demo'
-import { maakDemoBron, PROEF_OPSLAG } from '~/data/bron-demo'
+import { createClient } from '@supabase/supabase-js'
 import { maakSupabaseBron } from '~/data/bron-supabase'
-import { maakProefServer } from '~/data/proef-server'
 
-// Kiest de bron. Proefversie (of geen Supabase ingesteld): nep-login en voorbeeldgegevens,
-// bewaard in de browser van de tester. De gegevens komen van de server, en alleen met het
-// wachtwoord van de proefversie als dat is ingesteld. Anders: Microsoft-login en de echte database.
-// Herstelt de inlogsessie voordat de route-middleware draait.
+// De bron is Supabase: inloggen met een link per mail en de echte database. Zonder NUXT_PUBLIC_SUPABASE_URL en
+// NUXT_PUBLIC_SUPABASE_KEY start de app niet. Herstelt de inlogsessie voordat de route-middleware draait.
 export default defineNuxtPlugin(async () => {
   const config = useRuntimeConfig().public
-  const proef = config.proefversie || !(config.supabaseUrl && config.supabaseKey)
-  let supabase: SupabaseClient | null = null
-  let bron: Bron
-  let proefToegang = true
-  if (proef) {
-    const gegevens = await $fetch<DemoGegevens>('/api/proef/gegevens').catch(() => null)
-    proefToegang = !!gegevens
-    bron = maakDemoBron({ door: 'Jij', naam: 'Testgebruiker', opslag: PROEF_OPSLAG, gegevens, server: maakProefServer(config.supabaseKey) })
-  } else {
-    supabase = createClient(config.supabaseUrl, config.supabaseKey, { auth: { flowType: 'pkce' } })
-    bron = maakSupabaseBron(supabase)
+  if (!config.supabaseUrl || !config.supabaseKey) {
+    throw new Error('Supabase is niet ingesteld: zet NUXT_PUBLIC_SUPABASE_URL en NUXT_PUBLIC_SUPABASE_KEY (zie .env.example).')
   }
-  await useGebruiker().start(supabase, config.emailDomein, proefToegang)
-  return { provide: { bron, supabase } }
+  const supabase = createClient(config.supabaseUrl, config.supabaseKey, { auth: { flowType: 'pkce' } })
+  await useGebruiker().start(supabase, config.emailDomein)
+  return { provide: { bron: maakSupabaseBron(supabase), supabase } }
 })

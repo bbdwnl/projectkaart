@@ -3,7 +3,6 @@ import { samen, takenVan } from './stoplicht'
 import { adresRegel } from './adres'
 
 // Het overzicht van Leads en van Haalbaarheid: alle projecten in die fase, met filters en sortering.
-// Relatieve imports: de proefversie maakt hiermee ook voorbeeldleads op de server.
 
 /** De slagingskans zoals de database hem toestaat. */
 export const SLAGINGSKANSEN = [0, 25, 50, 75, 100] as const
@@ -152,7 +151,7 @@ export function maakSlug(naam: string, bestaand: string[]): string {
   return slug
 }
 
-/** Een volledig project, standaard in de fase lead, voor de proefversie. */
+/** Een volledig project met alles leeg, standaard in de fase lead (voor tests). */
 export function leegProject(extra: Partial<Project> & Pick<Project, 'id' | 'slug' | 'naam'>): Project {
   return {
     nummer: null, postcode: null, huisnummer: null, straat: null, plaats: null, bag_id: null, fase: 'lead', subfase: null, prio: false, wachtkamer: false, soort: [], m2: null,

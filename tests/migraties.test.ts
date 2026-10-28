@@ -24,10 +24,15 @@ const AUTH_STUB = `
 const map = new URL('../supabase/', import.meta.url)
 const migraties = readdirSync(new URL('migrations/', map)).sort().map(f => readFileSync(new URL(`migrations/${f}`, map), 'utf8'))
 
-const MICHIEL = { sub: '00000000-0000-0000-0000-000000000001', email: 'michiel@bbdw.nl', app_metadata: { provider: 'azure' }, user_metadata: { full_name: 'Michiel' } }
-const BENNO = { sub: '00000000-0000-0000-0000-000000000002', email: 'benno@bbdw.nl', app_metadata: { provider: 'azure' }, user_metadata: { full_name: 'Benno van Bergen' } }
-const VREEMD = { sub: '00000000-0000-0000-0000-000000000003', email: 'iemand@gmail.com', app_metadata: { provider: 'azure' }, user_metadata: {} }
-const WACHTWOORD = { ...MICHIEL, sub: '00000000-0000-0000-0000-000000000004', app_metadata: { provider: 'email' } }
+// Ingelogd met een link per mail: amr zegt wanneer (in seconden), zoals in het token van Supabase.
+const ingelogd = (dagenGeleden = 0) => [{ method: 'otp', timestamp: Math.floor(Date.now() / 1000) - dagenGeleden * 24 * 3600 }]
+const MICHIEL = { sub: '00000000-0000-0000-0000-000000000001', email: 'michiel@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: { full_name: 'Michiel' }, amr: ingelogd() }
+const BENNO = { sub: '00000000-0000-0000-0000-000000000002', email: 'benno@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: { full_name: 'Benno van Bergen' }, amr: ingelogd() }
+const VREEMD = { sub: '00000000-0000-0000-0000-000000000003', email: 'iemand@gmail.com', app_metadata: { provider: 'email' }, user_metadata: {}, amr: ingelogd() }
+const VERLOPEN = { ...MICHIEL, amr: ingelogd(8) }
+const ZONDER_MOMENT = { ...MICHIEL, amr: undefined }
+// Iemand die vooraf met een eigen wachtwoord een account op het adres van een collega aanmaakte.
+const WACHTWOORD = { ...MICHIEL, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }] }
 
 let db: PGlite
 let projectId: string
@@ -65,10 +70,25 @@ describe('seed', () => {
 })
 
 describe('rechten', () => {
-  it('laat alleen Microsoft-accounts van het BBDW-domein binnen', async () => {
+  it('laat alleen adressen van het BBDW-domein binnen, alleen via een link, en een inlog maar een week', async () => {
     expect(await als(MICHIEL, `select id from public.projecten`)).toHaveLength(27)
+    expect(await als({ ...MICHIEL, amr: ingelogd(6.9) }, `select id from public.projecten`)).toHaveLength(27)
     expect(await als(VREEMD, `select id from public.projecten`)).toHaveLength(0)
+    expect(await als(VERLOPEN, `select id from public.projecten`)).toHaveLength(0)
+    expect(await als(ZONDER_MOMENT, `select id from public.projecten`)).toHaveLength(0)
     expect(await als(WACHTWOORD, `select id from public.projecten`)).toHaveLength(0)
+    expect(await als({ ...MICHIEL, amr: [{ method: 'magiclink', timestamp: Math.floor(Date.now() / 1000) }] }, `select id from public.projecten`)).toHaveLength(27)
+  })
+  it('maakt geen account voor een adres buiten het BBDW-domein', async () => {
+    await expect(db.query(`insert into auth.users (id, email) values (gen_random_uuid(), 'iemand@gmail.com')`)).rejects.toThrow(/bbdw\.nl/)
+    await expect(db.query(`update auth.users set email = 'michiel@gmail.com' where id = $1`, [MICHIEL.sub])).rejects.toThrow(/bbdw\.nl/)
+  })
+  it('zet de naam uit het profiel in het logboek, ook zonder naam in het token', async () => {
+    const LINK = { sub: '00000000-0000-0000-0000-000000000005', email: 'jan.de.vries@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: {}, amr: ingelogd() }
+    await db.query(`insert into auth.users (id, email) values ($1, $2)`, [LINK.sub, LINK.email])
+    expect(await als(LINK, `select public.wie() as wie`)).toEqual([{ wie: 'jan.de.vries@bbdw.nl' }])
+    await als(LINK, `update public.profielen set naam = 'Jan de Vries' where id = $1`, [LINK.sub])
+    expect(await als(LINK, `select public.wie() as wie`)).toEqual([{ wie: 'Jan de Vries' }])
   })
   it('toont de financiën alleen aan het MT', async () => {
     await db.query(`insert into public.financien (project_id, opdracht_uren) values ($1, 78500)`, [projectId])
@@ -400,24 +420,9 @@ describe('deellinks', () => {
   })
 })
 
-describe('proefversie: kopie van een deellink', () => {
-  const SERVER = { role: 'service_role' }
-  const insert = `insert into public.proef_deellinks (token, code, geldig_tot, inhoud) values ($1, '23456', now() + $2::interval, '{"punten":[]}') returning token`
-
-  it('is alleen voor de server: medewerkers en anonieme bezoekers kunnen er niet bij', async () => {
-    expect(await als(SERVER, insert, ['d'.repeat(64), '1 month'], 'service_role')).toHaveLength(1)
-    expect(await als(MICHIEL, `select token from public.proef_deellinks`)).toHaveLength(0)
-    expect(await als({ role: 'anon' }, `select token from public.proef_deellinks`, [], 'anon')).toHaveLength(0)
-    await expect(als(MICHIEL, insert, ['e'.repeat(64), '1 day'])).rejects.toThrow()
-  })
-  it('is ook in de proefversie hooguit een maand geldig, met een code van 2 tot 9', async () => {
-    await expect(als(SERVER, insert, ['f'.repeat(64), '3 months'], 'service_role')).rejects.toThrow()
-    await expect(als(SERVER, `insert into public.proef_deellinks (token, code, geldig_tot, inhoud) values ($1, '10234', now(), '{}')`, ['0'.repeat(64)], 'service_role')).rejects.toThrow()
-  })
-  it('heeft een besloten bucket voor de tekeningen van testers', async () => {
-    const [b] = (await db.query<{ public: boolean, allowed_mime_types: string[] }>(`select public, allowed_mime_types from storage.buckets where id = 'proef'`)).rows
-    expect(b).toEqual({ public: false, allowed_mime_types: ['application/pdf'] })
-    await expect(als(MICHIEL, `insert into storage.objects (bucket_id, name) values ('proef', 'x/y.pdf')`)).rejects.toThrow()
+describe('proefversie', () => {
+  it('is weg: geen tabel meer voor kopieën van deellinks', async () => {
+    expect((await db.query(`select to_regclass('public.proef_deellinks') as t`)).rows).toEqual([{ t: null }])
   })
 })
 
@@ -473,13 +478,5 @@ describe('opgelost melden (leverancier) en aftekenen (BbDW)', () => {
   it('weer open: de melding en de oude afkeuring vervallen', async () => {
     await als(MICHIEL, `update public.controlepunten set opgelost = false where id = $1`, [punt])
     expect(await stand(punt)).toMatchObject({ opgelost: false, gereed_op: null, gereed_door: null, afgekeurd_reden: null })
-  })
-})
-
-describe('proefversie: wat de leverancier afvinkte', () => {
-  it('bewaart de meldingen per link, standaard leeg', async () => {
-    const [r] = await als<{ gereed: Record<string, string> }>({ role: 'service_role' },
-      `insert into public.proef_deellinks (token, code, geldig_tot, inhoud) values ($1, '23456', now(), '{}') returning gereed`, ['9'.repeat(64)], 'service_role')
-    expect(r!.gereed).toEqual({})
   })
 })

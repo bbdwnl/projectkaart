@@ -7,7 +7,6 @@ import { vandaag } from '~/lib/datum'
 // planningsoverzicht waarin de prognose over de lopende projecten heen valt, zodat je de overlap ziet.
 useHead({ title: 'Haalbaarheid · Projectkaart' })
 const bron = useBron()
-const { modus } = useGebruiker()
 const nu = vandaag()
 const stand = ref<'laden' | 'klaar' | 'fout'>('laden')
 const fout = ref('')
@@ -44,7 +43,6 @@ const zin = computed(() => {
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'proef'" class="melding">Proefversie. De projecten en datums komen uit het prototype; statussen, mensen, prognoses en documenten zijn voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
     <header class="paginakop">
       <p class="label">Na de lead, voor de ontwikkeling</p>
       <h1>Haalbaarheid</h1>

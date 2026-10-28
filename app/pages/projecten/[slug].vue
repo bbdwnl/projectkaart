@@ -6,7 +6,6 @@ const route = useRoute()
 const kaart = useProjectkaart(String(route.params.slug))
 const { project, stand, fout, lichten, mijlpaal, tabFase, filter, openPunten, openActies, nu } = kaart
 const { weergave } = useWeergave()
-const { modus } = useGebruiker()
 
 // Een link met #taken, #proces, #acties, #controle of #details opent dat tabblad; anders het laatst gebruikte.
 const uitLink = route.hash.slice(1) as Tab
@@ -63,7 +62,6 @@ function planning() {
 
 <template>
   <main class="wrap">
-    <p v-if="modus === 'proef'" class="melding">Proefversie. Naam, projectnummer en datums komen uit het prototype; statussen, mensen, documenten en bedragen zijn voorbeeldgegevens. Je wijzigingen blijven alleen in deze browser.</p>
 
     <div v-if="stand === 'laden'" class="laden" aria-busy="true">
       <span class="laden-regel kort" /><span class="laden-regel titel" /><span class="laden-regel" /><span class="laden-regel" />

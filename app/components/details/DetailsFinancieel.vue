@@ -1,7 +1,6 @@
 <script setup lang="ts">
 // Alleen voor het MT (ook afgedwongen in de database).
 const { financien } = useKaart()
-const { modus } = useGebruiker()
 
 const n = (v: number | null | undefined) => v ?? 0
 const euro = (v: number | null | undefined) => v === null || v === undefined ? '—' : `€${Math.round(v).toLocaleString('nl-NL')}`
@@ -46,7 +45,7 @@ onMounted(async () => {
     <div class="blokkop">
       <div>
         <h2>Financieel</h2>
-        <p class="klein">Alleen zichtbaar voor het MT.<template v-if="modus === 'proef'"> Voorbeeldbedragen.</template></p>
+        <p class="klein">Alleen zichtbaar voor het MT.</p>
       </div>
       <span class="tab later">Alleen MT</span>
     </div>

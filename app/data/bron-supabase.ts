@@ -36,8 +36,6 @@ async function viaServer<T>(pad: string, body: { code: string } & Record<string,
 /** De echte bron: Supabase in Frankfurt. Wat iemand mag, regelt RLS in de database. */
 export function maakSupabaseBron(sb: SupabaseClient): Bron {
   return {
-    modus: 'supabase',
-
     async projecten() {
       return uitkomst(await sb.from('projecten').select('*').order('naam'), 'projecten laden') as Project[]
     },

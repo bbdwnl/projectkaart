@@ -191,7 +191,7 @@ watch(nadruk, async (id) => {
         >
         <template v-else-if="bestand">
           <a v-if="bestand.url" class="doc" :href="bestand.url" target="_blank" rel="noopener" :title="bestand.naam"><span>{{ bestand.naam }}</span>↗</a>
-          <span v-else class="doc" :title="`${bestand.naam} (voorbeeldbestand, geen link)`"><span>{{ bestand.naam }}</span></span>
+          <span v-else class="doc" :title="`${bestand.naam} (zonder link)`"><span>{{ bestand.naam }}</span></span>
           <button type="button" class="doc-wijzig" title="Andere link, of leeg laten om het document weg te halen" :aria-label="`Ander document bij ${regel.titel}`" @click="bewerkDocument">
             <svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2l3 3-8 8H3v-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
           </button>

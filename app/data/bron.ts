@@ -1,12 +1,8 @@
 import type { Actie, ActieWijziging, Adres, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { ExternAntwoord } from '~/lib/deellink'
 
-/**
- * Waar de gegevens vandaan komen. Twee uitvoeringen: Supabase (echt) en demo
- * (in het geheugen, met voorbeeldgegevens, zonder backend).
- */
+/** Waar de gegevens vandaan komen: Supabase (bron-supabase.ts). De schermen praten alleen met deze interface. */
 export interface Bron {
-  modus: 'demo' | 'supabase'
   projecten(): Promise<Project[]>
   project(slug: string): Promise<Project | null>
   /** Alle taken, of die van één project. */
