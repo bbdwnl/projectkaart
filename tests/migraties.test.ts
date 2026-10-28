@@ -192,6 +192,16 @@ describe('aftekenen en logboek', () => {
     expect(log).toEqual([{ veld: 'afgehandeld', nieuw: 'true' }])
   })
 
+  it('bewaart feedback van een medewerker, met wie en wanneer; alleen het MT leest hem', async () => {
+    await als(MICHIEL, `insert into public.feedback (tekst, pad, plek_x, plek_y, element, door) values ('Knop staat scheef', '/projecten/vlijtseweg', 120, 840, 'button.knop "Opslaan"', 'Vervalst')`)
+    await expect(als(MICHIEL, `insert into public.feedback (tekst, pad, plek_x) values ('Alleen x', '/', 10)`)).rejects.toThrow()
+    await expect(als(MICHIEL, `insert into public.feedback (tekst, pad) values ('   ', '/')`)).rejects.toThrow()
+    await expect(als(VREEMD, `insert into public.feedback (tekst, pad) values ('Van buiten', '/')`)).rejects.toThrow()
+    expect(await als(MICHIEL, `select id from public.feedback`)).toHaveLength(0)
+    const rijen = await als<{ door: string, plek_y: number, afgehandeld: boolean }>(BENNO, `select door, plek_y, afgehandeld from public.feedback`)
+    expect(rijen).toEqual([{ door: 'Michiel', plek_y: 840, afgehandeld: false }])
+  })
+
   it('logt een uitzondering die erbij komt en weer weggaat', async () => {
     const [u] = await als<{ id: string, aangemaakt_door: string }>(MICHIEL,
       `insert into public.uitzonderingen (titel, fase) values ('Extra bodemonderzoek (PFAS)', 'ontwikkeling') returning id, aangemaakt_door`)

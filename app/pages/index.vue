@@ -101,7 +101,7 @@ async function maakProject() {
       nummer: nieuw.nummer.trim() || null,
       [nieuwRol.value]: nieuw.wie || null,
     })
-    toon(`${p.naam} is aangemaakt`)
+    toon('Project aangemaakt. Vul de details verder in, of ga naar Proces & Planning voor de deadlines.', 'ok', 6000)
     await navigateTo(`/projecten/${p.slug}#details`)
   } catch (e) {
     toon(foutTekst(e), 'fout')

@@ -280,10 +280,10 @@ section.blok{padding:58px 0 0}
 .log time{display:block;font-size:12.5px;color:var(--stil)}
 
 /* ---------- toast ---------- */
-.toast{position:fixed;left:50%;bottom:26px;z-index:50;transform:translate(-50%,0);background:var(--verloop-zwart);color:var(--wit);border-radius:var(--rond);padding:11px 20px 11px 14px;font-size:14px;display:flex;gap:10px;align-items:center;box-shadow:var(--zacht-hoog);transition:transform .5s var(--veer)}
+.toast{position:fixed;left:50%;bottom:26px;z-index:50;transform:translate(-50%,0);background:var(--verloop-zwart);color:var(--wit);border-radius:var(--rond);padding:11px 20px 11px 14px;max-width:calc(100vw - 32px);width:max-content;font-size:14px;line-height:20px;display:flex;gap:10px;align-items:center;box-shadow:var(--zacht-hoog);transition:transform .5s var(--veer)}
 .toast.fout i{background:var(--baksteen)}
 .toast-enter-from,.toast-leave-to{transform:translate(-50%,140%)}
-.toast i{width:10px;height:10px;border-radius:50%;background:var(--salie)}
+.toast i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--salie)}
 
 footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 
@@ -997,3 +997,24 @@ a.knop{text-decoration:none}
   .extern-project-kop .knop,.extern-acties>.knop{width:100%;justify-content:center}
   .poort-kaart{padding:34px 22px 28px}
 }
+
+/* ---------- feedback (knop rechtsonder) ---------- */
+.feedback-knop{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));z-index:45;display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px 0 14px;border:0;border-radius:var(--rond);background:var(--verloop-zwart);color:var(--wit);font-size:14px;font-weight:700;cursor:pointer;box-shadow:var(--zacht-hoog);transition:transform .3s var(--veer)}
+.feedback-knop:hover{transform:translateY(-2px)}
+.feedback-paneel{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:calc(max(20px,env(safe-area-inset-bottom)) + 52px);z-index:45;width:min(340px,calc(100vw - 32px));display:grid;gap:12px;background:var(--wit);border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog);padding:14px 16px 16px;transform-origin:bottom right}
+.feedback-titel{margin:0;font-weight:700;font-size:15px;line-height:20px}
+.feedback-paneel label{display:grid;gap:6px}
+.feedback-paneel .label{margin:0}
+.feedback-paneel .veld{width:100%}
+.feedback-plek{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.feedback-plek .klein{display:inline-flex;align-items:center;gap:6px;color:var(--zwart)}
+.feedback-stip{width:10px;height:10px;border-radius:50%;background:var(--blauw);border:2px solid var(--zwart)}
+.feedback-paneel .knoppen{display:flex;align-items:center;gap:14px}
+.feedback-markeer{position:fixed;inset:0;z-index:70;cursor:crosshair;background:rgba(17,17,17,.06)}
+.feedback-hint{position:fixed;left:50%;top:max(16px,env(safe-area-inset-top));transform:translateX(-50%);margin:0;display:flex;align-items:center;gap:12px;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:var(--rond);background:var(--verloop-zwart);color:var(--wit);font-size:14px;font-weight:600;box-shadow:var(--zacht-hoog);cursor:default}
+.feedback-hint .link{color:var(--wit)}
+.feedback-speld{position:absolute;z-index:44;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--blauw);border:3px solid var(--zwart);box-shadow:0 0 0 6px rgba(255,255,255,.7);pointer-events:none;animation:stempel .55s var(--veer)}
+.feedback-enter-active,.feedback-leave-active{transition:opacity .2s,transform .3s var(--veer)}
+.feedback-enter-from,.feedback-leave-to{opacity:0;transform:translateY(8px) scale(.96)}
+@media (max-width:760px){.feedback-knop{right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom))}.feedback-paneel{right:16px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 52px)}}
+@media print{.feedback-knop,.feedback-paneel,.feedback-speld{display:none}}

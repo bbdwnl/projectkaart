@@ -253,6 +253,18 @@ export interface ProjectDiscipline {
 }
 export type DisciplineWijziging = Partial<Pick<ProjectDiscipline, 'leverancier_id' | 'contact'>>
 
+/** Feedback uit de knop rechtsonder: de notitie, de pagina en eventueel de plek (pixels op de pagina). Wie en wanneer vult de database in. */
+export interface NieuweFeedback {
+  tekst: string
+  pad: string
+  plek_x: number | null
+  plek_y: number | null
+  element: string | null
+  scherm_breedte: number
+  scherm_hoogte: number
+  browser: string
+}
+
 /** Een actie uit het overleg. Wie hem maakte en wie hem gereed meldde, vult de database in. */
 export interface Actie {
   id: string

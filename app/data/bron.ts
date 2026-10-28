@@ -1,4 +1,4 @@
-import type { Actie, ActieWijziging, Adres, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Actie, ActieWijziging, NieuweFeedback, Adres, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { ExternAntwoord } from '~/lib/deellink'
 
 /** Waar de gegevens vandaan komen: Supabase (bron-supabase.ts). De schermen praten alleen met deze interface. */
@@ -54,6 +54,9 @@ export interface Bron {
   disciplines(projectId: string): Promise<ProjectDiscipline[]>
   /** Leverancier en contact van één discipline; de leverancier moet op het project staan. */
   bewaarDiscipline(projectId: string, discipline: Discipline, wijziging: DisciplineWijziging): Promise<ProjectDiscipline>
+
+  /** Feedback uit de knop rechtsonder. Alleen het MT kan hem lezen, dus er komt niets terug. */
+  stuurFeedback(invoer: NieuweFeedback): Promise<void>
 
   /** De acties uit het overleg van één project, of van alle projecten; oudste eerst. */
   acties(projectId?: string): Promise<Actie[]>

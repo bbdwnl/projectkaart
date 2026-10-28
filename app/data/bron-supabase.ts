@@ -203,6 +203,12 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
         .select().single(), 'opslaan') as ProjectDiscipline
     },
 
+    async stuurFeedback(invoer) {
+      // Zonder select: alleen het MT mag feedback lezen, ook die van zichzelf.
+      const res = await sb.from('feedback').insert(invoer)
+      if (res.error) uitkomst(res, 'de feedback versturen')
+    },
+
     async acties(projectId) {
       let q = sb.from('acties').select('*').order('aangemaakt_op')
       if (projectId) q = q.eq('project_id', projectId)
