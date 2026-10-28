@@ -6,14 +6,14 @@ import { beforeAll, describe, expect, it } from 'vitest'
 // minimale nabootsing van wat Supabase levert (auth.users, auth.jwt, rollen, storage).
 const AUTH_STUB = `
   create schema auth;
-  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}');
+  create table auth.users (id uuid primary key, email text, encrypted_password text, raw_user_meta_data jsonb not null default '{}');
   create function auth.jwt() returns jsonb language sql stable as $$
     select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
   create function auth.uid() returns uuid language sql stable as $$ select nullif(auth.jwt() ->> 'sub', '')::uuid $$;
   create role authenticated;
   create role anon;
   create role service_role bypassrls;
-  grant usage on schema auth to authenticated;
+  grant usage on schema auth to authenticated, service_role;
   create schema storage;
   create table storage.buckets (id text primary key, name text not null, public boolean not null default false, file_size_limit bigint, allowed_mime_types text[]);
   create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id), name text, owner uuid);
@@ -55,9 +55,10 @@ beforeAll(async () => {
   await db.exec(`grant usage on schema public to authenticated, anon; grant all on all tables in schema public to authenticated, anon, service_role;
     grant usage on schema public to service_role;
     revoke update on public.profielen from authenticated; grant update (naam) on public.profielen to authenticated;`)
-  await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, '{"full_name":"Michiel"}'), ($3, $4, '{"full_name":"Benno van Bergen"}')`,
-    [MICHIEL.sub, MICHIEL.email, BENNO.sub, BENNO.email])
-  await db.query(`update public.profielen set rol = 'mt' where id = $1`, [BENNO.sub])
+  await db.query(`insert into auth.users (id, email) values ($1, $2), ($3, $4)`, [MICHIEL.sub, MICHIEL.email, BENNO.sub, BENNO.email])
+  // De naam die ze bij hun eerste inlog opgaven; Benno is MT.
+  await db.query(`update public.profielen set naam = 'Michiel' where id = $1`, [MICHIEL.sub])
+  await db.query(`update public.profielen set naam = 'Benno van Bergen', rol = 'mt' where id = $1`, [BENNO.sub])
   projectId = (await db.query<{ id: string }>(`select id from public.projecten where nummer = 'P20038'`)).rows[0]!.id
 }, 60_000)
 
@@ -478,5 +479,67 @@ describe('opgelost melden (leverancier) en aftekenen (BbDW)', () => {
   it('weer open: de melding en de oude afkeuring vervallen', async () => {
     await als(MICHIEL, `update public.controlepunten set opgelost = false where id = $1`, [punt])
     expect(await stand(punt)).toMatchObject({ opgelost: false, gereed_op: null, gereed_door: null, afgekeurd_reden: null })
+  })
+})
+
+describe('beveiliging', () => {
+  const SERVER = { role: 'service_role' }
+  // Anna zette bij het aanmaken van haar account een andere naam in het token.
+  const ANNA = { sub: '00000000-0000-0000-0000-00000000000a', email: 'anna@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: { full_name: 'Benno van Bergen' }, amr: ingelogd() }
+  const BART = { sub: '00000000-0000-0000-0000-00000000000b', email: 'bart@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: {}, amr: ingelogd() }
+
+  it('bewaart geen wachtwoord, ook niet als Supabase er een zet', async () => {
+    await db.query(`insert into auth.users (id, email, encrypted_password, raw_user_meta_data) values ($1, $2, '$2a$vooraf', '{"full_name":"Benno van Bergen"}'), ($3, $4, null, '{}')`,
+      [ANNA.sub, ANNA.email, BART.sub, BART.email])
+    const wachtwoord = () => db.query<{ encrypted_password: string }>(`select encrypted_password from auth.users where id = $1`, [ANNA.sub]).then(r => r.rows[0]!.encrypted_password)
+    expect(await wachtwoord()).toBe('')
+    await db.query(`update auth.users set encrypted_password = '$2a$later' where id = $1`, [ANNA.sub])
+    expect(await wachtwoord()).toBe('')
+  })
+
+  it('neemt de naam niet uit het token, en laat hem één keer kiezen, niet die van een ander', async () => {
+    expect(await als(ANNA, `select public.wie() as wie`)).toEqual([{ wie: 'anna@bbdw.nl' }])
+    await als(ANNA, `update public.profielen set naam = '  Anna   de Wit ' where id = $1`, [ANNA.sub])
+    expect(await als(ANNA, `select public.wie() as wie`)).toEqual([{ wie: 'Anna de Wit' }])
+    // Daarna niet meer zelf: niet even onder een andere naam aftekenen.
+    expect(await als(ANNA, `update public.profielen set naam = 'Benno van Bergen' where id = $1 returning id`, [ANNA.sub])).toHaveLength(0)
+    await expect(als(BART, `update public.profielen set naam = 'anna de wit' where id = $1`, [BART.sub])).rejects.toMatchObject({ code: '23505' })
+    await expect(als(BART, `update public.profielen set naam = 'B' where id = $1`, [BART.sub])).rejects.toThrow()
+    expect(await als({ ...BART, amr: ingelogd(8) }, `update public.profielen set naam = 'Bart' where id = $1 returning id`, [BART.sub])).toHaveLength(0)
+  })
+
+  it('laat op het project alleen links naar http(s) toe', async () => {
+    await expect(als(MICHIEL, `update public.projecten set sharepoint_url = 'javascript:alert(1)' where id = $1`, [projectId])).rejects.toThrow()
+    await expect(als(MICHIEL, `update public.projecten set extern_url = 'data:text/html,x' where id = $1`, [projectId])).rejects.toThrow()
+    expect(await als(MICHIEL, `update public.projecten set notitieblok_url = 'https://bbdw.sharepoint.com/sites/P20038' where id = $1 returning id`, [projectId])).toHaveLength(1)
+  })
+
+  it('controleert de code van een deellink en telt in één keer; na tien verkeerde dicht', async () => {
+    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam, globaal) values ('Glaszetter Noord', true) returning id`)
+    await als(MICHIEL, `insert into public.project_leveranciers (project_id, leverancier_id) values ($1, $2)`, [projectId, l!.id])
+    await als(MICHIEL, `insert into public.controlepunten (project_id, leverancier_id, notitie, foto) values ($1, $2, 'Ruit gekrast', $3)`, [projectId, l!.id, `${projectId}/g.jpg`])
+    const maak = async () => (await als<{ token: string, code: string }>(MICHIEL, `insert into public.deellinks (leverancier_id) values ($1) returning token, code`, [l!.id]))[0]!
+    type Na = { klopt: boolean, foute_pogingen: number, gesloten_reden: string | null }
+    const poging = async (token: string, code: string) => (await als<{ na: Na | null }>(SERVER, `select public.deellink_code($1, $2) as na`, [token, code], 'service_role'))[0]!.na
+    const fout = (code: string) => (code === '22222' ? '33333' : '22222')
+
+    const d = await maak()
+    for (let i = 0; i < 9; i++) await poging(d.token, fout(d.code))
+    expect(await poging(d.token, fout(d.code))).toMatchObject({ klopt: false, foute_pogingen: 10, gesloten_reden: 'geblokkeerd' })
+    expect(await poging(d.token, d.code)).toMatchObject({ klopt: false, gesloten_reden: 'geblokkeerd' })
+
+    const e = await maak()
+    await poging(e.token, fout(e.code))
+    expect(await poging(e.token, e.code)).toMatchObject({ klopt: true, foute_pogingen: 0, gesloten_reden: null })
+    expect(await poging('0'.repeat(64), '22222')).toBeNull()
+    // Alleen de server: een medewerker of anonieme bezoeker kan niet raden via de database.
+    await expect(als(MICHIEL, `select public.deellink_code($1, $2)`, [e.token, e.code])).rejects.toThrow()
+    await expect(als({ role: 'anon' }, `select public.deellink_code($1, $2)`, [e.token, e.code], 'anon')).rejects.toThrow()
+  })
+
+  it('geeft elke functie een vaste search_path', async () => {
+    const zonder = await db.query<{ proname: string }>(`select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')`)
+    expect(zonder.rows.map(r => r.proname)).toEqual([])
   })
 })

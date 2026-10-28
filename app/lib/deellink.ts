@@ -99,18 +99,18 @@ export type ExternAntwoord =
 export const dichtAntwoord = (link: Pick<Deellink, 'geldig_tot' | 'gesloten_op'>, stand: DichtStand): ExternAntwoord =>
   ({ stand, op: stand === 'verlopen' ? link.geldig_tot : link.gesloten_op ?? new Date().toISOString() })
 
+/** De link na een poging met de code: de database controleert en telt in één keer (deellink_code in de migraties). */
+export type NaPoging = Pick<Deellink, 'foute_pogingen' | 'geldig_tot' | 'gesloten_reden' | 'gesloten_op'> & { klopt: boolean }
+
 /**
- * De code bij een open link: wat er in de link verandert, en het antwoord als de pagina niet open mag.
- * Zonder code telt het niet als poging. Na tien verkeerde codes op rij gaat de link dicht.
+ * Het antwoord voor de pagina bij de code, of null als hij open mag. `klopt` is null zonder code: dat telt niet als
+ * poging. Na tien verkeerde codes op rij heeft de database de link gesloten (geblokkeerd).
  */
-export function controleerCode(link: Pick<Deellink, 'foute_pogingen'>, code: string, klopt: boolean, nu: Date): { wijziging: Partial<Deellink> | null, antwoord: ExternAntwoord | null } {
-  if (!code) return { wijziging: null, antwoord: { stand: 'code', fout: false, over: MAX_POGINGEN - link.foute_pogingen } }
-  if (klopt) return { wijziging: { foute_pogingen: 0, bekeken_op: nu.toISOString() }, antwoord: null }
-  const pogingen = link.foute_pogingen + 1
-  if (pogingen >= MAX_POGINGEN) {
-    return { wijziging: { foute_pogingen: pogingen, gesloten_reden: 'geblokkeerd', gesloten_op: nu.toISOString() }, antwoord: { stand: 'geblokkeerd', op: nu.toISOString() } }
-  }
-  return { wijziging: { foute_pogingen: pogingen }, antwoord: { stand: 'code', fout: true, over: MAX_POGINGEN - pogingen } }
+export function antwoordOpCode(link: Pick<Deellink, 'foute_pogingen' | 'geldig_tot' | 'gesloten_reden' | 'gesloten_op'>, klopt: boolean | null, nu: Date): ExternAntwoord | null {
+  const stand = standVan(link, nu)
+  if (stand !== 'open') return dichtAntwoord(link, stand)
+  if (klopt) return null
+  return { stand: 'code', fout: klopt === false, over: MAX_POGINGEN - link.foute_pogingen }
 }
 
 /** De open punten van één leverancier. */

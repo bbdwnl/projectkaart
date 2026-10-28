@@ -86,10 +86,10 @@ const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['', ''], 
         <p class="lead">Klik op Inloggen. Daarna blijf je op dit apparaat een week ingelogd.</p>
       </template>
       <template v-else>
-        <p class="lead">Nog één ding: hoe heet je? Je naam staat bij wat je aftekent en wijzigt, zodat iedereen ziet wie het was.</p>
+        <p class="lead">Nog één ding: hoe heet je? Je naam staat bij wat je aftekent en wijzigt, zodat iedereen ziet wie het was. Je kiest hem één keer; daarna past alleen een beheerder hem aan.</p>
         <div class="login-veld">
           <label for="naam">Je naam</label>
-          <input id="naam" v-model="naam" class="veld" autocomplete="name" required minlength="2">
+          <input id="naam" v-model="naam" class="veld" autocomplete="name" required minlength="2" maxlength="80">
         </div>
       </template>
 

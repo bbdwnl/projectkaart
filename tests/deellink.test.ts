@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { actieveLink, CODE_VORM, controleerCode, deelTekst, externeInhoud, MAX_POGINGEN, nieuweCode, nieuwToken, standVan, TOKEN_VORM } from '~/lib/deellink'
+import { actieveLink, antwoordOpCode, CODE_VORM, deelTekst, externeInhoud, MAX_POGINGEN, nieuweCode, nieuwToken, standVan, TOKEN_VORM } from '~/lib/deellink'
 import { fotoPad } from '~/lib/controle'
 import { plusMaand } from '~/lib/datum'
 import type { Controlepunt, Deellink } from '~/lib/types'
@@ -51,13 +51,15 @@ describe('deellink: token en code', () => {
     expect(CODE_VORM.test('23450')).toBe(false)
     expect(CODE_VORM.test('2345')).toBe(false)
   })
-  it('telt alleen een verkeerde code, en sluit na tien keer', () => {
-    expect(controleerCode(link(), '', false, NU)).toEqual({ wijziging: null, antwoord: { stand: 'code', fout: false, over: MAX_POGINGEN } })
-    expect(controleerCode(link({ foute_pogingen: 3 }), '22222', false, NU)).toEqual({ wijziging: { foute_pogingen: 4 }, antwoord: { stand: 'code', fout: true, over: 6 } })
-    const tiende = controleerCode(link({ foute_pogingen: 9 }), '22222', false, NU)
-    expect(tiende.wijziging).toMatchObject({ foute_pogingen: 10, gesloten_reden: 'geblokkeerd' })
-    expect(tiende.antwoord?.stand).toBe('geblokkeerd')
-    expect(controleerCode(link({ foute_pogingen: 4 }), '23456', true, NU)).toEqual({ wijziging: { foute_pogingen: 0, bekeken_op: NU.toISOString() }, antwoord: null })
+  it('zegt wat de pagina toont bij de code; de database telt en sluit na tien keer', () => {
+    expect(antwoordOpCode(link({ foute_pogingen: 3 }), null, NU)).toEqual({ stand: 'code', fout: false, over: MAX_POGINGEN - 3 })
+    expect(antwoordOpCode(link({ foute_pogingen: 4 }), false, NU)).toEqual({ stand: 'code', fout: true, over: 6 })
+    expect(antwoordOpCode(link({ foute_pogingen: 0 }), true, NU)).toBeNull()
+    // De tiende verkeerde: de database sloot de link.
+    expect(antwoordOpCode(link({ foute_pogingen: 10, gesloten_reden: 'geblokkeerd', gesloten_op: NU.toISOString() }), false, NU)).toEqual({ stand: 'geblokkeerd', op: NU.toISOString() })
+    // Ging hij intussen dicht of verliep hij, dan zegt de pagina dat, ook bij de goede code.
+    expect(antwoordOpCode(link({ gesloten_reden: 'opgelost', gesloten_op: NU.toISOString() }), false, NU)?.stand).toBe('opgelost')
+    expect(antwoordOpCode(link(), true, new Date('2026-12-01'))?.stand).toBe('verlopen')
   })
   it('zet de link in het bericht, maar de code niet', () => {
     const { onderwerp, tekst } = deelTekst({ leverancier: 'Klimaattechniek Oost', adres: 'https://x/punten/abc', geldigTot: '2026-11-12T10:00:00Z', door: 'Michiel' })

@@ -1,8 +1,7 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
 import type { Deellink } from '../../app/lib/types'
-import { controleerCode, dichtAntwoord, standVan, TOKEN_VORM, type ExternAntwoord } from '../../app/lib/deellink'
+import { antwoordOpCode, dichtAntwoord, standVan, TOKEN_VORM, type ExternAntwoord, type NaPoging } from '../../app/lib/deellink'
 
 // De pagina van een leverancier (/punten/<token>) heeft geen account: de server leest voor hem, met de
 // service-rol, en geeft alleen wat bij de link hoort. Elke vraag controleert de link en de code opnieuw.
@@ -18,16 +17,11 @@ export function serviceDatabase(event: H3Event): SupabaseClient {
 
 export const nietBereikbaar = () => createError({ statusCode: 502, statusMessage: 'De gegevens zijn nu niet bereikbaar.' })
 
-/** Vergelijkt twee codes in vaste tijd, zodat de responstijd niets verraadt. */
-export function gelijk(a: string, b: string): boolean {
-  const x = createHash('sha256').update(a).digest()
-  const y = createHash('sha256').update(b).digest()
-  return timingSafeEqual(x, y)
-}
-
 /**
  * Zoekt de link en controleert hem en de code. Geeft de link als hij open is en de code klopt, anders het
  * antwoord voor de pagina. Een verkeerde code telt en kost even tijd; na tien keer gaat de link dicht.
+ * Controleren en tellen gebeurt in één keer in de database (deellink_code), zodat verzoeken tegelijk de
+ * grens van tien pogingen niet omzeilen.
  */
 export async function poort(event: H3Event, sb: SupabaseClient): Promise<{ link: Deellink } | { antwoord: ExternAntwoord }> {
   const token = getRouterParam(event, 'token') ?? ''
@@ -39,12 +33,16 @@ export async function poort(event: H3Event, sb: SupabaseClient): Promise<{ link:
   if (res.error) throw nietBereikbaar()
   const link = res.data as Deellink | null
   if (!link) return { antwoord: { stand: 'onbekend' } }
-  const nu = new Date()
-  const stand = standVan(link, nu)
+  const stand = standVan(link, new Date())
   if (stand !== 'open') return { antwoord: dichtAntwoord(link, stand) }
+  if (!code) return { antwoord: antwoordOpCode(link, null, new Date())! }
 
-  const { wijziging, antwoord } = controleerCode(link, code, !!code && gelijk(code, link.code), nu)
-  if (wijziging) await sb.from('deellinks').update(wijziging).eq('token', token)
-  if (antwoord && (antwoord.stand !== 'code' || antwoord.fout)) await new Promise(r => setTimeout(r, 600)) // raden kost tijd
-  return antwoord ? { antwoord } : { link }
+  const poging = await sb.rpc('deellink_code', { link_token: token, poging: code })
+  if (poging.error) throw nietBereikbaar()
+  if (!poging.data) return { antwoord: { stand: 'onbekend' } }
+  const { klopt, ...na } = poging.data as NaPoging
+  const antwoord = antwoordOpCode(na, klopt, new Date())
+  if (!antwoord) return { link: { ...link, ...na } }
+  await new Promise(r => setTimeout(r, 600)) // raden kost tijd
+  return { antwoord }
 }

@@ -41,6 +41,8 @@ npm run build
      "Je inloglink voor de Projectkaart". De link gaat naar `/login` van de app; pas een klik daar gebruikt
      hem, zodat de linkscanner van Outlook hem niet opmaakt. Hij werkt ook in een andere browser.
    - **Providers**: Email aan, met Confirm email aan. De link is een uur geldig (Email OTP Expiration 3600).
+     Alle andere providers uit (ook Azure van eerder, en Anonymous Sign-Ins). Alleen een inlog met een link per
+     mail geeft toegang; de database bewaart geen wachtwoorden, dus inloggen met een wachtwoord kan niet.
    - **URL Configuration**: Site URL = het adres van de app op Vercel. Bij Redirect URLs dat adres en
      `http://localhost:3000`, elk met `/**` erachter.
    - Optioneel, op een betaald plan: Sessions → Time-box user sessions op 168 uur. De app en de database
@@ -53,12 +55,17 @@ npm run build
    van de app gewoon, maar opent een gedeelde link niet.
 5. **MT.** Wie de financiën mag zien en de catalogus beheert, zet je na de eerste login in de
    SQL-editor op MT: `update profielen set rol = 'mt' where email = 'naam@bbdw.nl';`
+   Een naam corrigeren gaat ook daar (iedereen kiest zijn naam één keer):
+   `update profielen set naam = 'Jan de Vries' where email = 'jan@bbdw.nl';`
+6. **Nieuwe externe dienst in de browser** (bijvoorbeeld Microsoft Graph voor SharePoint): zet de host in de
+   Content-Security-Policy in [nuxt.config.ts](nuxt.config.ts), anders blokkeert de browser hem.
 
 Alleen e-mailadressen op `@bbdw.nl` komen erin. De database maakt voor een ander adres geen account aan
 (dus gaat er ook geen link naartoe), en de RLS-policies laten alleen `@bbdw.nl` toe (`toegestane_domeinen()`).
 Een inlog geldt een week vanaf het moment van inloggen; gebruik verlengt hem niet (`inlogduur()` in de
 migratie, `INLOGDUUR_DAGEN` in `app/lib/inlog.ts`). Daarna vraag je een nieuwe link aan. Bij de eerste inlog
-vraagt de app je naam: die staat in het logboek en bij wat je aftekent.
+vraagt de app je naam: die staat in het logboek en bij wat je aftekent. Je kiest hem één keer, en niet een naam
+die een collega al heeft; daarna wijzigt alleen een beheerder hem (stap 5), zodat niemand onder andermans naam aftekent.
 
 ## Opbouw
 

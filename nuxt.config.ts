@@ -1,10 +1,34 @@
-// Security headers for every response. No full script CSP: Nuxt inlines its
-// payload script, so a strict policy would need nonces.
+// Supabase in the CSP: every project on supabase.co, plus the configured URL when it lives elsewhere (a custom
+// domain, or a local `supabase start` on http://127.0.0.1:54321). Read at build time, like the rest of this file.
+const supabaseUrl = URL.canParse(process.env.NUXT_PUBLIC_SUPABASE_URL ?? '') ? new URL(process.env.NUXT_PUBLIC_SUPABASE_URL!) : null
+const supabase = [...new Set([
+  'https://*.supabase.co', 'wss://*.supabase.co',
+  ...(supabaseUrl ? [supabaseUrl.origin, `${supabaseUrl.protocol === 'http:' ? 'ws' : 'wss'}://${supabaseUrl.host}`] : []),
+])]
+const supabaseHttp = supabase.filter(h => h.startsWith('http')).join(' ')
+
+// Security headers for every response. Scripts only from the app itself: Nuxt inlines its config script, so
+// 'unsafe-inline' (a strict policy would need nonces), but no other hosts and no eval. The browser only talks
+// to the app, Supabase (database, realtime, storage) and PDOK (the BAG lookup); add a host here if that changes.
 const securityHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'X-Frame-Options': 'DENY',
-  'Content-Security-Policy': "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: ${supabaseHttp}`,
+    "font-src 'self' data:",
+    `connect-src 'self' data: blob: ${supabase.join(' ')} https://api.pdok.nl`,
+    "worker-src 'self' blob:",
+    "frame-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+  ].join('; '),
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
 }
 

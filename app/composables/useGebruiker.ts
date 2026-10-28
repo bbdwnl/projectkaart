@@ -34,9 +34,9 @@ export function useGebruiker() {
     if (tot <= Date.now()) return verlopen(false)
     // Blijft het scherm open tot de week om is, dan alsnog uitloggen (de database laat je dan ook niet meer toe).
     verloopKlok = setTimeout(() => verlopen(true), Math.min(tot - Date.now(), 2 ** 31 - 1))
+    // Alleen de naam uit het profiel, zoals wie() in de database; die in het token kan iedereen zelf zetten.
     const { data } = await sb.from('profielen').select('rol, naam').eq('id', sessie.user.id).maybeSingle()
-    const meta = sessie.user.user_metadata ?? {}
-    const naam = data?.naam?.trim() || meta.full_name || meta.name || ''
+    const naam = data?.naam?.trim() || ''
     gebruiker.value = { naam: naam || email, email, isMt: data?.rol === 'mt', naamNodig: !naam }
   }
 
@@ -106,14 +106,22 @@ export function useGebruiker() {
     }
   }
 
-  /** Je naam, voor het logboek en bij wat je aftekent. Gevraagd bij je eerste inlog. */
+  /** Je naam, voor het logboek en bij wat je aftekent. Gevraagd bij je eerste inlog; daarna alleen door een beheerder te wijzigen. */
   async function bewaarNaam(naam: string): Promise<boolean> {
     const schoon = naam.trim().replace(/\s+/g, ' ')
     if (!sb || !gebruiker.value || schoon.length < 2) return false
     const { data } = await sb.auth.getSession()
-    const { error } = await sb.from('profielen').update({ naam: schoon }).eq('id', data.session?.user.id ?? '')
+    const { data: rijen, error } = await sb.from('profielen').update({ naam: schoon }).eq('id', data.session?.user.id ?? '').select('id')
+    if (!error && !rijen.length) {
+      // Je naam stond al vast: de database laat hem dan staan (profielen_eigen_naam).
+      melding.value = 'Je naam staat al vast. Vraag een beheerder als hij anders moet.'
+      return false
+    }
     if (error) {
-      melding.value = `Opslaan lukte niet: ${error.message}`
+      // 23505: een collega heeft deze naam al (naam_uniek in de migraties).
+      melding.value = error.code === '23505'
+        ? `${schoon} is al de naam van een collega. Zet er bijvoorbeeld je achternaam of een voorletter bij.`
+        : `Opslaan lukte niet: ${error.message}`
       return false
     }
     gebruiker.value = { ...gebruiker.value, naam: schoon, naamNodig: false }
