@@ -2,12 +2,13 @@
 import type { Fase, Project, Taak, Uitzondering } from '~/lib/types'
 import { FASEN, faseInfo, MENSEN, ROLLEN } from '~/lib/fasen'
 import { maakSlug } from '~/lib/leads'
-import { kaartjesVan, KOLOMMEN, namenVan, pastPersoon, pastWie, personen, sorteerKaartjes, SORTERINGEN, vindt, type Kaartje } from '~/lib/overzicht'
+import { isAfgehandeld, kaartjesVan, KOLOMMEN, namenVan, pastPersoon, pastWie, personen, SORTEERDATUM, sorteerKaartjes, SORTERINGEN, vindt, type Kaartje } from '~/lib/overzicht'
 import { vandaag } from '~/lib/datum'
 import { signalen, SOORTEN } from '~/lib/signalen'
 
 // De lopende projecten in drie kolommen: ontwikkeling, uitvoering en nazorg. Per kolom het dringendste bovenaan.
 // Daarnaast een planningsoverzicht, te filteren op fase, en wat daarin opvalt. Leads en haalbaarheid hebben een eigen pagina.
+// Afgehandelde nazorg staat er alleen als je die laat zien, apart onderaan de kolom Nazorg.
 useHead({ title: 'Projecten · Projectkaart' })
 const bron = useBron()
 const { toon } = useToast()
@@ -18,7 +19,7 @@ const projecten = ref<Project[]>([])
 const taken = ref<Taak[]>([])
 const catalogus = ref<Uitzondering[]>([])
 const zoek = ref('')
-const { sortering, wie, pl, oz, prio } = useOverzichtKeuze('/')
+const { sortering, wie, pl, oz, prio, afgehandeld } = useOverzichtKeuze('/')
 const weergave = useTabblad<'kolommen' | 'planning' | 'aandachtspunten'>('kolommen', ['kolommen', 'planning', 'aandachtspunten'])
 /** Wat opvalt in de planning, het ernstigste eerst; de pil op het tabblad krijgt de kleur daarvan. */
 const punten = computed(() => signalen(projecten.value, nu))
@@ -27,7 +28,10 @@ const tabs = computed(() => [
   { id: 'planning' as const, naam: 'Planningsoverzicht' },
   { id: 'aandachtspunten' as const, naam: 'Aandachtspunten', pil: punten.value.length ? { licht: SOORTEN[punten.value[0]!.soort].licht, tekst: String(punten.value.length) } : null },
 ])
-const datumBij = (p: Project) => (sortering.value === 'inkoop' ? { naam: 'Inkoop gereed', waarde: p.datum_inkoop } : null)
+const datumBij = (p: Project) => {
+  const d = SORTEERDATUM[sortering.value]
+  return d ? { naam: d.naam, waarde: p[d.veld] } : null
+}
 
 async function laad(stil = false) {
   if (!stil) stand.value = 'laden'
@@ -46,25 +50,33 @@ useLive(() => [{ tabel: 'projecten' }, { tabel: 'taken' }], () => laad(true))
 
 const kaartjes = computed(() => sorteerKaartjes(kaartjesVan(projecten.value.filter(p => KOLOMMEN.includes(p.fase)), taken.value, catalogus.value, nu), sortering.value))
 /** Past een kaartje door alle filters, behalve het genoemde: zo zegt het getal bij een keuze wat je krijgt. */
-const past = (k: Kaartje, zonder?: 'wie' | 'pl' | 'oz' | 'prio') => vindt(k, zoek.value)
+const past = (k: Kaartje, zonder?: 'wie' | 'pl' | 'oz' | 'prio' | 'af') => vindt(k, zoek.value)
   && (zonder === 'wie' || pastWie(k, wie.value))
   && (zonder === 'pl' || pastPersoon(k.p.pm, pl.value))
   && (zonder === 'oz' || pastPersoon(k.p.opzichter, oz.value))
   && (zonder === 'prio' || !prio.value || k.p.prio)
+  && (zonder === 'af' || afgehandeld.value || !isAfgehandeld(k.p))
 /** Wat door de andere filters komt; daaruit tellen de knoppen van de verantwoordelijke. */
 const gezocht = computed(() => kaartjes.value.filter(k => past(k, 'wie')))
 const mensen = computed(() => personen(gezocht.value, wie.value))
 const projectleiders = computed(() => namenVan(kaartjes.value.filter(k => past(k, 'pl')), 'pm', pl.value))
 const opzichters = computed(() => namenVan(kaartjes.value.filter(k => past(k, 'oz')), 'opzichter', oz.value))
 const aantalPrio = computed(() => kaartjes.value.filter(k => past(k, 'prio') && k.p.prio).length)
+const aantalAfgehandeld = computed(() => kaartjes.value.filter(k => past(k, 'af') && isAfgehandeld(k.p)).length)
+/** De lopende projecten: zonder afgehandelde nazorg. */
+const lopend = computed(() => kaartjes.value.filter(k => !isAfgehandeld(k.p)))
 const gefilterd = computed(() => !!zoek.value.trim() || wie.value !== 'alle' || pl.value !== 'alle' || oz.value !== 'alle' || prio.value)
 const kolommen = computed(() => KOLOMMEN.map((f) => {
-  const inFase = kaartjes.value.filter(k => k.p.fase === f)
-  return { fase: f, naam: faseInfo(f).naam, rol: ROLLEN[faseInfo(f).rol].kort, totaal: inFase.length, kaartjes: gezocht.value.filter(k => k.p.fase === f && pastWie(k, wie.value)) }
+  const inFase = lopend.value.filter(k => k.p.fase === f)
+  const hier = gezocht.value.filter(k => k.p.fase === f && pastWie(k, wie.value))
+  return {
+    fase: f, naam: faseInfo(f).naam, rol: ROLLEN[faseInfo(f).rol].kort, totaal: inFase.length,
+    kaartjes: hier.filter(k => !isAfgehandeld(k.p)), afgehandeld: hier.filter(k => isAfgehandeld(k.p)),
+  }
 }))
 const zin = computed(() => {
-  const laat = kaartjes.value.filter(k => k.t.telaat).length
-  return `${kaartjes.value.length} lopende projecten. ${laat ? `${laat} ${laat === 1 ? 'heeft' : 'hebben'} taken die te laat zijn.` : 'Niets te laat.'}`
+  const laat = lopend.value.filter(k => k.t.telaat).length
+  return `${lopend.value.length} lopende projecten. ${laat ? `${laat} ${laat === 1 ? 'heeft' : 'hebben'} taken die te laat zijn.` : 'Niets te laat.'}`
 })
 
 // Nieuw project: begint als lead; een lopend project zet je meteen in zijn fase. De rest vul je op de kaart in.
@@ -171,6 +183,7 @@ async function maakProject() {
             </select>
           </label>
           <label class="schakel"><input v-model="prio" type="checkbox"><span />Alleen prio <small class="n">{{ aantalPrio }}</small></label>
+          <label class="schakel" title="Nazorg die helemaal klaar is"><input v-model="afgehandeld" type="checkbox"><span />Toon afgehandeld <small class="n">{{ aantalAfgehandeld }}</small></label>
         </div>
         <input v-model="zoek" class="veld zoekveld" type="search" placeholder="Zoek op naam, nummer, plaats of persoon" aria-label="Zoek een project">
       </div>
@@ -182,8 +195,12 @@ async function maakProject() {
           </header>
           <div class="kolom-lijst">
             <ProjectKaartje v-for="(kaartje, i) in k.kaartjes" :key="kaartje.p.id" :k="kaartje" :volgorde="i" :datum="datumBij(kaartje.p)" />
+            <template v-if="k.afgehandeld.length">
+              <p class="kolom-scheiding" role="separator">Afgehandeld · {{ k.afgehandeld.length }}</p>
+              <ProjectKaartje v-for="(kaartje, i) in k.afgehandeld" :key="kaartje.p.id" :k="kaartje" :volgorde="k.kaartjes.length + i" :datum="datumBij(kaartje.p)" />
+            </template>
           </div>
-          <p v-if="!k.kaartjes.length" class="leeg-staat klein">{{ gefilterd ? 'Niets in deze selectie.' : `Geen projecten in ${k.naam.toLowerCase()}.` }}</p>
+          <p v-if="!k.kaartjes.length && !k.afgehandeld.length" class="leeg-staat klein">{{ gefilterd ? 'Niets in deze selectie.' : `Geen projecten in ${k.naam.toLowerCase()}.` }}</p>
         </section>
       </div>
     </template>

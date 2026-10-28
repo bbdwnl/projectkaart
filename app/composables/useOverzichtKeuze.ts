@@ -1,7 +1,7 @@
 import { leesSortering, type Sortering } from '~/lib/overzicht'
 
 /**
- * De sortering en de filters van Projecten (verantwoordelijke, projectleider, opzichter, alleen prio), in de
+ * De sortering en de filters van Projecten (verantwoordelijke, projectleider, opzichter, alleen prio, afgehandeld), in de
  * adresbalk: terug vanaf een kaart geeft dezelfde keuze, en een selectie is te delen.
  */
 export function useOverzichtKeuze(pad: string) {
@@ -13,10 +13,11 @@ export function useOverzichtKeuze(pad: string) {
   const pl = ref(tekst(route.query.pl) ?? 'alle')
   const oz = ref(tekst(route.query.oz) ?? 'alle')
   const prio = ref(route.query.prio === '1')
-  watch([sortering, wie, pl, oz, prio], ([s, w, l, o, p]) => {
+  const afgehandeld = ref(route.query.af === '1')
+  watch([sortering, wie, pl, oz, prio, afgehandeld], ([s, w, l, o, p, a]) => {
     if (route.path !== pad) return
     // Andere sleutels (zoals het tabblad) blijven staan.
-    const { sort: _s, wie: _w, pl: _l, oz: _o, prio: _p, ...rest } = route.query
+    const { sort: _s, wie: _w, pl: _l, oz: _o, prio: _p, af: _a, ...rest } = route.query
     router.replace({ query: {
       ...rest,
       ...(s !== 'telaat' ? { sort: s } : {}),
@@ -24,6 +25,7 @@ export function useOverzichtKeuze(pad: string) {
       ...(l !== 'alle' ? { pl: l } : {}),
       ...(o !== 'alle' ? { oz: o } : {}),
       ...(p ? { prio: '1' } : {}),
+      ...(a ? { af: '1' } : {}),
     } })
   })
   // Opnieuw op het menu-item klikken (zonder query): terug naar de standaard.
@@ -34,6 +36,7 @@ export function useOverzichtKeuze(pad: string) {
     pl.value = tekst(q.pl) ?? 'alle'
     oz.value = tekst(q.oz) ?? 'alle'
     prio.value = q.prio === '1'
+    afgehandeld.value = q.af === '1'
   })
-  return { sortering, wie, pl, oz, prio }
+  return { sortering, wie, pl, oz, prio, afgehandeld }
 }

@@ -170,6 +170,10 @@ async function kopieer() {
             <label class="schakel"><input type="checkbox" :checked="project.wachtkamer" @change="e => wijzigProject({ wachtkamer: (e.target as HTMLInputElement).checked })"><span />In de wachtkamer</label>
             <dd class="klein">Een lead die nog niet actief is, wel in beeld. Staat onder Leads apart onderaan.</dd>
           </div>
+          <div v-if="project.fase === 'nazorg' || project.afgehandeld">
+            <label class="schakel"><input type="checkbox" :checked="project.afgehandeld" @change="e => wijzigProject({ afgehandeld: (e.target as HTMLInputElement).checked })"><span />Afgehandeld</label>
+            <dd class="klein">Nazorg is helemaal klaar. Staat onder Projecten alleen nog bij Toon afgehandeld.</dd>
+          </div>
         </dl>
       </div>
 

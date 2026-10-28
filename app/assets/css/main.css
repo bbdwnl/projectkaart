@@ -491,6 +491,9 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
 .kolom-kop h2{font-size:24px}
 .kolom-lijst{display:grid;gap:16px}
+.kolom-scheiding{margin:8px 0 -4px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--stil)}
+.projectkaartje.afgehandeld h3{color:var(--stil)}
+.projectkaartje .afgehandeld-tab{align-self:flex-start}
 .kolom .leeg-staat{padding:18px}
 @media (max-width:900px){
   .kolommen{grid-template-columns:1fr;gap:34px}

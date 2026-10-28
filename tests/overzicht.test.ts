@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import projecten from '~/data/projecten.json'
 import { maakDemoGegevens } from './voorbeeldgegevens'
-import { balkTekst, kaartjesVan, KOLOMMEN, leesSortering, pastWie, personen, sorteerKaartjes, vindt, voornaam } from '~/lib/overzicht'
+import { balkTekst, isAfgehandeld, kaartjesVan, KOLOMMEN, leesSortering, pastWie, personen, sorteerKaartjes, vindt, voornaam } from '~/lib/overzicht'
 import { ORDE } from '~/lib/stoplicht'
 
 describe('projectenoverzicht', () => {
@@ -33,8 +33,19 @@ describe('projectenoverzicht', () => {
     const metDatum = inkoop.filter(Boolean) as string[]
     expect(metDatum).toEqual([...metDatum].sort())
     expect(inkoop.slice(metDatum.length).every(d => d === null)).toBe(true)
+    const afbouw = sorteerKaartjes(kaartjes, 'afbouw').map(k => k.p.datum_afbouw)
+    const metAfbouw = afbouw.filter(Boolean) as string[]
+    expect(metAfbouw.length).toBeGreaterThan(0)
+    expect(metAfbouw).toEqual([...metAfbouw].sort())
+    expect(afbouw.slice(metAfbouw.length).every(d => d === null)).toBe(true)
+    expect(leesSortering('afbouw')).toBe('afbouw')
     expect(leesSortering('inkoop')).toBe('inkoop')
     expect(leesSortering('iets')).toBe('telaat')
+  })
+  it('telt afgehandeld alleen in nazorg', () => {
+    expect(isAfgehandeld({ fase: 'nazorg', afgehandeld: true })).toBe(true)
+    expect(isAfgehandeld({ fase: 'nazorg', afgehandeld: false })).toBe(false)
+    expect(isAfgehandeld({ fase: 'uitvoering', afgehandeld: true })).toBe(false)
   })
   it('zoekt op naam, nummer en persoon', () => {
     const k = kaartjes.find(x => x.p.nummer && x.wie)!

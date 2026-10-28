@@ -184,6 +184,14 @@ describe('aftekenen en logboek', () => {
     expect(log).toEqual([{ veld: 'wachtkamer', nieuw: 'true' }, { veld: 'buddy', nieuw: 'Ad' }])
   })
 
+  it('logt afgehandeld op het project', async () => {
+    const [p] = await als<{ id: string, afgehandeld: boolean }>(MICHIEL, `insert into public.projecten (slug, naam, fase) values ('klaar', 'Klaar', 'nazorg') returning id, afgehandeld`)
+    expect(p!.afgehandeld).toBe(false)
+    await als(MICHIEL, `update public.projecten set afgehandeld = true where id = $1`, [p!.id])
+    const log = await als<{ veld: string, nieuw: string }>(MICHIEL, `select veld, nieuw from public.logboek where project_id = $1 order by id`, [p!.id])
+    expect(log).toEqual([{ veld: 'afgehandeld', nieuw: 'true' }])
+  })
+
   it('logt een uitzondering die erbij komt en weer weggaat', async () => {
     const [u] = await als<{ id: string, aangemaakt_door: string }>(MICHIEL,
       `insert into public.uitzonderingen (titel, fase) values ('Extra bodemonderzoek (PFAS)', 'ontwikkeling') returning id, aangemaakt_door`)

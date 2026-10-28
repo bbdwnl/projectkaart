@@ -31,24 +31,34 @@ export function kaartjesVan(projecten: Project[], taken: Taak[], catalogus: Uitz
     .map(({ dagen: _, ...k }) => k)
 }
 
-export type Sortering = 'telaat' | 'naam' | 'inkoop'
+/** Nazorg die helemaal klaar is. Alleen in nazorg: gaat een project terug, dan telt het weer gewoon mee. */
+export const isAfgehandeld = (p: Pick<Project, 'fase' | 'afgehandeld'>) => p.fase === 'nazorg' && p.afgehandeld
+
+export type Sortering = 'telaat' | 'naam' | 'inkoop' | 'afbouw'
 export const SORTERINGEN: { id: Sortering, naam: string }[] = [
   { id: 'telaat', naam: 'Meeste te laat' },
   { id: 'naam', naam: 'Alfabetisch' },
   { id: 'inkoop', naam: 'Inkoop gereed' },
+  { id: 'afbouw', naam: 'Start afbouw' },
 ]
+/** De datum waarop gesorteerd wordt; die staat dan ook op het kaartje. */
+export const SORTEERDATUM: Partial<Record<Sortering, { naam: string, veld: 'datum_inkoop' | 'datum_afbouw' }>> = {
+  inkoop: { naam: 'Inkoop gereed', veld: 'datum_inkoop' },
+  afbouw: { naam: 'Start afbouw', veld: 'datum_afbouw' },
+}
 export const leesSortering = (v: unknown): Sortering => SORTERINGEN.find(s => s.id === v)?.id ?? 'telaat'
 
 /**
- * Meeste te laat: de volgorde van kaartjesVan. Alfabetisch: op naam. Inkoop gereed: de vroegste datum inkoop gereed
- * eerst, zonder datum achteraan.
+ * Meeste te laat: de volgorde van kaartjesVan. Alfabetisch: op naam. Inkoop gereed en start afbouw: de vroegste
+ * datum eerst, zonder datum achteraan.
  */
 export function sorteerKaartjes(kaartjes: Kaartje[], op: Sortering): Kaartje[] {
   if (op === 'telaat') return kaartjes
   const naam = (a: Kaartje, b: Kaartje) => a.p.naam.localeCompare(b.p.naam, 'nl')
   if (op === 'naam') return [...kaartjes].sort(naam)
-  const inkoop = (k: Kaartje) => k.p.datum_inkoop ?? '9999'
-  return [...kaartjes].sort((a, b) => inkoop(a).localeCompare(inkoop(b)) || naam(a, b))
+  const veld = SORTEERDATUM[op]!.veld
+  const datum = (k: Kaartje) => k.p[veld] ?? '9999'
+  return [...kaartjes].sort((a, b) => datum(a).localeCompare(datum(b)) || naam(a, b))
 }
 
 /** Filter op wie verantwoordelijk is: een voornaam, 'geen' (nog niemand gekozen) of 'alle'. */

@@ -154,7 +154,7 @@ export function maakSlug(naam: string, bestaand: string[]): string {
 /** Een volledig project met alles leeg, standaard in de fase lead (voor tests). */
 export function leegProject(extra: Partial<Project> & Pick<Project, 'id' | 'slug' | 'naam'>): Project {
   return {
-    nummer: null, postcode: null, huisnummer: null, straat: null, plaats: null, bag_id: null, fase: 'lead', subfase: null, prio: false, wachtkamer: false, soort: [], m2: null,
+    nummer: null, postcode: null, huisnummer: null, straat: null, plaats: null, bag_id: null, fase: 'lead', subfase: null, prio: false, wachtkamer: false, afgehandeld: false, soort: [], m2: null,
     slagingskans: null, am: null, po: null, pm: null, opzichter: null, buddy: null,
     datum_casco: null, datum_voorbereiding: null, datum_inkoop: null, datum_afbouw: null, datum_oplevering: null,
     prognose_casco: null, prognose_afbouw: null, prognose_oplevering: null,

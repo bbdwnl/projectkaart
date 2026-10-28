@@ -46,6 +46,8 @@ export interface Project extends ProjectDatums, ProjectPrognose {
   prio: boolean
   /** Een lead in de wachtkamer: nog niet actief, wel in beeld. */
   wachtkamer: boolean
+  /** Nazorg is helemaal klaar: staat onder Projecten niet meer in de kolom (het archief uit het prototype). */
+  afgehandeld: boolean
   soort: Soort[]
   m2: number | null
   slagingskans: number | null

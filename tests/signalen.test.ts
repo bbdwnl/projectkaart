@@ -44,4 +44,10 @@ describe('aandachtspunten in de planning', () => {
   it('laat lead en haalbaarheid buiten beschouwing', () => {
     expect(signalen([project({ fase: 'haalbaarheid', po: null, datum_inkoop: '2027-02-01', datum_afbouw: '2027-01-15' })], nu)).toEqual([])
   })
+
+  it('laat afgehandelde nazorg buiten beschouwing', () => {
+    const oud = { fase: 'nazorg' as const, pm: null, datum_afbouw: '2026-01-15', datum_oplevering: '2025-12-01' }
+    expect(signalen([project(oud)], nu)).not.toEqual([])
+    expect(signalen([project({ ...oud, afgehandeld: true })], nu)).toEqual([])
+  })
 })

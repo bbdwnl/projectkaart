@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Kaartje } from '~/lib/overzicht'
-import { balkTekst } from '~/lib/overzicht'
+import { balkTekst, isAfgehandeld } from '~/lib/overzicht'
 import { ROLLEN } from '~/lib/fasen'
 import { fmt, naarDatum } from '~/lib/datum'
 
@@ -10,15 +10,16 @@ import { fmt, naarDatum } from '~/lib/datum'
 defineProps<{
   k: Kaartje
   volgorde?: number
-  /** Een datum erbij, als het overzicht daarop sorteert (bijvoorbeeld inkoop gereed). */
+  /** Een datum erbij, als het overzicht daarop sorteert (inkoop gereed of start afbouw). */
   datum?: { naam: string, waarde: string | null } | null
 }>()
 </script>
 
 <template>
-  <NuxtLink :to="`/projecten/${k.p.slug}`" class="kaart til projectkaartje" :style="{ '--i': Math.min(volgorde ?? 0, 12) }">
+  <NuxtLink :to="`/projecten/${k.p.slug}`" class="kaart til projectkaartje" :class="{ afgehandeld: isAfgehandeld(k.p) }" :style="{ '--i': Math.min(volgorde ?? 0, 12) }">
     <span v-if="k.p.nummer" class="label n">{{ k.p.nummer }}</span>
     <h3>{{ k.p.naam }}</h3>
+    <span v-if="isAfgehandeld(k.p)" class="tab afgehandeld-tab">Afgehandeld</span>
     <span class="mini-balk" role="img" :aria-label="balkTekst(k.t)" :title="balkTekst(k.t)">
       <span class="seg-telaat" :style="{ flexGrow: k.t.telaat }" /><span class="seg-letop" :style="{ flexGrow: k.t.letop }" />
       <span class="seg-klaar" :style="{ flexGrow: k.t.klaar }" /><span class="seg-open" :style="{ flexGrow: k.t.open }" />

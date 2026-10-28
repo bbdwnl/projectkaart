@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { FASEN, faseInfo, MENSEN, ROLLEN, SUBFASEN } from '~/lib/fasen'
+import { isAfgehandeld } from '~/lib/overzicht'
 import type { Fase, Subfase } from '~/lib/types'
 
 const emit = defineEmits<{ lamp: [licht: 'telaat' | 'letop' | 'klaar'], planning: [] }>()
@@ -9,6 +10,8 @@ const { weergave } = useWeergave()
 const rol = computed(() => faseInfo(project.value!.fase).rol)
 const eigenaar = computed(() => project.value?.[rol.value] ?? null)
 const label = computed(() => [project.value?.nummer, project.value?.plaats].filter(Boolean).join(' · '))
+/** Alleen een link naar http(s), zoals onder Details: een ander adres (javascript:) wordt geen link. */
+const sharepoint = computed(() => (/^https?:\/\//i.test(project.value?.sharepoint_url ?? '') ? project.value!.sharepoint_url! : null))
 
 /** Wie de rol van deze fase kan hebben; ook iemand die er nu staat maar niet in de lijst. */
 const keuzes = computed(() => [...new Set([...MENSEN[rol.value], ...(eigenaar.value ? [eigenaar.value] : [])])])
@@ -35,6 +38,7 @@ function kiesFase(e: Event) {
         <span>{{ label }}</span>
         <span v-if="project.prio" class="tab telaat">Prio</span>
         <span v-if="project.wachtkamer && project.fase === 'lead'" class="tab">Wachtkamer</span>
+        <span v-if="isAfgehandeld(project)" class="tab">Afgehandeld</span>
       </div>
       <h1>{{ project.naam }}</h1>
       <StandZin :delen="zin" />
@@ -56,7 +60,7 @@ function kiesFase(e: Event) {
             <option v-for="m in keuzes" :key="m" :value="m">{{ m }}</option>
           </select>
         </label>
-        <a v-if="project.sharepoint_url" class="chip" :href="project.sharepoint_url" target="_blank" rel="noopener"><b>Projectmap in SharePoint ↗</b></a>
+        <a v-if="sharepoint" class="chip" :href="sharepoint" target="_blank" rel="noopener"><b>Projectmap in SharePoint ↗</b></a>
       </div>
       <Transition name="blok">
         <KaartStrook v-if="weergave.kop.planningstrook" @open="emit('planning')" />

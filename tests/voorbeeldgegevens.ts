@@ -233,7 +233,7 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
       po: j.po,
       pm: faseIndex(fase) >= faseIndex('uitvoering') ? kies(MENSEN.pm, j.slug + 'pm') : null,
       opzichter: faseIndex(fase) >= faseIndex('uitvoering') ? kies(MENSEN.opzichter, j.slug + 'oz') : null,
-      buddy: null, subfase: null, wachtkamer: false,
+      buddy: null, subfase: null, wachtkamer: false, afgehandeld: false,
       datum_casco: j.datum_casco, datum_voorbereiding: j.datum_voorbereiding, datum_inkoop: j.datum_inkoop,
       datum_afbouw: j.datum_afbouw, datum_oplevering: j.datum_oplevering,
       prognose_casco: null, prognose_afbouw: null, prognose_oplevering: null,

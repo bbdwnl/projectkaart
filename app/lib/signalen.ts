@@ -1,6 +1,7 @@
 import type { Licht, Project, ProjectDatums } from './types'
 import { DATUMVELDEN, faseInfo, ROLLEN } from './fasen'
 import { fmt, naarDatum } from './datum'
+import { isAfgehandeld } from './overzicht'
 
 // Aandachtspunten in de planning (zoals in het prototype): wat opvalt aan de datums en de mensen van de lopende
 // projecten. Geen fouten die de app tegenhoudt, wel vragen die iemand moet beantwoorden.
@@ -32,7 +33,7 @@ const VOLGORDE: [keyof ProjectDatums, keyof ProjectDatums, Signaal['soort']][] =
 ]
 
 export function signalen(projecten: Project[], nu: Date): Signaal[] {
-  const lopend = projecten.filter(p => LOPEND.includes(p.fase))
+  const lopend = projecten.filter(p => LOPEND.includes(p.fase) && !isAfgehandeld(p))
   const d = (p: Project, v: keyof ProjectDatums) => naarDatum(p[v])
   const uit: Signaal[] = []
   const lijst = (soort: Signaal['soort'], tekst: string, ps: Project[]) => {
