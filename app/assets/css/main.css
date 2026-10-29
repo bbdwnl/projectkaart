@@ -1,5 +1,6 @@
 /* Componenten en opbouw. Overgenomen uit design-referentie.html; tokens staan in tokens.css. */
 *{box-sizing:border-box}
+.schil{display:contents}
 html{scroll-behavior:smooth;scroll-padding-top:90px}
 body{margin:0;background:var(--wit) var(--verloop-zacht) no-repeat;background-size:100% 760px;color:var(--zwart);font:400 17px/26px var(--font);-webkit-font-smoothing:antialiased}
 a{color:inherit}

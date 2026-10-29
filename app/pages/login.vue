@@ -39,6 +39,10 @@ if (route.query.error_code || route.query.error_description) {
   melding.value = 'Deze inloglink werkt niet meer: hij is al gebruikt of verlopen. Vraag hieronder een nieuwe aan.'
   router.replace({ query: typeof route.query.terug === 'string' ? { terug: route.query.terug } : {} })
 }
+// Ingelogd in een andere tab (met de link uit de mail): deze tab, die op "Kijk in je mail" wachtte, gaat mee.
+watch(() => !!gebruiker.value && !gebruiker.value.naamNodig, (binnen) => {
+  if (binnen && stap.value === 'verstuurd') navigateTo(terug())
+})
 watch(() => gebruiker.value?.naamNodig, (nodig) => {
   if (nodig && !naam.value) naam.value = naamVoorstel.value
 }, { immediate: true })
