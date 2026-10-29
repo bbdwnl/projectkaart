@@ -164,7 +164,7 @@ describe('aftekenen en logboek', () => {
     await expect(als(MICHIEL, `insert into public.project_disciplines (project_id, discipline, leverancier_id) values ($1, 'lift', $2)`, [projectId, l!.id])).rejects.toThrow()
     await als(MICHIEL, `insert into public.project_leveranciers (project_id, leverancier_id) values ($1, $2)`, [projectId, l!.id])
     await als(MICHIEL, `insert into public.project_disciplines (project_id, discipline, leverancier_id, contact) values ($1, 'lift', $2, 'Kees · 06 1234 5678')`, [projectId, l!.id])
-    await expect(als(MICHIEL, `insert into public.project_disciplines (project_id, discipline) values ($1, 'liften')`, [projectId])).rejects.toThrow()
+    await expect(als(MICHIEL, `insert into public.project_disciplines (project_id, discipline) values ($1, 'Liften!')`, [projectId])).rejects.toThrow()
     await als(MICHIEL, `delete from public.project_leveranciers where project_id = $1 and leverancier_id = $2`, [projectId, l!.id])
     const [d] = await als<{ leverancier_id: string | null, contact: string }>(MICHIEL, `select leverancier_id, contact from public.project_disciplines where project_id = $1 and discipline = 'lift'`, [projectId])
     expect(d).toEqual({ leverancier_id: null, contact: 'Kees · 06 1234 5678' })
@@ -179,7 +179,7 @@ describe('aftekenen en logboek', () => {
   it('logt wachtkamer, subfase en buddy op het project', async () => {
     const [p] = await als<{ id: string }>(MICHIEL, `insert into public.projecten (slug, naam) values ('wachtend', 'Wachtend') returning id`)
     await als(MICHIEL, `update public.projecten set wachtkamer = true, buddy = 'Ad' where id = $1`, [p!.id])
-    await expect(als(MICHIEL, `update public.projecten set subfase = 'xo' where id = $1`, [p!.id])).rejects.toThrow()
+    await expect(als(MICHIEL, `update public.projecten set subfase = 'X O' where id = $1`, [p!.id])).rejects.toThrow()
     const log = await als<{ veld: string, nieuw: string }>(MICHIEL, `select veld, nieuw from public.logboek where project_id = $1 order by id`, [p!.id])
     expect(log).toEqual([{ veld: 'wachtkamer', nieuw: 'true' }, { veld: 'buddy', nieuw: 'Ad' }])
   })
@@ -200,6 +200,23 @@ describe('aftekenen en logboek', () => {
     expect(await als(MICHIEL, `select id from public.feedback`)).toHaveLength(0)
     const rijen = await als<{ door: string, plek_y: number, afgehandeld: boolean }>(BENNO, `select door, plek_y, afgehandeld from public.feedback`)
     expect(rijen).toEqual([{ door: 'Michiel', plek_y: 840, afgehandeld: false }])
+  })
+
+  it('bewaart instellingen: iedereen leest, alleen het MT schrijft, met wie en wanneer', async () => {
+    await expect(als(MICHIEL, `insert into public.instellingen (sleutel, waarde) values ('mensen', '{}')`)).rejects.toThrow()
+    const [r] = await als<{ gewijzigd_door: string }>(BENNO, `insert into public.instellingen (sleutel, waarde, gewijzigd_door) values ('mensen', '{"eigenaren":["Anna"]}', 'Vervalst') returning gewijzigd_door`)
+    expect(r!.gewijzigd_door).toBe('Benno van Bergen')
+    await expect(als(BENNO, `insert into public.instellingen (sleutel, waarde) values ('iets', '{}')`)).rejects.toThrow()
+    expect(await als(MICHIEL, `select sleutel from public.instellingen`)).toEqual([{ sleutel: 'mensen' }])
+    expect(await als(MICHIEL, `delete from public.instellingen returning sleutel`)).toHaveLength(0)
+    expect(await als(VREEMD, `select sleutel from public.instellingen`)).toHaveLength(0)
+  })
+
+  it('laat nieuwe soorten, subfasen en disciplines toe, als korte code', async () => {
+    const [p] = await als<{ id: string }>(MICHIEL, `insert into public.projecten (slug, naam, soort, subfase) values ('nieuwe-soort', 'Nieuwe soort', '{tk,huur_2}', 'do') returning id`)
+    await expect(als(MICHIEL, `update public.projecten set soort = '{"Met spatie"}' where id = $1`, [p!.id])).rejects.toThrow()
+    await als(MICHIEL, `insert into public.project_disciplines (project_id, discipline, contact) values ($1, 'dak', 'Kees')`, [p!.id])
+    await expect(als(MICHIEL, `insert into public.project_disciplines (project_id, discipline) values ($1, 'Dak!')`, [p!.id])).rejects.toThrow()
   })
 
   it('logt een uitzondering die erbij komt en weer weggaat', async () => {

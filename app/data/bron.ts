@@ -55,6 +55,13 @@ export interface Bron {
   /** Leverancier en contact van één discipline; de leverancier moet op het project staan. */
   bewaarDiscipline(projectId: string, discipline: Discipline, wijziging: DisciplineWijziging): Promise<ProjectDiscipline>
 
+  /** De keuzelijsten onder Instellingen: één rij per lijst. Ontbreekt een rij, dan geldt de standaard uit de code. */
+  instellingen(): Promise<InstellingRij[]>
+  /** Alleen het MT. Wie en wanneer vult de database in. */
+  bewaarInstelling(sleutel: string, waarde: unknown): Promise<InstellingRij>
+  /** Terug naar de standaard uit de code (alleen het MT). */
+  wisInstelling(sleutel: string): Promise<void>
+
   /** Feedback uit de knop rechtsonder. Alleen het MT kan hem lezen, dus er komt niets terug. */
   stuurFeedback(invoer: NieuweFeedback): Promise<void>
 
@@ -96,8 +103,10 @@ export interface Bron {
   meldGereed(token: string, code: string, puntId: string, gereed: boolean): Promise<void>
 }
 
+export interface InstellingRij { sleutel: string, waarde: unknown, gewijzigd_door: string | null, gewijzigd_op: string }
+
 export interface Luister {
-  tabel: 'projecten' | 'taken' | 'opmerkingen' | 'acties' | 'controlepunten' | 'project_leveranciers' | 'project_disciplines' | 'tekeningen'
+  tabel: 'projecten' | 'taken' | 'opmerkingen' | 'acties' | 'controlepunten' | 'project_leveranciers' | 'project_disciplines' | 'tekeningen' | 'instellingen'
   projectId?: string
 }
 

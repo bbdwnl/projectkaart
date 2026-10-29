@@ -9,6 +9,22 @@ export default defineNuxtPlugin(async () => {
     throw new Error('Supabase is niet ingesteld: zet NUXT_PUBLIC_SUPABASE_URL en NUXT_PUBLIC_SUPABASE_KEY (zie .env.example).')
   }
   const supabase = createClient(config.supabaseUrl, config.supabaseKey, { auth: { flowType: 'pkce' } })
-  await useGebruiker().start(supabase, config.emailDomein)
-  return { provide: { bron: maakSupabaseBron(supabase), supabase } }
+  const bron = maakSupabaseBron(supabase)
+  const { gebruiker, start } = useGebruiker()
+  await start(supabase, config.emailDomein)
+
+  // De keuzelijsten uit Instellingen: met een geldige inlog meteen bij het starten (zodat het eerste scherm ze al
+  // heeft), anders zodra je inlogt. Live bijgewerkt zolang je ingelogd bent.
+  const nuxtApp = useNuxtApp()
+  let stop: (() => void) | null = null
+  const laad = () => nuxtApp.runWithContext(() => useInstellingen().laad(bron))
+  if (gebruiker.value) await laad()
+  watch(() => gebruiker.value?.email ?? null, (email, vorig) => {
+    stop?.()
+    stop = null
+    if (!email) return
+    if (vorig !== undefined) laad()
+    stop = bron.luister([{ tabel: 'instellingen' }], () => laad())
+  }, { immediate: true })
+  return { provide: { bron, supabase } }
 })

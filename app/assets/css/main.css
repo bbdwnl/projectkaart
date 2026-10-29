@@ -1019,3 +1019,55 @@ a.knop{text-decoration:none}
 .feedback-enter-from,.feedback-leave-to{opacity:0;transform:translateY(8px) scale(.96)}
 @media (max-width:760px){.feedback-knop{right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom))}.feedback-paneel{right:16px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 52px)}}
 @media print{.feedback-knop,.feedback-paneel,.feedback-speld{display:none}}
+
+/* ---------- instellingen: keuzelijsten ---------- */
+.paginatabs+.instellingen,.paginatabs~.instellingen{margin-top:30px}
+fieldset.kaal{border:0;margin:0;padding:0;min-width:0}
+fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,fieldset.kaal:disabled>.knop,fieldset.kaal:disabled .inst-groep>.knop{display:none}
+.inst-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;align-items:start}
+.inst-kaart{display:grid;gap:12px;padding:22px 18px 18px}
+.inst-kaart>.tab{justify-self:start}
+.inst-kaart>.klein{margin:0}
+.inst-lijst{display:grid;gap:10px}
+.inst-items{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.inst-items li{display:flex;align-items:center;gap:6px}
+.inst-items .veld,.inst-taak>.veld{flex:1 1 auto;min-width:0;border-color:transparent;background:transparent;font-size:15px}
+.inst-items .veld:hover,.inst-items .veld:focus,.inst-taak>.veld:hover,.inst-taak>.veld:focus{border-color:var(--zwart);background:var(--wit)}
+.inst-knopjes{display:inline-flex;align-items:center;gap:2px;flex:none}
+.inst-knopjes small{margin-right:6px}
+.ikoon{width:28px;height:28px;padding:0;border:0;border-radius:50%;background:none;color:var(--stil);font-size:14px;font-weight:700;cursor:pointer;display:grid;place-items:center;transition:background-color .2s,color .2s}
+.ikoon:hover:not(:disabled){background:var(--grijs);color:var(--zwart)}
+.ikoon:disabled{opacity:.3;cursor:default}
+.inst-nieuw{display:flex;gap:8px}
+.inst-nieuw .veld{flex:1 1 auto;min-width:0}
+.inst-labels{display:grid;gap:8px}
+.inst-labels.twee{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+.inst-labels label{display:grid;gap:2px}
+.inst-labels .veld{width:100%}
+.inst-pakket{display:grid;gap:18px}
+.inst-pakket>.knop{justify-self:start}
+.inst-groep{display:grid;gap:12px;padding:18px}
+.inst-groep>.knop{justify-self:start}
+.inst-groepkop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto;gap:10px;align-items:end}
+.inst-groepkop label,.inst-kop{display:grid;gap:4px}
+.inst-groepkop .veld,.inst-kop .veld{width:100%}
+.inst-kop{max-width:360px}
+.inst-taken{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.inst-taak{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:2px 0;border-top:1px solid var(--grijs)}
+.inst-regel{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.inst-regel .getal{width:70px}
+.inst-casco{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.inst-koppel summary{cursor:pointer;padding:4px 0}
+.inst-koppelgroep{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+.inst-koppelgroep .label{flex-basis:100%;margin:0}
+.inst-opslaan{position:sticky;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 52px);z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:22px;padding:12px 16px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border:var(--rand);border-radius:var(--radius)}
+.inst-opslaan p{margin:0}
+.inst-opslaan.gewijzigd{border-color:var(--oker);box-shadow:var(--zacht-hoog)}
+.inst-opslaan .knoppen{display:flex;align-items:center;gap:14px}
+@media (max-width:760px){
+  .inst-groepkop{grid-template-columns:minmax(0,1fr) auto}
+  .inst-groepkop label:nth-child(2){grid-column:1/-1;grid-row:2}
+  .inst-taak{grid-template-columns:minmax(0,1fr) auto}
+  .inst-regel{grid-column:1/-1;grid-row:2}
+  .inst-labels.twee{grid-template-columns:1fr}
+}

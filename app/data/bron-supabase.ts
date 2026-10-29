@@ -1,5 +1,5 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
-import type { Bron, Luister, NieuwControlepunt, NieuweUitzondering } from './bron'
+import type { Bron, InstellingRij, Luister, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
 import type { Actie, Adres, ProjectDiscipline, Controlepunt, Deellink, Financien, Leverancier, LogRegel, Opmerking, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
 import { fotoPad } from '~/lib/controle'
@@ -201,6 +201,17 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     async bewaarDiscipline(projectId, discipline, wijziging) {
       return uitkomst(await sb.from('project_disciplines').upsert({ project_id: projectId, discipline, ...wijziging }, { onConflict: 'project_id,discipline' })
         .select().single(), 'opslaan') as ProjectDiscipline
+    },
+
+    async instellingen() {
+      return uitkomst(await sb.from('instellingen').select('*'), 'de instellingen laden') as InstellingRij[]
+    },
+    async bewaarInstelling(sleutel, waarde) {
+      return uitkomst(await sb.from('instellingen').upsert({ sleutel, waarde }, { onConflict: 'sleutel' }).select().single(), 'de instellingen opslaan') as InstellingRij
+    },
+    async wisInstelling(sleutel) {
+      const res = await sb.from('instellingen').delete().eq('sleutel', sleutel)
+      if (res.error) uitkomst(res, 'de standaard terugzetten')
     },
 
     async stuurFeedback(invoer) {

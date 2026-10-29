@@ -1,3 +1,4 @@
+import { reactive } from 'vue'
 import type { Fase } from './types'
 
 /**
@@ -33,8 +34,9 @@ const voorb = (dagen: number): DeadlineRegel => ({ type: 'voorbereiding', dagen 
 /**
  * Het standaardpakket: de lijsten uit het prototype (de "live" lijsten), per fase.
  * De sleutels zijn die van het prototype, zodat de bestaande gegevens één op één over kunnen.
+ * Dit is de standaard; onder Instellingen past het MT het pakket aan (zie instellingen.ts).
  */
-export const LIJSTEN: Record<Fase, Takengroep[]> = {
+export const LIJSTEN: Record<Fase, Takengroep[]> = reactive({
   lead: [
     { titel: 'Overdracht naar haalbaarheid', taken: [
       t('betaalde_opdracht', 'Betaalde opdracht'),
@@ -149,7 +151,7 @@ export const LIJSTEN: Record<Fase, Takengroep[]> = {
       t('fin_afhandeling', 'Financiële afhandeling', { type: 'oplevering', dagen: 42 }),
     ] },
   ],
-}
+})
 
 export const UITZONDERINGEN_GROEP = 'Uitzonderingen in dit project'
 

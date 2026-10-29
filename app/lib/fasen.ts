@@ -1,4 +1,8 @@
-import type { Discipline, Fase, ProjectDatums, ProjectPrognose, Rol, Subfase } from './types'
+import { reactive } from 'vue'
+import type { Discipline, Fase, ProjectDatums, ProjectPrognose, Rol, Soort, Subfase } from './types'
+
+// De keuzelijsten hieronder zijn de standaard. Onder Instellingen past het MT ze aan; de app zet die versie er na het
+// inloggen overheen (pasToe in instellingen.ts). Daarom reactive: elk scherm volgt een wijziging vanzelf.
 
 export interface FaseInfo {
   id: Fase
@@ -8,32 +12,33 @@ export interface FaseInfo {
 }
 
 /** De procesflow van BBDW, van lead tot nazorg (uit het prototype). */
-export const FASEN: FaseInfo[] = [
+export const FASEN: FaseInfo[] = reactive<FaseInfo[]>([
   { id: 'lead', naam: 'Lead', rol: 'am', wat: 'Kans in beeld' },
   { id: 'haalbaarheid', naam: 'Haalbaarheid', rol: 'am', wat: 'SO / VO' },
   { id: 'ontwikkeling', naam: 'Ontwikkeling', rol: 'po', wat: 'Voorbereiding & inkoop' },
   { id: 'uitvoering', naam: 'Uitvoering', rol: 'pm', wat: 'Bouwvoorbereiding, casco & afbouw' },
   { id: 'nazorg', naam: 'Nazorg', rol: 'pm', wat: 'Actielijst tot afronding' },
-]
+])
 
 export const faseInfo = (f: Fase): FaseInfo => FASEN.find(x => x.id === f)!
 export const faseIndex = (f: Fase): number => FASEN.findIndex(x => x.id === f)
 
-export const ROLLEN: Record<Rol, { kort: string, naam: string }> = {
+export const ROLLEN: Record<Rol, { kort: string, naam: string }> = reactive({
   am: { kort: 'AM', naam: 'Accountmanager' },
   po: { kort: 'PO', naam: 'Projectontwikkelaar' },
   pm: { kort: 'PM', naam: 'Projectmanager' },
   opzichter: { kort: 'Opzichter', naam: 'Opzichter' },
-}
+})
 
-/** De mensen uit het prototype; later een tabel. */
-export const MENSEN: Record<Rol, string[]> = {
+/** Wie welke rol kan hebben (standaard: de mensen uit het prototype). */
+export const MENSEN: Record<Rol, string[]> = reactive({
   am: ['Benno', 'Jeroen', 'Michiel', 'Peter'],
   po: ['Benno', 'Michiel'],
   pm: ['Benno', 'Carlo', 'Dimitry', 'Michiel', 'Patrick'],
   opzichter: ['Carlo', 'Heino', 'Hugo'],
-}
-export const EIGENAREN = ['Michiel', 'Benno', 'Jeroen', 'Peter', 'Ad', 'Patrick', 'Dimitry', 'Carlo', 'Heino', 'Hugo', 'Architect', 'Adviseur', 'Aannemer', 'Leverancier']
+})
+/** Wie eigenaar van een taak of actiehouder kan zijn. */
+export const EIGENAREN: string[] = reactive(['Michiel', 'Benno', 'Jeroen', 'Peter', 'Ad', 'Patrick', 'Dimitry', 'Carlo', 'Heino', 'Hugo', 'Architect', 'Adviseur', 'Aannemer', 'Leverancier'])
 
 export const DATUMVELDEN: { veld: keyof ProjectDatums, naam: string, kort: string }[] = [
   { veld: 'datum_casco', naam: 'Start casco', kort: 'Start casco' },
@@ -63,7 +68,8 @@ export const MIJLPAAL: Record<Fase, { naam: string, veld: keyof ProjectDatums } 
  * Wat er bij elke overdracht klaar moet zijn (de procesflow van het prototype).
  * Elke eis leidt zijn stand af uit taken ('lijst:sleutel'); er is geen harde gate.
  */
-export const EISEN: Record<Fase, { kop: string, items: { titel: string, taken: string[] }[] }> = {
+export interface Eis { titel: string, taken: string[] }
+export const EISEN: Record<Fase, { kop: string, items: Eis[] }> = reactive({
   lead: { kop: 'Overdracht', items: [
     { titel: 'Betaalde opdracht', taken: ['lead:betaalde_opdracht'] },
     { titel: 'Analyse risico\'s & kansen', taken: ['lead:risico'] },
@@ -91,18 +97,18 @@ export const EISEN: Record<Fase, { kop: string, items: { titel: string, taken: s
     { titel: 'Opleverpunten < 3 weken opgelost', taken: ['nazorg:opleverpunten'] },
     { titel: 'Financiële afhandeling < 6 weken', taken: ['nazorg:fin_afhandeling'] },
   ] },
-}
+})
 
-export const SUBFASEN: { id: Subfase, naam: string }[] = [
+export const SUBFASEN: { id: Subfase, naam: string }[] = reactive([
   { id: 'so', naam: 'SO' },
   { id: 'vo', naam: 'Ontwikkeling VO' },
-]
+])
 
 /** Wie buddy kan zijn bij een project (uit het prototype). */
-export const BUDDIES = ['Michiel', 'Benno', 'Ad', 'Jeroen', 'Peter']
+export const BUDDIES: string[] = reactive(['Michiel', 'Benno', 'Ad', 'Jeroen', 'Peter'])
 
 /** De vaste disciplines in de uitvoering, elk met één leverancier (uit het prototype). */
-export const DISCIPLINES: { id: Discipline, naam: string }[] = [
+export const DISCIPLINES: { id: Discipline, naam: string }[] = reactive([
   { id: 'casco', naam: 'Casco / hoofdaannemer' },
   { id: 'sloop', naam: 'Sloop' },
   { id: 'w', naam: 'Installaties W (werktuigbouwkundig)' },
@@ -118,10 +124,10 @@ export const DISCIPLINES: { id: Discipline, naam: string }[] = [
   { id: 'brand', naam: 'Brandwerende voorzieningen' },
   { id: 'terrein', naam: 'Terrein & riolering' },
   { id: 'overig', naam: 'Overig' },
-]
+])
 
-export const SOORTEN: { id: 'adv' | 'ont' | 'tk', naam: string }[] = [
+export const SOORTEN: { id: Soort, naam: string }[] = reactive([
   { id: 'adv', naam: 'Alleen adviseur' },
   { id: 'ont', naam: 'Ontwerp & coördinatie' },
   { id: 'tk', naam: 'Turnkey afbouw' },
-]
+])

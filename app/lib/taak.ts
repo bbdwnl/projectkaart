@@ -1,13 +1,15 @@
+import { reactive } from 'vue'
 import type { Status, Taak } from './types'
 
-export const STATUSSEN: { id: Status, naam: string }[] = [
+/** De statussen staan vast (het stoplicht rekent ermee); de namen zijn aan te passen onder Instellingen. */
+export const STATUSSEN: { id: Status, naam: string }[] = reactive([
   { id: 'niet_gestart', naam: 'Niet gestart' },
   { id: 'loopt', naam: 'Loopt' },
   { id: 'concept', naam: 'Concept' },
   { id: 'definitief', naam: 'Definitief' },
   { id: 'volgende_fase', naam: 'Volgende fase' },
   { id: 'nvt', naam: 'N.v.t.' },
-]
+])
 export const statusNaam = (s: string | null | undefined) => STATUSSEN.find(x => x.id === s)?.naam ?? s ?? ''
 
 export function leegTaak(extra: Partial<Taak> & Pick<Taak, 'id' | 'project_id' | 'fase'>): Taak {

@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import type { Leverancier, ProjectLeverancier } from '~/lib/types'
 
-// Instellingen voor alle projecten. Nu: de globale lijst met leveranciers, waaruit je op elk project kiest.
+// Instellingen voor alle projecten: de globale lijst met leveranciers (iedereen), en de keuzelijsten van de app (alleen
+// het MT past die aan): mensen per rol, de namen in de keuzelijsten, het takenpakket en wat er bij elke overdracht klaar
+// moet zijn. Alle tabbladen blijven staan bij wisselen, zodat wat je nog niet opsloeg niet verloren gaat.
 useHead({ title: 'Instellingen · Projectkaart' })
+type Tab = 'leveranciers' | 'mensen' | 'keuzelijsten' | 'takenpakket' | 'overdracht'
+const TABS: { id: Tab, naam: string }[] = [
+  { id: 'leveranciers', naam: 'Leveranciers' },
+  { id: 'mensen', naam: 'Mensen' },
+  { id: 'keuzelijsten', naam: 'Keuzelijsten' },
+  { id: 'takenpakket', naam: 'Takenpakket' },
+  { id: 'overdracht', naam: 'Overdracht' },
+]
+const tab = useTabblad<Tab>('leveranciers', TABS.map(t => t.id))
+const { gebruiker } = useGebruiker()
 const bron = useBron()
 const { toon } = useToast()
 const stand = ref<'laden' | 'klaar' | 'fout'>('laden')
@@ -90,9 +102,16 @@ async function weg(l: Leverancier) {
     <header class="paginakop">
       <p class="label">Voor alle projecten</p>
       <h1>Instellingen</h1>
+      <p v-if="!gebruiker?.isMt" class="zin">De keuzelijsten past alleen het MT aan; je ziet hier wat er nu geldt.</p>
     </header>
 
-    <section id="leveranciers" class="blok instellingen">
+    <PaginaTabs v-model="tab" :tabs="TABS" label="Instellingen" />
+    <InstellingenMensen v-show="tab === 'mensen'" />
+    <InstellingenKeuzelijsten v-show="tab === 'keuzelijsten'" />
+    <InstellingenTakenpakket v-show="tab === 'takenpakket'" />
+    <InstellingenOverdracht v-show="tab === 'overdracht'" />
+
+    <section v-show="tab === 'leveranciers'" id="leveranciers" class="blok instellingen">
       <div class="blokkop">
         <div>
           <h2>Leveranciers</h2>

@@ -5,10 +5,12 @@ export type Status = 'niet_gestart' | 'loopt' | 'concept' | 'definitief' | 'volg
 /** De stand van een taak op de kaart: het stoplicht. */
 export type Licht = 'telaat' | 'letop' | 'open' | 'klaar' | 'later'
 export type Rol = 'am' | 'po' | 'pm' | 'opzichter'
-export type Soort = 'adv' | 'ont' | 'tk'
+/** Een code uit de keuzelijst Soort project (Instellingen), bijvoorbeeld 'tk'. */
+export type Soort = string
 /** De subfase van haalbaarheid: SO of ontwikkeling VO. */
-export type Subfase = 'so' | 'vo'
-export type Discipline = 'casco' | 'sloop' | 'w' | 'e' | 'klimaat' | 'lift' | 'zon' | 'wanden' | 'vloeren' | 'kozijnen' | 'schilder' | 'sanitair' | 'brand' | 'terrein' | 'overig'
+export type Subfase = string
+/** Een code uit de keuzelijst Disciplines (Instellingen), bijvoorbeeld 'casco'. */
+export type Discipline = string
 export type UitzonderingStatus = 'uitzondering' | 'voorgesteld' | 'standaard'
 /** Datum als 'YYYY-MM-DD'. */
 export type IsoDatum = string
