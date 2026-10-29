@@ -55,7 +55,8 @@ textarea.veld{height:auto;min-height:64px;padding:8px 10px;resize:vertical;width
 .merk .logo{display:block;height:22px;width:auto}
 .merk .streep{width:2px;height:24px;background:var(--zwart);border-radius:2px}
 .merk b{font-weight:900;font-size:20px;letter-spacing:-.04em}
-.nav{display:flex;gap:6px;margin-left:10px}
+.nav{display:flex;gap:6px;margin-left:10px;min-width:0}
+.nav a{flex:none;white-space:nowrap}
 .nav a{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;padding:8px 14px;border-radius:var(--rond);border:2px solid transparent}
 .nav a:hover{background:var(--grijs)}
 .nav a[aria-current]{border-color:var(--zwart)}
@@ -429,7 +430,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .weergave{animation:none}
 
 /* balk: kruimel en gebruikersmenu */
-.nav .kruimel{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;border-radius:var(--rond);border:2px solid var(--zwart);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+.nav .kruimel{flex:0 1 auto;min-width:70px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:8px 14px;border-radius:var(--rond);border:2px solid var(--zwart);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis}
 .nav a.router-link-exact-active{border-color:var(--zwart)}
 .gebruiker-menu{position:relative}
 .avatar{border:0;cursor:pointer}
@@ -439,6 +440,11 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 
 /* mobiel: één menu achter de hamburger (pagina's, weergave van de kaart, account) */
 .mobiel-menu{display:none}
+/* Past het hoofdmenu niet meer naast logo en avatar (tablet, smalle laptop): dan het menu achter de knop. */
+@media (max-width:1200px){
+  .balk .nav,.balk .gebruiker-menu.alleen-breed{display:none}
+  .balk .mobiel-menu{display:block}
+}
 .hamburger{width:40px;height:40px;padding:0;border:var(--rand);border-radius:50%;background:var(--wit);display:grid;place-content:center;gap:4px;cursor:pointer}
 .hamburger i{display:block;width:16px;height:2px;border-radius:2px;background:var(--zwart);transition:transform .3s var(--uit),opacity .2s}
 .hamburger.open i:nth-child(1){transform:translateY(6px) rotate(45deg)}
@@ -1024,13 +1030,14 @@ a.knop{text-decoration:none}
 .paginatabs+.instellingen,.paginatabs~.instellingen{margin-top:30px}
 fieldset.kaal{border:0;margin:0;padding:0;min-width:0}
 fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,fieldset.kaal:disabled>.knop,fieldset.kaal:disabled .inst-groep>.knop{display:none}
-.inst-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;align-items:start}
-.inst-kaart{display:grid;gap:12px;padding:22px 18px 18px}
+.inst-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:22px;align-items:start}
+/* minmax(0,1fr): een veld mag smaller worden dan zijn standaardbreedte, anders duwt het de knoppen buiten de kaart. */
+.inst-kaart{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:22px 18px 18px}
 .inst-kaart>.tab{justify-self:start}
 .inst-kaart>.klein{margin:0}
 .inst-lijst{display:grid;gap:10px}
 .inst-items{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.inst-items li{display:flex;align-items:center;gap:6px}
+.inst-items li{display:flex;align-items:center;gap:6px;min-width:0}
 .inst-items .veld,.inst-taak>.veld{flex:1 1 auto;min-width:0;border-color:transparent;background:transparent;font-size:15px}
 .inst-items .veld:hover,.inst-items .veld:focus,.inst-taak>.veld:hover,.inst-taak>.veld:focus{border-color:var(--zwart);background:var(--wit)}
 .inst-knopjes{display:inline-flex;align-items:center;gap:2px;flex:none}
@@ -1038,15 +1045,17 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
 .ikoon{width:28px;height:28px;padding:0;border:0;border-radius:50%;background:none;color:var(--stil);font-size:14px;font-weight:700;cursor:pointer;display:grid;place-items:center;transition:background-color .2s,color .2s}
 .ikoon:hover:not(:disabled){background:var(--grijs);color:var(--zwart)}
 .ikoon:disabled{opacity:.3;cursor:default}
-.inst-nieuw{display:flex;gap:8px}
+.inst-nieuw{display:flex;gap:8px;min-width:0}
+.inst-nieuw .knop{flex:none}
 .inst-nieuw .veld{flex:1 1 auto;min-width:0}
 .inst-labels{display:grid;gap:8px}
 .inst-labels.twee{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
 .inst-labels label{display:grid;gap:2px}
 .inst-labels .veld{width:100%}
-.inst-pakket{display:grid;gap:18px}
+.inst-pakket{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.instellingen .blokkop .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}
 .inst-pakket>.knop{justify-self:start}
-.inst-groep{display:grid;gap:12px;padding:18px}
+.inst-groep{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:18px}
 .inst-groep>.knop{justify-self:start}
 .inst-groepkop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) auto;gap:10px;align-items:end}
 .inst-groepkop label,.inst-kop{display:grid;gap:4px}
@@ -1070,4 +1079,37 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
   .inst-taak{grid-template-columns:minmax(0,1fr) auto}
   .inst-regel{grid-column:1/-1;grid-row:2}
   .inst-labels.twee{grid-template-columns:1fr}
+}
+
+/* ---------- maand meeting ---------- */
+.meeting-filters{align-items:center}
+.meeting-filters .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.meeting-fase{margin-top:44px}
+.meeting-lijst{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.meeting-rij{display:grid;gap:10px;padding:16px 18px}
+.meeting-kop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.meeting-naam{display:inline-flex;align-items:baseline;gap:10px;font-weight:900;font-size:20px;letter-spacing:-.02em;text-decoration:none;min-width:0}
+.meeting-naam:hover{text-decoration:underline}
+.meeting-naam .label{margin:0}
+.meeting-kop .chip{margin-left:auto;min-height:28px;font-size:13px}
+.meeting-waarom{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.meeting-waarom li{display:flex;gap:10px;align-items:baseline;font-size:15px;line-height:21px}
+.meeting-waarom i{flex:none;width:10px;height:10px;border-radius:50%;background:var(--grijs);transform:translateY(-1px)}
+.meeting-waarom .telaat i{background:var(--baksteen)}
+.meeting-waarom .letop i{background:var(--oker)}
+.meeting-opschema{margin:14px 0 0}
+.meeting-opschema a{font-weight:700}
+.meeting-mijlpalen{list-style:none;margin:0;padding:0;display:grid}
+.meeting-mijlpalen li{display:grid;grid-template-columns:110px minmax(0,1.4fr) minmax(0,1fr) 110px;gap:12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--grijs)}
+.meeting-mijlpalen a{font-weight:700;text-decoration:none}
+.meeting-mijlpalen li>.n{white-space:nowrap}
+@media (max-width:760px){
+  .meeting-kop .chip{margin-left:0}
+  .meeting-mijlpalen li{grid-template-columns:96px minmax(0,1fr);gap:2px 10px}
+  .meeting-mijlpalen li>:nth-child(3),.meeting-mijlpalen li>:nth-child(4){grid-column:2}
+}
+@media print{
+  .meeting .kop-knoppen,.meeting-filters{display:none}
+  .meeting-rij{break-inside:avoid;box-shadow:none}
+  .meeting-fase{margin-top:24px}
 }

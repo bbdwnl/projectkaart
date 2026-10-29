@@ -39,6 +39,8 @@ de offerte "Van oud naar nieuw" (fase B) en [design-referentie.html](../design-r
 | 35 | Afgehandeld (keuze opdrachtgever 28-10-2026) | **Een project in nazorg dat helemaal klaar is, meld je af onder Details: Afgehandeld.** Het blijft in nazorg, maar staat onder Projecten niet meer in de kolom en telt niet mee in de aantallen en de aandachtspunten. Met **Toon afgehandeld** (in de adresbalk) staan ze apart onderaan de kolom Nazorg. De kop van de kaart toont het, en het komt in het logboek. Gaat een project terug naar een eerdere fase, dan telt het weer gewoon mee | Het archief (afgehandeld) uit het prototype. Zonder eindstand bleef de kolom Nazorg alleen maar groeien. Het planningsoverzicht en Mail actiehouders laten ze staan: de planning is geschiedenis, en een open actie blijft open. |
 | 36 | Feedback (verzoek opdrachtgever 28-10-2026) | **Een knop Feedback rechtsonder op elke pagina achter de login.** Hij opent op die plek een klein venster met een notitie en **Markeer de plek**: je klikt op de pagina waar het over gaat en daar komt een speld. Mee gaan de pagina (met de keuzes in de adresbalk), de plek in pixels op de pagina, het element dat daar staat met een stukje tekst, de schermmaat en de browser. Wie en wanneer vult de database in | Iedere medewerker kan sturen, alleen het MT leest (RLS), in Supabase in de tabel `feedback`, met een vinkje afgehandeld. Een overzicht in de app kan later. Niet op de pagina van een leverancier en niet in de schermvullende tekeningviewer. |
 | 37 | Keuzelijsten onder Instellingen (verzoek opdrachtgever 29-10-2026) | **Alle keuzelijsten zijn aan te passen onder Instellingen, door het MT**, in de tabbladen **Mensen** (wie AM, PO, PM, opzichter, eigenaar/actiehouder en buddy kan zijn), **Keuzelijsten** (de namen van statussen, fasen en rollen; soort project, subfase en disciplines vrij uit te breiden), **Takenpakket** (per fase de groepen en taken met hun deadline) en **Overdracht** (per fase wat er klaar moet zijn, gekoppeld aan taken). Opslaan per tabblad; het geldt meteen en live voor iedereen. Iedereen ziet wat er geldt, alleen het MT wijzigt (RLS) | Eén rij per lijst in de tabel `instellingen`, de inhoud als JSON (`app/lib/instellingen.ts`). Zonder rij, of met een rij die niet klopt, geldt de standaard uit de code; Terug naar de standaard haalt de rij weg. **Statussen en fasen liggen vast** (het stoplicht en de planning rekenen ermee), net als de soorten deadline en de slagingskansen (0 tot 100%); alleen de namen zijn aan te passen. Wie of wat uit een lijst gaat, blijft op de projecten staan. Een taak die uit het pakket gaat, verdwijnt van de kaarten; wat er was ingevuld blijft bewaard en komt terug met dezelfde sleutel, en een nieuwe taak krijgt nooit een oude sleutel. Uitzonderingen op "standaard" zet het MT nu zelf in het pakket. |
+| 38 | Maand meeting (offerte fase C, 29-10-2026) | **Menu-item Maand meeting**: de weergave voor het maandelijkse moment waarop de fase-eigenaren met de bedrijfsleider bekijken welke werken afwijken. Per fase alleen wat afwijkt, het ernstigste eerst, en in woorden waarom: taken te laat of let op (met de namen), acties uit het overleg te laat, open aandachtspunten bij Controle, en wat er in de planning opvalt. Wat op schema ligt, staat achter een schakelaar. Filter op fase-eigenaar (in de adresbalk), onderaan de mijlpalen van de komende vijf weken, en Afdrukken voor op tafel | Wat openstaat eerst (beslissing 8). Afgehandelde nazorg en leads in de wachtkamer tellen niet mee. Het hoofdmenu gaat onder 1200 px achter de menuknop, omdat het met dit item niet meer naast logo en avatar past. |
+| 39 | Back-up (29-10-2026) | **Elke nacht een SQL-bestand met alle gegevens, in een besloten bucket in Supabase (Frankfurt), 30 dagen bewaard**, gemaakt door Vercel Cron (`server/api/backup.get.ts`, beveiligd met `CRON_SECRET`). Met de migraties uit de repo is de database ermee terug te zetten (README) | Een Vercel-functie kan geen bestand op de hosting bewaren (de schijf is tijdelijk), dus de cron schrijft naar Supabase Storage: zo blijft alles in de EU. Vercel Blob staat standaard in de VS. Het beschermt tegen vergissingen en verlies van gegevens, niet tegen het wegvallen van Supabase zelf; daarvoor is de back-up van het Supabase-plan (Pro: dagelijks). Getest: legen en terugzetten gaf alle 17 tabellen rij voor rij gelijk terug. |
 
 ## Techniek
 
@@ -115,10 +117,21 @@ leest de database, zodat Copilot kan antwoorden op "waar staat project X?".
 7. **Tekeningen uit SharePoint:** zodra de koppeling met Microsoft Graph er is (volgende stap 4), kan een tekening
    rechtstreeks uit de projectmap komen in plaats van via downloaden en uploaden. Gewenst?
 
-## Volgende stappen
+## Stand van de offerte (29-10-2026)
 
-1. Schema en projecten in Supabase zetten (na akkoord), MT-rollen toekennen.
-2. De inloglink instellen in Supabase (SMTP, mailtemplate en URL's, zie README). De proefversie is uit de code.
-3. De live statussen uit het prototype overzetten (export van Benno).
-4. Documenten kiezen uit SharePoint via Microsoft Graph, met "gewijzigd na aftekenen".
-5. Fase C: het overzicht over alle projecten. Daarna de publieke kaart voor externe partijen.
+Fase B en C zijn opgeleverd; het project gaat over naar beheer en ondersteuning.
+
+- **Fase B, projectkaart:** klaar. Getest op een lopend werk. Het voorwaardenblad en de lijsten voor afstemmingen en
+  verspreide tekeningen vervallen (keuze opdrachtgever). **On hold:** documenten uit SharePoint via Microsoft Graph,
+  met de nieuwste documenten en de versie op de kaart (volgende stap 4); dat wacht op een app-registratie bij de
+  IT-partij van BBDW.
+- **Fase C, overzicht productierijp:** klaar. Eén omgeving (productie, `main`), bewust zonder aparte testomgeving.
+  Database in Frankfurt met een nachtelijke back-up (beslissing 39), de functies uit het prototype en de Maand
+  meeting (beslissing 38). De keuzelijsten onder Instellingen (beslissing 37) zijn erbij gekomen.
+
+## Na oplevering (beheer en ondersteuning)
+
+1. **On hold:** documenten kiezen uit SharePoint via Microsoft Graph, met "gewijzigd na aftekenen" en de nieuwste
+   documenten op de kaart. Nodig: een app-registratie met Sites.Selected op de site Projecten (IT-partij BBDW).
+2. Uitbreidingen op aanvraag, tegen nacalculatie (offerte fase C), zoals de open vragen hierboven, de publieke kaart
+   voor externe partijen of een overzicht in de app van de feedback.

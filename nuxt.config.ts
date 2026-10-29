@@ -69,9 +69,16 @@ export default defineNuxtConfig({
     '/**': { headers: securityHeaders },
   },
 
+  // Elke nacht om 03:00 UTC een back-up van de database naar de besloten bucket backups (server/api/backup.get.ts).
+  // Vercel stuurt CRON_SECRET mee; zonder die variabele in Vercel doet de route niets.
+  nitro: {
+    vercel: { config: { crons: [{ path: '/api/backup', schedule: '0 3 * * *' }] } },
+  },
+
   runtimeConfig: {
     // De service-sleutel van Supabase (NUXT_SUPABASE_SERVICE_KEY), alleen op de server: daarmee leest
-    // server/api/punten de open punten voor de pagina van een leverancier. Leeg = delen werkt nog niet.
+    // server/api/punten de open punten voor de pagina van een leverancier, en maakt server/api/backup de back-up.
+    // Leeg = delen en de back-up werken nog niet.
     supabaseServiceKey: '',
     public: {
       // Supabase (NUXT_PUBLIC_SUPABASE_URL en _KEY). Verplicht: zonder start de app niet.

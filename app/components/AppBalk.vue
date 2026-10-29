@@ -11,6 +11,7 @@ const MENU = [
   { pad: '/haalbaarheid', naam: 'Haalbaarheid', groep: 'haalbaarheid' },
   { pad: '/controle', naam: 'Controle', groep: '' },
   { pad: '/uitzonderingen', naam: 'Uitzonderingen', groep: '' },
+  { pad: '/maandmeeting', naam: 'Maand meeting', groep: '' },
 ]
 const menuOpen = ref(false)
 const menu = ref<HTMLElement>()

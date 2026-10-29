@@ -53,12 +53,23 @@ npm run build
    de service-role of secret key). Die sleutel blijft op de server: alleen `server/api/punten` gebruikt hem om
    de pagina van een leverancier te vullen, na controle van de link en de code. Zonder sleutel werkt de rest
    van de app gewoon, maar opent een gedeelde link niet.
-5. **MT.** Wie de financiën mag zien en de catalogus beheert, zet je na de eerste login in de
+5. **MT.** Wie de financiën mag zien, de catalogus beheert en de keuzelijsten onder Instellingen aanpast, zet je na de eerste login in de
    SQL-editor op MT: `update profielen set rol = 'mt' where email = 'naam@bbdw.nl';`
    Een naam corrigeren gaat ook daar (iedereen kiest zijn naam één keer):
    `update profielen set naam = 'Jan de Vries' where email = 'jan@bbdw.nl';`
 6. **Nieuwe externe dienst in de browser** (bijvoorbeeld Microsoft Graph voor SharePoint): zet de host in de
    Content-Security-Policy in [nuxt.config.ts](nuxt.config.ts), anders blokkeert de browser hem.
+6. **Back-up.** Elke nacht om 03:00 UTC maakt Vercel Cron een back-up: alle rijen van alle tabellen als één
+   SQL-bestand in de besloten bucket `backups` in Supabase Storage (Frankfurt), 30 dagen bewaard. Zet daarvoor in
+   Vercel `CRON_SECRET` (een lang willekeurig geheim, bijvoorbeeld `openssl rand -hex 32`) naast
+   `NUXT_SUPABASE_SERVICE_KEY`. Zonder `CRON_SECRET` doet de route niets. De bestanden staan in Supabase onder
+   Storage → backups (alleen voor wie het Supabase-project beheert). Foto's en tekeningen zitten er niet in; die
+   staan in Storage zelf.
+
+   **Terugzetten:** maak een lege database met het schema (`supabase db push` op een nieuw project), download het
+   bestand van de gewenste dag en voer het uit in de SQL-editor. Het zet triggers en verwijzingen uit tijdens het
+   terugzetten, zodat wie en wanneer blijven zoals ze waren, en zet de teller van het logboek goed. Op een database
+   waar al gegevens in staan, stopt het bij de eerste dubbele rij en verandert het niets.
 
 Alleen e-mailadressen op `@bbdw.nl` komen erin. De database maakt voor een ander adres geen account aan
 (dus gaat er ook geen link naartoe), en de RLS-policies laten alleen `@bbdw.nl` toe (`toegestane_domeinen()`).
