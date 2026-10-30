@@ -98,7 +98,7 @@ function maakKaart(slug: string) {
     return Object.fromEntries(FASEN.map(f => [f.id, takenVan(f.id, p, taken.value, catalogus.value, nu)])) as Record<Fase, TaakRegel[]>
   })
   const huidig = computed(() => (project.value && regelsPerFase.value?.[project.value.fase]) || [])
-  const lichten = computed(() => telling(huidig.value))
+  const lichten = computed(() => telling(Object.values(regelsPerFase.value ?? {}).flat()))
   const zin = computed(() => project.value ? standZin(project.value, huidig.value) : [])
   const mijlpaal = computed(() => project.value ? volgendeMijlpaal(project.value, nu) : null)
   const bereikt = (fase: Fase) => bereiktFase(projecten.value, fase)

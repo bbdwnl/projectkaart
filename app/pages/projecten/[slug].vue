@@ -32,10 +32,6 @@ const pilTaken = computed(() => {
   const n = lichten.value.telaat + lichten.value.letop
   return { licht: lichten.value.telaat ? 'telaat' as const : lichten.value.letop ? 'letop' as const : 'klaar' as const, tekst: n ? `${n} ${n === 1 ? 'vraagt' : 'vragen'} aandacht` : 'Op schema' }
 })
-const pilProces = computed(() => {
-  const m = mijlpaal.value
-  return m ? (m.dagen >= 0 ? dagen(m.dagen) : `${dagen(-m.dagen)} geleden`) : null
-})
 
 const pilActies = computed(() => {
   const n = openActies.value.length

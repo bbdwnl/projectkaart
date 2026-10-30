@@ -10,7 +10,7 @@ button,select,input,textarea{font:inherit;color:inherit}
 
 /* ---------- typografie ---------- */
 .label{font-size:10.5px;line-height:16px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--stil)}
-h1,.kop-1{font-weight:900;font-size:clamp(40px,6vw,64px);line-height:.95;letter-spacing:-.04em;margin:0;text-wrap:balance}
+h1,.kop-1{font-weight:900;font-size:clamp(32px,4.2vw,48px);line-height:1.02;letter-spacing:-.03em;margin:0;text-wrap:balance}
 h2,.kop-2{font-weight:900;font-size:30px;line-height:1.05;letter-spacing:-.03em;margin:0;text-wrap:balance}
 h3,.kop-3{font-weight:700;font-size:18px;line-height:24px;margin:0}
 .klein{font-size:14px;line-height:20px;color:var(--stil)}
@@ -64,18 +64,20 @@ textarea.veld{height:auto;min-height:64px;padding:8px 10px;resize:vertical;width
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--verloop-zwart);color:var(--wit);display:grid;place-items:center;font-size:12px;font-weight:700;letter-spacing:.04em}
 
 section.blok{padding:58px 0 0}
-.blokkop{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap}
+.blokkop{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap;margin-top:8px}
 .blokkop p{margin:8px 0 0;max-width:46em}
 
 /* ---------- kop ---------- */
-.kop{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:48px;padding-top:44px;align-items:start}
+.kop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;padding-top:44px;align-items:flex-start}
+  .kop > div:last-child{display:flex;align-items:flex-start;justify-content:flex-end}
+  .stoplicht{height:auto;max-width:100%}
 .kop .label{margin-bottom:14px;display:flex;gap:10px;align-items:center}
 .kop .label .tab{height:20px}
 .zin{font-weight:900;font-size:clamp(24px,2.6vw,32px);line-height:1.12;letter-spacing:-.03em;margin:22px 0 0;max-width:22em;min-height:2.3em}
 .zin .w{display:inline-block;opacity:0;transform:translateY(.5em);animation:woord .6s var(--uit) forwards;animation-delay:calc(var(--i)*45ms + 250ms)}
 @keyframes woord{to{opacity:1;transform:none}}
 .zin .telaat{color:var(--baksteen-diep)} .zin .letop{color:var(--oker-diep)} .zin .klaar{color:var(--salie-diep)}
-.meta{display:flex;flex-wrap:wrap;gap:10px 10px;margin-top:28px}
+.meta{display:flex;flex-wrap:wrap;gap:10px 10px;margin-top:28px;justify-content:flex-end}
 .chip{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:4px 12px 4px 10px;border:var(--rand);border-radius:var(--rond);background:var(--wit);font-size:14px}
 .chip .label{margin:0;font-size:9.5px;color:var(--stil)}
 .chip.leeg{border-style:dashed;color:var(--stil)}
@@ -86,40 +88,62 @@ section.blok{padding:58px 0 0}
 .links .pad{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--grijs);border-radius:var(--radius-s);padding:2px 8px}
 
 /* ---------- het stoplicht ---------- */
-.stoplicht{background:var(--verloop-zwart);color:var(--wit);border-radius:var(--radius-l);padding:22px 22px 18px;box-shadow:var(--zacht-hoog);position:relative}
-.stoplicht .label{color:#bdbdbd;margin:0 0 14px}
-.lampen{display:grid;gap:12px}
-.lamp{display:grid;grid-template-columns:62px 1fr;align-items:center;gap:14px;cursor:pointer;background:none;border:0;padding:0;text-align:left;color:inherit}
-.lamp i{transition-delay:var(--d,0ms)!important;width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:24px;letter-spacing:-.03em;background:radial-gradient(circle at 35% 30%,#2b2b2b,#141414 70%);color:#5c5c5c;box-shadow:inset 0 2px 6px rgba(0,0,0,.6),0 0 0 2px #2a2a2a;transition:background .5s var(--uit),box-shadow .6s var(--uit),color .4s,transform .4s var(--veer)}
-.lamp b{display:block;font-size:15px;font-weight:700;line-height:20px}
-.lamp small{display:block;font-size:12.5px;line-height:17px;color:#9a9a9a}
-.lamp.aan i{color:var(--zwart)}
-.lamp.aan.telaat i{background:radial-gradient(circle at 35% 30%,#dc9286,var(--baksteen) 62%);box-shadow:0 0 0 2px #2a2a2a,0 0 26px 2px rgba(194,110,96,.65)}
-.lamp.aan.letop i{background:radial-gradient(circle at 35% 30%,#ecc78f,var(--oker) 62%);box-shadow:0 0 0 2px #2a2a2a,0 0 26px 2px rgba(214,164,97,.6)}
-.lamp.aan.klaar i{background:radial-gradient(circle at 35% 30%,#98c3ac,var(--salie) 62%);box-shadow:0 0 0 2px #2a2a2a,0 0 26px 2px rgba(111,162,135,.6)}
-.lamp:hover i{transform:scale(1.06)}
-.stoplicht .balkje{display:flex;height:8px;border-radius:var(--rond);overflow:hidden;background:#2a2a2a;margin:20px 0 10px}
-.stoplicht .balkje span{height:100%;transform-origin:left;transition:flex-grow .8s var(--uit)}
-.seg-telaat{background:var(--baksteen)}.seg-letop{background:var(--oker)}.seg-klaar{background:var(--salie)}.stoplicht .seg-open{background:#3a3a3a}
-.stoplicht .voet{display:flex;justify-content:space-between;font-size:12.5px;color:#9a9a9a}
+.stoplicht{background:var(--verloop-zwart);color:var(--wit);border-radius:var(--radius-l);padding:18px 22px;box-shadow:var(--zacht-hoog);position:relative;display:flex;flex-direction:column;gap:14px}
+  .stoplicht .label{color:#bdbdbd;margin:0}
+  .lampen{display:flex;gap:6px}
+  .lamp{display:flex;align-items:center;gap:10px;cursor:pointer;background:none;border:0;padding:0;text-align:left;color:inherit;min-width:0}
+  .lamp i{transition-delay:var(--d,0ms)!important;width:50px;height:50px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:22px;letter-spacing:-.03em;background:radial-gradient(circle at 35% 30%,#2b2b2b,#141414 70%);color:#5c5c5c;box-shadow:inset 0 2px 6px rgba(0,0,0,.6),0 0 0 2px #2a2a2a;transition:background .5s var(--uit),box-shadow .6s var(--uit),color .4s,transform .4s var(--veer)}
+  .lamp b{display:block;font-size:13px;font-weight:700;line-height:18px}
+  .lamp small{display:block;font-size:11px;line-height:16px;color:#9a9a9a}
+  .lamp.aan i{color:var(--zwart)}
+  .lamp.aan.telaat i{background:radial-gradient(circle at 35% 30%,#dc9286,var(--baksteen) 62%);box-shadow:0 0 0 2px #2a2a2a,0 0 26px 2px rgba(194,110,96,.65)}
+  .lamp.aan.letop i{background:radial-gradient(circle at 35% 30%,#ecc78f,var(--oker) 62%);box-shadow:0 0 0 2px #2a2a2a,0 0 26px 2px rgba(214,164,97,.6)}
+  .lamp.aan.klaar i{background:radial-gradient(circle at 35% 30%,#98c3ac,var(--salie) 62%);box-shadow:0 0 0 2px #2a2a2a,0 0 26px 2px rgba(111,162,135,.6)}
+  .lamp:hover i{transform:scale(1.06)}
+  .stoplicht .balkje{display:flex;height:8px;border-radius:var(--rond);overflow:hidden;background:#2a2a2a;margin:0}
+  .stoplicht .balkje span{height:100%;transform-origin:left;transition:flex-grow .8s var(--uit)}
+  .stoplicht .voet{display:flex;justify-content:space-between;font-size:12.5px;color:#9a9a9a}
 
 /* ---------- procesflow ---------- */
 .flow{position:relative}
 .banden{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:12px}
 .band{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--stil);border-top:2px solid #d7d7d2;padding-top:6px}
 .band b{color:var(--zwart)}
-.spoor{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;height:34px;align-items:center}
-.spoor .lijn{position:absolute;left:10%;right:10%;top:50%;height:4px;margin-top:-2px;background:#dcdcd6;border-radius:4px;overflow:hidden}
+.spoor{position:relative;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;min-height:58px;align-items:start;padding-top:2px}
+.spoor .stop{position:relative;z-index:1;display:grid;justify-items:center;gap:4px;min-width:0}
+.spoor .knoopplek{display:grid;place-items:center;height:30px}
+.spoor .stop-datums{display:grid;gap:1px;justify-items:center;max-width:100%;text-align:center}
+.spoor .stop-datum{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:11px;line-height:14px;white-space:nowrap;background:none;border:none;padding:0;cursor:pointer;color:var(--stil)}
+  .stop-datum leeg{color:var(--stil)}
+  .stop-datum leeg b{font-weight:400;color:#9a9a9a}
+  .stop-datum .bewerk-icoon{flex:none;width:12px;height:12px;color:var(--stil)}
+.spoor .stop-datum-naam{overflow:hidden;text-overflow:ellipsis;max-width:104px}
+.spoor .stop-datum b{font-size:12px;color:var(--zwart)}
+.spoor .stop-datum.leeg b{font-weight:400;color:#9a9a9a}
+.spoor .stop-nu{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blauw-diep);white-space:nowrap}
+.spoor .lijn{position:absolute;left:10%;right:10%;top:13px;height:4px;background:#dcdcd6;border-radius:4px;overflow:hidden}
 .spoor .lijn i{position:absolute;inset:0;background:var(--zwart);transform-origin:left;transform:scaleX(0);transition:transform 1.1s var(--uit) .35s}
 .knoop{justify-self:center;position:relative;z-index:1;width:22px;height:22px;border-radius:50%;background:var(--wit);border:var(--rand);transform:scale(0);transition:transform .5s var(--veer),background-color .3s}
 .knoop.af{background:var(--zwart)}
 .knoop.nu{background:var(--blauw);width:28px;height:28px}
 .knoop.nu::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid var(--blauw);opacity:0;animation:ring 2.4s var(--uit) 1.6s 2}
 @keyframes ring{0%{opacity:.9;transform:scale(.6)}100%{opacity:0;transform:scale(1.5)}}
-.flow.klaar .knoop{transform:scale(1)}
-.fasen{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:14px}
+.tijdlijn.klaar .knoop{transform:scale(1)}
+.fasen{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:16px}
 .fase{display:flex;flex-direction:column;gap:14px}
-.fase .kaart{padding:20px 16px 14px;min-height:112px}
+.fase-datums{display:grid;gap:8px}
+.datumknop{display:inline-flex;align-items:center;gap:8px;background:none;border:none;border-radius:var(--rond);padding:0;cursor:pointer;transition:color .2s}
+  .datumknop:hover{color:var(--zwart)}
+  .datumknop .label{margin:0;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--stil)}
+  .datumknop-rij{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+  .datumknop-rij b{font-size:14px;font-weight:700}
+  .datumknop-rij b.leeg{font-weight:500;color:var(--stil)}
+  .datumknop-rij svg{flex:none;width:14px;height:14px;color:var(--stil);transition:color .2s}
+  .datumknop:hover .datumknop-rij svg{color:var(--zwart)}
+  .datumknop.leeg b{color:var(--stil)}
+  .datumknop.prognoseknop{color:#d55181}
+.prognose-datums{grid-template-columns:repeat(3,minmax(0,1fr));max-width:60%;margin-top:10px}
+.fase .kaart{padding:18px 16px 12px;min-height:104px}
 .fase .kaart h3{font-weight:900;font-size:21px;letter-spacing:-.02em}
 .fase .kaart p{margin:4px 0 0;font-size:13.5px;line-height:19px;color:var(--stil)}
 .fase .kaart .rol{position:absolute;top:12px;right:12px;font-size:10px;font-weight:700;letter-spacing:.08em;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--zwart)}
@@ -153,7 +177,6 @@ section.blok{padding:58px 0 0}
 .tl-vandaag span{position:absolute;top:50%;left:0;transform:translate(-50%,-50%);font-size:10px;line-height:1;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--zwart);white-space:nowrap;background:var(--blauw);padding:5px 9px;border-radius:var(--rond);box-shadow:0 0 0 3px var(--wit)}
 .datums{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:22px}
 .datums.drie{grid-template-columns:repeat(3,minmax(0,1fr));max-width:60%;margin-top:10px}
-.prognose .datum{border-color:#d55181}
 .prognose{margin-top:22px}
 .prognose>.label{margin:0 0 4px}
 .prognose>.klein{margin:0;max-width:46em}
@@ -374,6 +397,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 
 @media (max-width:1100px){
   .kop{grid-template-columns:1fr}
+  .spoor .stop-datum-naam{display:none}
   .stoplicht{max-width:420px}
   .geld{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kolkop{display:none}
@@ -383,8 +407,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .wrap{padding:0 16px}
   .nav{display:none}
   .banden,.spoor{display:none}
-  .fasen,.datums,.datums.drie{grid-template-columns:1fr}
-  .datums.drie{max-width:none}
+  .fasen,.datums,.datums.drie,.prognose-datums{grid-template-columns:1fr}
+  .datums.drie,.prognose-datums{max-width:none}
   .tl-as{display:none}
 }
 @media (prefers-reduced-motion:reduce){
@@ -491,12 +515,17 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .projectkaartje .chip.wie{align-self:flex-start;margin-top:4px;font-size:15px}
 .projectkaartje .chip.wie .label{font-size:9.5px}
 .projectkaartje .kaartje-datum{margin:0}
+  .projectkaartje.met-telaat{border-color:var(--baksteen);box-shadow:0 0 0 3px rgba(194,110,96,.18),var(--zacht)}
+  .projectkaartje .kaartje-telling{display:flex;gap:10px;margin:4px 0 0;font-size:12.5px;line-height:18px;font-weight:700}
+  .projectkaartje .kaartje-telling .telling-telaat{color:var(--baksteen-diep)}
+  .projectkaartje .kaartje-telling .telling-open{color:var(--stil)}
 .mini-balk{display:flex;height:6px;border-radius:6px;overflow:hidden;background:var(--grijs);margin:6px 0 2px}
 .projectkaartje .mini-balk{height:12px;border-radius:7px;margin:8px 0 4px}
 /* projecten: drie kolommen */
-.kolommen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;align-items:start;padding-top:26px}
-.kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
-.kolom-kop h2{font-size:24px}
+  .kolommen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;align-items:start;padding-top:26px}
+  .kolommen.gridview{grid-template-columns:1fr}
+  .kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
+.kolom-kop h2{display:flex;align-items:center;gap:9px;font-size:24px}
 .kolom-lijst{display:grid;gap:16px}
 .kolom-scheiding{margin:8px 0 -4px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--stil)}
 .projectkaartje.afgehandeld h3{color:var(--stil)}
@@ -516,6 +545,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .nieuw-formulier .knoppen{display:flex;align-items:center;gap:14px}
 .leadfilters{margin-top:34px}
 .filtergroep{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;min-width:0;max-width:100%}
+  .popup .filtergroep{margin-top:14px}
+  .popup .filtergroep:first-child{margin-top:0}
 .filtergroep>.label{margin:0}
 .filtergroep .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}
 .filtergroep .seg button{flex:none;white-space:nowrap}
@@ -587,7 +618,12 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 }
 
 /* mail actiehouders (Projecten) */
-.kop-knoppen{display:flex;gap:10px;flex-wrap:wrap}
+.kop-knoppen{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .gridview-knoppen{display:inline-flex;align-items:center;gap:6px;border:var(--rand);border-radius:var(--rond);padding:3px 6px 3px 10px;gap:6px}
+  .gridview-knoppen .grid-icoon-kop{display:inline-flex;align-items:center;color:var(--zwart)}
+  .gridview-knoppen .grid-icoon-kop svg{width:14px;height:14px;display:block}
+  .gridview-knoppen button{display:inline-flex;align-items:center;border:0;background:none;border-radius:var(--rond);padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;transition:background-color .25s,color .25s;min-height:30px;color:var(--zwart)}
+  .gridview-knoppen button[aria-pressed="true"]{background:var(--zwart);color:var(--wit)}
 .mail-actiehouders{margin-top:34px;padding-top:26px}
 .mail-kop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-bottom:14px}
 .mail-kop>.klein{margin:0;max-width:52em}
@@ -607,6 +643,12 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .paginatabs button .tab{height:18px;padding:0 8px;font-size:9.5px}
 .paginatabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6px;background:var(--zwart);border-radius:6px 6px 0 0}
 .paginatabs+*>.filters:first-child,.paginatabs+.filters,.paginatabs+*>.leadfilters:first-child{margin-top:22px}
+
+/* fasekleur (onder Instellingen te kiezen): een stip die de fase aangeeft. Staat op de kolommen van Projecten,
+   bij de fasen op de tijdlijn van de kaart en bij het fasefilter en de projecten in het planningsoverzicht. */
+.fase-stip{display:inline-block;flex:none;width:10px;height:10px;border-radius:50%}
+.fase .kaart h3 .fase-stip{width:9px;height:9px;margin-right:8px;vertical-align:middle}
+.seg button .fase-stip{width:8px;height:8px;margin-right:6px;vertical-align:middle}
 
 /* planningsoverzicht: per verantwoordelijke de projecten in de tijd. Kleur = laag (blauw lopend, magenta prognose),
    licht naar donker = de stap in de tijd. Gevalideerd op kleurenblindheid en contrast (dataviz-validator). */
@@ -628,6 +670,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .plan-rij{display:grid;grid-template-columns:var(--plan-lbl) minmax(0,1fr);align-items:stretch;border-bottom:var(--lijn-dun)}
 .plan-lbl{padding:7px 12px 7px 16px;min-width:0;display:flex;flex-direction:column;justify-content:center}
 .plan-lbl a,.plan-lbl b{font-weight:700;font-size:14px;line-height:18px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plan-rij-kleur{display:flex;align-items:center;gap:7px;min-width:0}
+.plan-rij-kleur .fase-stip{width:8px;height:8px}
 .plan-lbl a:hover{text-decoration:underline;text-underline-offset:3px}
 .plan-lbl small{font-size:11.5px;line-height:15px;color:var(--stil);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .plan-spoor{position:relative;min-height:40px;margin-right:18px}
@@ -648,19 +692,14 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .plan-vandaag-tekst{position:absolute;top:4px;transform:translateX(-50%);font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--wit);background:var(--zwart);padding:3px 6px;border-radius:var(--rond);z-index:3;white-space:nowrap}
 .plan-last .plan-spoor{min-height:62px}
 .plan-last{border-bottom:var(--rand)}
-.plan-kolom{position:absolute;bottom:6px;top:4px;display:flex;flex-direction:column-reverse;align-items:stretch;gap:2px;z-index:1;cursor:default}
-.plan-kolom i{display:block;border-radius:2px;min-height:2px}
-.plan-kolom i:last-of-type{border-radius:3px 3px 2px 2px}
+.plan-kolom{position:absolute;bottom:6px;top:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;z-index:1;cursor:default}
 .plan-kolom small{font-size:10.5px;line-height:12px;color:var(--stil);text-align:center;font-variant-numeric:tabular-nums}
 .plan-groep{display:flex;align-items:baseline;gap:10px;padding:14px 16px 6px;font-weight:900;font-size:16px;letter-spacing:-.01em;background:var(--grijs-2);border-bottom:var(--lijn-dun)}
 .plan-groep small{font-weight:400;font-size:12px;color:var(--stil)}
 .plan-zonder{margin:0;padding:12px 16px;font-size:13px;color:var(--stil)}
 .plan-zonder b{color:var(--zwart)}
-.plan-tip{position:absolute;z-index:30;pointer-events:none;transform:translate(-50%,calc(-100% - 14px));background:var(--wit);border:var(--rand);border-radius:var(--radius-s);box-shadow:var(--zacht-hoog);padding:8px 11px;max-width:300px;font-size:12.5px;line-height:17px;white-space:nowrap}
-.plan-tip strong{display:block;font-size:14px;color:var(--zwart)}
-.plan-tip span{display:block;color:var(--stil);overflow:hidden;text-overflow:ellipsis}
 @media (max-width:760px){.plan{--plan-lbl:170px}}
-@media print{.plan-scroll{overflow:visible;box-shadow:none}.plan-in{min-width:0}.plan-tip{display:none}}
+@media print{.plan-scroll{overflow:visible;box-shadow:none}.plan-in{min-width:0}}
 
 /* controle: aandachtspunten met een foto */
 .controle .blokkop .knop{flex:none}
@@ -948,6 +987,29 @@ a.knop{text-decoration:none}
   .delen-knoppen .knop{flex:1 1 auto;justify-content:center}
 }
 
+/* proces & planning: een datum wijzigen in een rustig venster */
+.datumvenster{width:min(460px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:0;border:var(--rand);border-radius:var(--radius);box-shadow:var(--zacht-hoog);background:var(--wit);color:var(--zwart);overscroll-behavior:contain}
+.datumvenster::backdrop{background:rgba(17,17,17,.6)}
+.datumvenster-in{display:grid;gap:16px;padding:22px 22px 20px}
+.datumvenster-kop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.datumvenster-kop .label{margin:0 0 6px}
+.datumvenster-kop h2{font-size:28px}
+.datumvenster-in>p.klein{margin:-6px 0 0}
+.datumvenster-veld{display:grid;gap:6px}
+.datumvenster-veld .label{margin:0}
+.datumvenster-veld .veld{height:48px;font-size:18px;font-weight:700}
+.datumvenster-huidig{margin:-8px 0 0;font-weight:500}
+.datumvenster-snel{display:flex;flex-wrap:wrap;gap:8px}
+.datumvenster-snel .knop{height:32px;padding:0 12px;font-size:13px}
+.datumvenster-knoppen{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding-top:16px;border-top:var(--lijn-dun)}
+.datumvenster-knoppen .link{margin-left:auto;font-size:14px}
+@media (max-width:760px){
+  .datumvenster{width:100%;max-height:92dvh;margin:auto 0 0;border-radius:var(--radius) var(--radius) 0 0;border-bottom:0}
+  .datumvenster-in{padding:18px 16px calc(22px + env(safe-area-inset-bottom))}
+  .datumvenster-knoppen .knop{flex:1 1 auto;justify-content:center}
+  .datumvenster-knoppen .link{flex-basis:100%;margin-left:0;justify-self:start}
+}
+
 /* de pagina van een leverancier (/punten/<token>): de code, of wat er open staat */
 .poort{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
 .poort-kaart{width:100%;max-width:520px;padding:40px 36px 34px}
@@ -1030,7 +1092,7 @@ a.knop{text-decoration:none}
 .paginatabs+.instellingen,.paginatabs~.instellingen{margin-top:30px}
 fieldset.kaal{border:0;margin:0;padding:0;min-width:0}
 fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,fieldset.kaal:disabled>.knop,fieldset.kaal:disabled .inst-groep>.knop{display:none}
-.inst-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:22px;align-items:start}
+.inst-raster{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(440px,100%),1fr));gap:22px;align-items:start}
 /* minmax(0,1fr): een veld mag smaller worden dan zijn standaardbreedte, anders duwt het de knoppen buiten de kaart. */
 .inst-kaart{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:22px 18px 18px}
 .inst-kaart>.tab{justify-self:start}
@@ -1052,6 +1114,13 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
 .inst-labels.twee{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
 .inst-labels label{display:grid;gap:2px}
 .inst-labels .veld{width:100%}
+/* fasen met hun kleur: een kleurkiezer, de naam en wat er gebeurt, per fase een rij */
+.inst-fasen{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,1.3fr);gap:6px 8px;align-items:end}
+.inst-fasen label{display:grid;gap:2px}
+.inst-fasen .veld{width:100%}
+.inst-kleur{width:34px;height:34px;padding:2px;border:var(--rand);border-radius:var(--radius-s);background:var(--wit);cursor:pointer}
+.inst-kleur::-webkit-color-swatch-wrapper{padding:2px}
+.inst-kleur::-webkit-color-swatch{border:none;border-radius:calc(var(--radius-s) - 4px)}
 .inst-pakket{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
 .instellingen .blokkop .seg{max-width:100%;overflow-x:auto;scrollbar-width:none}
 .inst-pakket>.knop{justify-self:start}
@@ -1062,23 +1131,32 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
 .inst-groepkop .veld,.inst-kop .veld{width:100%}
 .inst-kop{max-width:360px}
 .inst-taken{list-style:none;margin:0;padding:0;display:grid;gap:2px}
-.inst-taak{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:2px 0;border-top:1px solid var(--grijs)}
-.inst-regel{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
-.inst-regel .getal{width:70px}
+.inst-taak{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1.4fr) minmax(150px,auto);gap:10px;align-items:center;padding:2px 0;border-top:1px solid var(--grijs)}
+  .inst-taak>*{min-width:0}
+  .inst-taak>.veld{width:100%;min-width:0}
+  .inst-taak .veld{width:100%;min-width:0}
+  .inst-regel{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+  .inst-regel select.veld{min-width:150px;flex:0 1 auto}
+  .inst-regel .getal{width:70px}
+.inst-knopjes{display:inline-flex;align-items:center;gap:6px;justify-self:end;white-space:nowrap}
 .inst-casco{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 .inst-koppel summary{cursor:pointer;padding:4px 0}
 .inst-koppelgroep{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
 .inst-koppelgroep .label{flex-basis:100%;margin:0}
-.inst-opslaan{position:sticky;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 52px);z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:22px;padding:12px 16px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border:var(--rand);border-radius:var(--radius)}
+.inst-opslaan{position:sticky;bottom:calc(max(20px,env(safe-area-inset-bottom)) + 52px);z-index:20;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:14px;margin-top:22px;padding:12px 16px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border:var(--rand);border-radius:var(--radius)}
 .inst-opslaan p{margin:0}
 .inst-opslaan.gewijzigd{border-color:var(--oker);box-shadow:var(--zacht-hoog)}
 .inst-opslaan .knoppen{display:flex;align-items:center;gap:14px}
-@media (max-width:760px){
+/* Onder 1020px (smal desktopvenster) past de driedeling niet meer: alles gaat naar één volledige kolom, net als op mobiel. */
+@media (max-width:1020px){
+  .inst-raster{grid-template-columns:1fr}
   .inst-groepkop{grid-template-columns:minmax(0,1fr) auto}
   .inst-groepkop label:nth-child(2){grid-column:1/-1;grid-row:2}
   .inst-taak{grid-template-columns:minmax(0,1fr) auto}
   .inst-regel{grid-column:1/-1;grid-row:2}
+  .inst-knopjes{grid-column:2;grid-row:1}
   .inst-labels.twee{grid-template-columns:1fr}
+  .inst-kop{max-width:100%}
 }
 
 /* ---------- maand meeting ---------- */
@@ -1113,3 +1191,6 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
   .meeting-rij{break-inside:avoid;box-shadow:none}
   .meeting-fase{margin-top:24px}
 }
+
+.filter-acties{margin-left:auto;display:flex;gap:8px;position:relative}
+.popup{position:absolute;right:0;top:44px;background:#fff;border:var(--rand);padding:12px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;min-width:260px}

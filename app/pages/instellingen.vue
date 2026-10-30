@@ -5,13 +5,14 @@ import type { Leverancier, ProjectLeverancier } from '~/lib/types'
 // het MT past die aan): mensen per rol, de namen in de keuzelijsten, het takenpakket en wat er bij elke overdracht klaar
 // moet zijn. Alle tabbladen blijven staan bij wisselen, zodat wat je nog niet opsloeg niet verloren gaat.
 useHead({ title: 'Instellingen · Projectkaart' })
-type Tab = 'leveranciers' | 'mensen' | 'keuzelijsten' | 'takenpakket' | 'overdracht'
+type Tab = 'leveranciers' | 'mensen' | 'keuzelijsten' | 'takenpakket' | 'overdracht' | 'uitzonderingen'
 const TABS: { id: Tab, naam: string }[] = [
   { id: 'leveranciers', naam: 'Leveranciers' },
   { id: 'mensen', naam: 'Mensen' },
   { id: 'keuzelijsten', naam: 'Keuzelijsten' },
   { id: 'takenpakket', naam: 'Takenpakket' },
   { id: 'overdracht', naam: 'Overdracht' },
+  { id: 'uitzonderingen', naam: 'Uitzonderingen' },
 ]
 const tab = useTabblad<Tab>('leveranciers', TABS.map(t => t.id))
 const { gebruiker } = useGebruiker()
@@ -100,8 +101,6 @@ async function weg(l: Leverancier) {
 <template>
   <main class="wrap">
     <header class="paginakop">
-      <p class="label">Voor alle projecten</p>
-      <h1>Instellingen</h1>
       <p v-if="!gebruiker?.isMt" class="zin">De keuzelijsten past alleen het MT aan; je ziet hier wat er nu geldt.</p>
     </header>
 
@@ -110,6 +109,7 @@ async function weg(l: Leverancier) {
     <InstellingenKeuzelijsten v-show="tab === 'keuzelijsten'" />
     <InstellingenTakenpakket v-show="tab === 'takenpakket'" />
     <InstellingenOverdracht v-show="tab === 'overdracht'" />
+    <InstellingenUitzonderingen v-show="tab === 'uitzonderingen'" />
 
     <section v-show="tab === 'leveranciers'" id="leveranciers" class="blok instellingen">
       <div class="blokkop">
@@ -122,6 +122,13 @@ async function weg(l: Leverancier) {
       <div v-if="stand === 'laden'" class="laden" aria-busy="true"><span class="laden-regel" /><span class="laden-regel" /></div>
       <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad">Probeer het opnieuw</button></div>
       <template v-else>
+        <form class="kaart globale-nieuw" @submit.prevent="voegToe">
+          <span class="tab">Nieuwe leverancier</span>
+          <input v-model="naam" class="veld" placeholder="Naam, bijvoorbeeld Klimaattechniek Oost" aria-label="Naam van de nieuwe leverancier">
+          <input v-model="vak" class="veld" placeholder="Wat ze doen, bijvoorbeeld installateur" aria-label="Wat de nieuwe leverancier doet">
+          <button type="submit" class="knop" :disabled="bezig">Toevoegen</button>
+        </form>
+
         <div v-if="leveranciers.length" class="lijst globale-lijst">
           <div class="kolkop"><span>Naam</span><span>Wat ze doen</span><span>Staat op</span><span /></div>
           <div v-for="l in leveranciers" :key="l.id" class="rij">
@@ -134,13 +141,6 @@ async function weg(l: Leverancier) {
           </div>
         </div>
         <div v-else class="leeg-staat">De globale lijst is nog leeg. Voeg hieronder leveranciers toe, of zet er een in de lijst vanaf een project.</div>
-
-        <form class="kaart globale-nieuw" @submit.prevent="voegToe">
-          <span class="tab">Nieuwe leverancier</span>
-          <input v-model="naam" class="veld" placeholder="Naam, bijvoorbeeld Klimaattechniek Oost" aria-label="Naam van de nieuwe leverancier">
-          <input v-model="vak" class="veld" placeholder="Wat ze doen, bijvoorbeeld installateur" aria-label="Wat de nieuwe leverancier doet">
-          <button type="submit" class="knop" :disabled="bezig">Toevoegen</button>
-        </form>
       </template>
     </section>
     <footer>Projectkaart BbDW</footer>

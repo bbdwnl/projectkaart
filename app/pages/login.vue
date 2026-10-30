@@ -9,7 +9,7 @@ import { veiligPad } from '~/lib/inlog'
 useHead({ title: 'Inloggen · Projectkaart' })
 const route = useRoute()
 const router = useRouter()
-const { gebruiker, stuurLink, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, melding, geblokkeerdTot } = useGebruiker()
+const { gebruiker, stuurLink, devInloggen, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, melding, geblokkeerdTot } = useGebruiker()
 const bezig = ref(false)
 const email = ref('')
 const naam = ref('')
@@ -63,7 +63,10 @@ async function verstuur() {
       }
       if (!gebruiker.value?.naamNodig) await navigateTo(terug())
     } else {
-      verstuurd.value = await stuurLink(email.value, typeof route.query.terug === 'string' ? route.query.terug : '/')
+      // Op localhost in dev: direct inloggen zonder mail (devInloggen). Anders de gewone weg: een link per mail.
+      if (!await devInloggen(email.value, typeof route.query.terug === 'string' ? route.query.terug : '/')) {
+        verstuurd.value = await stuurLink(email.value, typeof route.query.terug === 'string' ? route.query.terug : '/')
+      }
     }
   } finally {
     bezig.value = false

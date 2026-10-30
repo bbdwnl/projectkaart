@@ -71,8 +71,6 @@ const afdrukken = () => window.print()
   <main class="wrap meeting">
     <header class="paginakop kop-met-knop">
       <div>
-        <p class="label">Voor de fase-eigenaren en de bedrijfsleider</p>
-        <h1>Maand meeting</h1>
         <p v-if="stand === 'klaar'" class="zin">
           {{ MAAND[nu.getMonth()] }} {{ nu.getFullYear() }} · {{ afwijkend ? `${afwijkend} van ${totaal} projecten wijken af.` : `Alle ${totaal} projecten liggen op schema.` }}
         </p>

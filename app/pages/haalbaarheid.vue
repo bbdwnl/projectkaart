@@ -44,8 +44,6 @@ const zin = computed(() => {
 <template>
   <main class="wrap">
     <header class="paginakop">
-      <p class="label">Na de lead, voor de ontwikkeling</p>
-      <h1>Haalbaarheid</h1>
       <p v-if="stand === 'klaar'" class="zin">{{ zin }}</p>
     </header>
 

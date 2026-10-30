@@ -54,8 +54,6 @@ async function zetStatus(u: Uitzondering, status: UitzonderingStatus) {
 <template>
   <main class="wrap">
     <header class="paginakop">
-      <p class="label">Over alle projecten</p>
-      <h1>Uitzonderingen</h1>
       <p v-if="stand === 'klaar'" class="zin">{{ zin }}</p>
       <p class="klein regel">Een uitzondering is een kandidaat als hij in minstens {{ KANDIDAAT_MIN_PROJECTEN }} projecten voorkomt, of in minstens {{ Math.round(KANDIDAAT_MIN_AANDEEL * 100) }}% van de projecten die die fase bereikten. Het MT beslist of hij in het standaardpakket komt.</p>
     </header>

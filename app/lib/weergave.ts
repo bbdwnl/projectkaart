@@ -1,6 +1,6 @@
 /** Wat iemand op de projectkaart wil zien. Per apparaat bewaard in een cookie. */
 
-export const TABS = ['taken', 'proces', 'acties', 'controle', 'details'] as const
+export const TABS = ['proces', 'taken', 'acties', 'controle', 'details'] as const
 export type Tab = typeof TABS[number]
 
 export interface Weergave {
@@ -16,8 +16,8 @@ export interface Weergave {
 }
 
 export const WEERGAVE_STANDAARD: Weergave = {
-  tab: 'taken',
-  kop: { stoplicht: true, planningstrook: true },
+  tab: 'proces',
+  kop: { stoplicht: true, planningstrook: false },
   taken: { eerstDit: false, compact: false, kolommen: { eigenaar: true, deadline: true, akkoord: true, document: true } },
   proces: { flow: true, tijdlijn: true, datums: true },
   details: { gegevens: true, leveranciers: true, tekeningen: true, geld: true, logboek: true },
@@ -43,11 +43,11 @@ export function leesWeergave(bewaard: unknown): Weergave {
     try { bron = JSON.parse(bron) } catch { bron = null }
   }
   samenvoegen(w as unknown as Record<string, unknown>, bron)
-  if (!TABS.includes(w.tab)) w.tab = 'taken'
+  if (!TABS.includes(w.tab)) w.tab = 'proces'
   return w
 }
 
-export const standaardWeergave = (tab: Tab = 'taken'): Weergave => ({ ...kopie(WEERGAVE_STANDAARD), tab })
+export const standaardWeergave = (tab: Tab = 'proces'): Weergave => ({ ...kopie(WEERGAVE_STANDAARD), tab })
 
 /** Kolommen van de takenlijst, in volgorde, met hun breedte. */
 export const KOLOMMEN: { id: string, breedte: string, schakelbaar?: keyof Weergave['taken']['kolommen'] }[] = [

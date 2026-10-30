@@ -16,7 +16,7 @@ defineProps<{
 </script>
 
 <template>
-  <NuxtLink :to="`/projecten/${k.p.slug}`" class="kaart til projectkaartje" :class="{ afgehandeld: isAfgehandeld(k.p) }" :style="{ '--i': Math.min(volgorde ?? 0, 12) }">
+  <NuxtLink :to="`/projecten/${k.p.slug}`" class="kaart til projectkaartje" :class="{ afgehandeld: isAfgehandeld(k.p), 'met-telaat': k.t.telaat > 0 }" :style="{ '--i': Math.min(volgorde ?? 0, 12) }">
     <span v-if="k.p.nummer" class="label n">{{ k.p.nummer }}</span>
     <h3>{{ k.p.naam }}</h3>
     <span v-if="isAfgehandeld(k.p)" class="tab afgehandeld-tab">Afgehandeld</span>
@@ -28,5 +28,9 @@ defineProps<{
       <span class="label">{{ ROLLEN[k.rol].kort }}</span><b v-if="k.wie">{{ k.wie }}</b><template v-else>nog niet gekozen</template>
     </span>
     <p v-if="datum" class="kaartje-datum klein">{{ datum.naam }}: {{ datum.waarde ? fmt(naarDatum(datum.waarde)) : 'geen datum' }}</p>
+    <p v-if="k.t.telaat || k.t.open" class="kaartje-telling klein">
+      <span v-if="k.t.telaat" class="telling-telaat">{{ k.t.telaat }} te laat</span>
+      <span v-if="k.t.open" class="telling-open">{{ k.t.open }} open</span>
+    </p>
   </NuxtLink>
 </template>

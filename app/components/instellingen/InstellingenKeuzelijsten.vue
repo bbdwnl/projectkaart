@@ -26,7 +26,7 @@ const disciplineGebruik = computed(() => tel(disciplines.value.filter(d => d.lev
     <div class="blokkop">
       <div>
         <h2>Keuzelijsten</h2>
-        <p class="klein">Statussen, fasen en rollen staan vast, want het stoplicht en de planning rekenen ermee: hun naam pas je hier aan. Soorten, subfasen en disciplines vul je vrij aan.</p>
+        <p class="klein">Statussen, fasen en rollen staan vast, want het stoplicht en de planning rekenen ermee: naam en kleur pas je hier aan. Soorten, subfasen en disciplines vul je vrij aan.</p>
       </div>
     </div>
     <fieldset class="kaal inst-raster" :disabled="!isMt">
@@ -38,8 +38,10 @@ const disciplineGebruik = computed(() => tel(disciplines.value.filter(d => d.lev
       </div>
       <div class="kaart inst-kaart">
         <span class="tab">Fasen</span>
-        <div class="inst-labels twee">
+        <p class="klein">Elke fase krijgt zijn eigen kleur. Die kleur staat terug op de plekken waar de fase langs komt: de kolommen, het planningsoverzicht en de tijdlijn op de kaart.</p>
+        <div class="inst-fasen">
           <template v-for="f in FASE_IDS" :key="f">
+            <label :aria-label="`Kleur van ${std.fasen[f].naam}`"><input v-model="concept.fasen[f].kleur" type="color" class="inst-kleur"></label>
             <label><span class="klein">{{ std.fasen[f].naam }}</span><input v-model="concept.fasen[f].naam" class="veld" maxlength="40"></label>
             <label><span class="klein">Wat er gebeurt</span><input v-model="concept.fasen[f].wat" class="veld" maxlength="80"></label>
           </template>

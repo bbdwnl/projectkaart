@@ -7,8 +7,8 @@ import { STATUSSEN } from './taak'
 // (tabel instellingen). De lijsten in de code zijn de standaard: zonder rij, of met een rij die niet klopt, geldt die.
 // pasToe zet de versie uit de database over de lijsten in de code heen, op hun plek, zodat elk scherm meegaat.
 //
-// Waar de app mee rekent, ligt vast: de statussen en de fasen (alleen de namen zijn aan te passen), de rollen en de
-// soorten deadline. De rest is vrij: wie welke rol kan hebben, soorten, subfasen, disciplines, het takenpakket en wat
+// Waar de app mee rekent, ligt vast: de statussen en de fasen (alleen de namen en de kleur zijn aan te passen), de
+// rollen en de soorten deadline. De rest is vrij: wie welke rol kan hebben, soorten, subfasen, disciplines, het takenpakket en wat
 // er bij elke overdracht klaar moet zijn.
 
 export const FASE_IDS: Fase[] = ['lead', 'haalbaarheid', 'ontwikkeling', 'uitvoering', 'nazorg']
@@ -21,7 +21,7 @@ export interface Instellingen {
   mensen: { rollen: Record<Rol, string[]>, eigenaren: string[], buddies: string[] }
   labels: {
     statussen: Record<Status, string>
-    fasen: Record<Fase, { naam: string, wat: string }>
+    fasen: Record<Fase, { naam: string, wat: string, kleur: string }>
     rollen: Record<Rol, { kort: string, naam: string }>
     subfasen: Keuze[]
     soorten: Keuze[]
@@ -49,7 +49,7 @@ export function huidig(): Instellingen {
     mensen: { rollen: per(ROL_IDS, r => MENSEN[r]), eigenaren: EIGENAREN, buddies: BUDDIES },
     labels: {
       statussen: per(STATUS_IDS, s => STATUSSEN.find(x => x.id === s)!.naam),
-      fasen: per(FASE_IDS, f => { const i = FASEN.find(x => x.id === f)!; return { naam: i.naam, wat: i.wat } }),
+      fasen: per(FASE_IDS, f => { const i = FASEN.find(x => x.id === f)!; return { naam: i.naam, wat: i.wat, kleur: i.kleur } }),
       rollen: per(ROL_IDS, r => ROLLEN[r]),
       subfasen: SUBFASEN,
       soorten: SOORTEN,
@@ -71,6 +71,8 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 const tekst = (v: unknown, max: number) => (typeof v === 'string' && v.trim() && v.trim().length <= max ? v.trim().replace(/\s+/g, ' ') : null)
 const CODE = /^[a-z0-9_]{1,40}$/
 const SLEUTEL = /^[a-z0-9_]{1,60}$/
+/** Een kleur in hex, zoals een kleurkiezer hem geeft. */
+const KLEUR = /^#[0-9a-f]{6}$/i
 
 /** Namen: getrimd, zonder dubbele (hoofdletters tellen niet), hoogstens 100. */
 function namen(v: unknown): string[] | null {
@@ -171,7 +173,7 @@ export function lees<S extends Sleutel>(sleutel: S, waarde: unknown): Instelling
         statussen: Object.fromEntries(STATUS_IDS.map(id => [id, tekst(st[id], 40) ?? s.statussen[id]])),
         fasen: Object.fromEntries(FASE_IDS.map((id) => {
           const f = isObject(fa[id]) ? fa[id] : {}
-          return [id, { naam: tekst(f.naam, 40) ?? s.fasen[id].naam, wat: tekst(f.wat, 80) ?? s.fasen[id].wat }]
+          return [id, { naam: tekst(f.naam, 40) ?? s.fasen[id].naam, wat: tekst(f.wat, 80) ?? s.fasen[id].wat, kleur: KLEUR.test(`${f.kleur}`) ? `${f.kleur}` : s.fasen[id].kleur }]
         })),
         rollen: Object.fromEntries(ROL_IDS.map((id) => {
           const r = isObject(ro[id]) ? ro[id] : {}

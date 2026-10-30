@@ -32,7 +32,7 @@ const KOLOMMEN = [['eigenaar', 'Eigenaar'], ['deadline', 'Deadline'], ['akkoord'
     </div>
     <div class="wg-groep">
       <h4>Proces &amp; Planning</h4>
-      <label class="schakel"><input v-model="weergave.proces.flow" type="checkbox"><span />Procesflow</label>
+      <label class="schakel"><input v-model="weergave.proces.flow" type="checkbox"><span />Fasen en overdracht</label>
       <label class="schakel"><input v-model="weergave.proces.tijdlijn" type="checkbox"><span />Tijdlijn</label>
       <label class="schakel"><input v-model="weergave.proces.datums" type="checkbox"><span />Datums</label>
     </div>

@@ -106,6 +106,32 @@ export function useGebruiker() {
     return true
   }
 
+  /**
+   * Alleen op localhost in een dev-opstart: inloggen zonder de link per mail. De serverroute /api/dev-inlog
+   * (die zélf alleen op localhost in dev antwoordt) haalt een echt magisch token op en hiermee ingelogd.
+   * Doe niets buiten die omstandigheden (of als het niet lukte): dan doet de gewone weg het werk.
+   */
+  async function devInloggen(email: string, terug = '/'): Promise<boolean> {
+    if (import.meta.dev !== true || !sb || !['localhost', '127.0.0.1'].includes(location.hostname)) return false
+    melding.value = ''
+    const adres = email.trim().toLowerCase()
+    if (!vanDomein(adres, domein)) return false
+    try { localStorage.setItem(TERUG_SLEUTEL, veiligPad(terug)) } catch { /* dan na het inloggen naar het begin */ }
+    const poging = await $fetch<{ token: string }>('/api/dev-inlog', { method: 'POST', body: { email: adres } }).catch(() => null)
+    if (!poging?.token) {
+      melding.value = 'Dev-inloggen lukte niet. Gaat het om nog wat anders, dan komt de inloglink per mail.'
+      return false
+    }
+    const { data, error } = await sb.auth.verifyOtp({ email: adres, token: poging.token, type: 'email' })
+    if (error || !data.session) {
+      melding.value = 'Dev-inloggen lukte niet. Gaat het om nog wat anders, dan komt de inloglink per mail.'
+      return false
+    }
+    await zet(data.session)
+    if (gebruiker.value && !gebruiker.value.naamNodig) await navigateTo(terug)
+    return true
+  }
+
   /** De link uit de mail (token_hash): inloggen in deze browser. Geeft terug of het lukte. */
   async function metLink(tokenHash: string, type: EmailOtpType = 'email'): Promise<boolean> {
     melding.value = ''
@@ -165,5 +191,5 @@ export function useGebruiker() {
   const initialen = computed(() => (gebruiker.value?.naam ?? '')
     .split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join(''))
 
-  return { gebruiker, melding, geblokkeerdTot, start, stuurLink, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, uitloggen, initialen }
+  return { gebruiker, melding, geblokkeerdTot, start, stuurLink, devInloggen, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, uitloggen, initialen }
 }

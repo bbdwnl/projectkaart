@@ -3,7 +3,7 @@ import { TABS, type Tab } from '~/lib/weergave'
 import type { Licht } from '~/lib/types'
 
 const tab = defineModel<Tab>({ required: true })
-defineProps<{ pilTaken: { licht: Licht, tekst: string }, pilProces: string | null, pilActies: { licht: Licht, tekst: string } | null, pilControle: string | null }>()
+defineProps<{ pilTaken: { licht: Licht, tekst: string }, pilControle: string | null, pilActies: { licht: Licht, tekst: string } | null }>()
 
 const NAMEN: Record<Tab, string> = { taken: 'Taken', proces: 'Proces & Planning', acties: 'Acties', controle: 'Controle', details: 'Details' }
 const knoppen = ref<Partial<Record<Tab, HTMLElement>>>({})

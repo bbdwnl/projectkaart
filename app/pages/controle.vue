@@ -201,8 +201,6 @@ const gedeeld = computed(() => (keuze.indeling === 'leverancier' && keuze.gekoze
 <template>
   <main class="wrap">
     <header class="paginakop">
-      <p class="label">Over alle projecten</p>
-      <h1>Controle</h1>
       <p v-if="stand === 'klaar'" class="zin">{{ zin }}</p>
     </header>
 

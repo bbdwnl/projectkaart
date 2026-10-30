@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Fase, Project } from '~/lib/types'
-import { faseInfo, ROLLEN, SUBFASEN } from '~/lib/fasen'
+import { faseInfo, faseKleur, ROLLEN, SUBFASEN } from '~/lib/fasen'
 import { begin, bezetting, LAAG_FASEN, planRegels, STAPPEN, tijdas, type Laag, type PlanRegel, type Segment } from '~/lib/planning'
 import { fmt, vandaag } from '~/lib/datum'
 
@@ -43,7 +43,7 @@ const mensen = computed(() => {
       buddy: metDatums.value.filter(r => wieVan(r) === id && r.buddy).length,
     }))
 })
-const fasen = computed(() => LAAG_FASEN.lopend.map(f => ({ id: f, naam: faseInfo(f).naam, aantal: alle.value.filter(r => r.p.fase === f && r.segmenten.length).length })))
+const fasen = computed(() => LAAG_FASEN.lopend.map(f => ({ id: f, naam: faseInfo(f).naam, kleur: faseKleur(f), aantal: alle.value.filter(r => r.p.fase === f && r.segmenten.length).length })))
 
 const vanWie = (r: PlanRegel) => wie.value === 'alle' || wieVan(r) === wie.value
 const gekozen = computed(() => metDatums.value.filter(vanWie))
@@ -73,23 +73,10 @@ const onder = (r: PlanRegel) => [
   r.p.prio ? 'prio' : null,
 ].filter(Boolean).join(' · ')
 const segTekst = (r: PlanRegel, s: Segment) => `${r.p.naam}, ${r.laag === 'prognose' ? 'prognose ' : ''}${s.naam.toLowerCase()}: ${fmt(s.van)} tot ${fmt(s.tot)}`
-
-// Eén tooltip voor het hele overzicht, bij de muis.
-const doos = ref<HTMLElement>()
-const tip = ref<{ x: number, y: number, kop: string, waarde: string, onder: string } | null>(null)
-function toon(e: PointerEvent, kop: string, waarde: string, onder: string) {
-  const r = doos.value?.getBoundingClientRect()
-  if (r) tip.value = { x: e.clientX - r.left, y: e.clientY - r.top, kop, waarde, onder }
-}
-const toonSeg = (e: PointerEvent, r: PlanRegel, s: Segment) =>
-  toon(e, `${r.p.naam}${r.buddy ? ` · ${r.wie} als buddy` : ''}`, s.open ? `vanaf ${fmt(s.van)}` : `${fmt(s.van)} – ${fmt(s.tot)}`, `${r.laag === 'prognose' ? 'Prognose · ' : ''}${s.naam}`)
-const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: number }) =>
-  toon(e, `${MAAND[m.maand.getMonth()]} ${m.maand.getFullYear()}`, `${m.lopend + m.prognose} ${m.lopend + m.prognose === 1 ? 'project' : 'projecten'}`,
-    props.lagen.length > 1 ? `${m.lopend} lopend · ${m.prognose} prognose in de bouw` : 'lopend in deze maand')
 </script>
 
 <template>
-  <div ref="doos" class="plan" @pointerleave="tip = null">
+  <div class="plan">
     <div class="filters projectfilters">
       <div class="filtergroep">
         <span class="label">Verantwoordelijke</span>
@@ -102,7 +89,7 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
         <span class="label">Fase</span>
         <div class="seg" role="group" aria-label="Fase">
           <button type="button" :aria-pressed="fase === 'alle'" @click="fase = 'alle'">Alle</button>
-          <button v-for="f in fasen" :key="f.id" type="button" :aria-pressed="fase === f.id" @click="fase = f.id">{{ f.naam }} <span class="n">{{ f.aantal }}</span></button>
+          <button v-for="f in fasen" :key="f.id" type="button" :aria-pressed="fase === f.id" @click="fase = f.id"><i class="fase-stip" :style="{ background: f.kleur }" aria-hidden="true"/>{{ f.naam }} <span class="n">{{ f.aantal }}</span></button>
         </div>
       </div>
       <div v-if="lagen.length > 1" class="filtergroep">
@@ -112,12 +99,14 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
     </div>
 
     <div class="plan-legenda">
-      <template v-for="l in lagen" :key="l">
-        <span class="plan-legenda-laag" :class="{ uit: !aan[l] }">
-          <b>{{ lagen.length > 1 ? LAAG_NAAM[l] : 'Fase in de tijd' }}</b>
-          <span v-for="(naam, i) in STAPPEN[l]" :key="i"><i :class="`plan-${l}-${i}`" />{{ naam }}</span>
-        </span>
-      </template>
+      <span class="plan-legenda-laag">
+        <b>Fase in de tijd</b>
+        <span v-for="f in LAAG_FASEN.lopend" :key="f"><i class="fase-stip" :style="{ background: faseKleur(f) }" />{{ faseInfo(f).naam }}</span>
+      </span>
+      <span v-if="lagen.length > 1" class="plan-legenda-laag">
+        <b>Prognose</b>
+        <span v-for="f in LAAG_FASEN.prognose" :key="f"><i class="fase-stip" :style="{ background: faseKleur(f) }" />{{ faseInfo(f).naam }}</span>
+      </span>
       <span><i class="plan-legenda-open" />Nog geen opleverdatum</span>
       <span><i class="plan-legenda-buddy" />Als buddy (telt niet mee)</span>
       <span><i class="plan-legenda-prio" />Prio</span>
@@ -141,15 +130,11 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
           <div class="plan-spoor">
             <i v-for="m in as.maanden" :key="m.getTime()" class="plan-raster" :class="{ jaar: m.getMonth() === 0 }" :style="{ left: `${as.pos(m)}%` }" />
             <i class="plan-vandaag" :style="{ left: `${vandaagPos}%` }" />
-            <div
+<div
               v-for="m in maanden" :key="m.maand.getTime()" class="plan-kolom"
               :style="{ left: `calc(${as.pos(m.maand)}% + 2px)`, width: `calc(${breedte(m.maand)}% - 4px)` }"
-              :aria-label="`${MAAND[m.maand.getMonth()]} ${m.maand.getFullYear()}: ${m.lopend} lopend${lagen.length > 1 ? `, ${m.prognose} prognose` : ''}`"
-              role="img" @pointermove="e => toonMaand(e, m)" @pointerleave="tip = null"
             >
-              <i v-if="m.lopend" class="plan-lopend-1" :style="{ height: `${m.lopend / hoogste * 38}px` }" />
-              <i v-if="m.prognose" class="plan-prognose-1" :style="{ height: `${m.prognose / hoogste * 38}px` }" />
-              <small v-if="m.lopend + m.prognose">{{ m.lopend + m.prognose }}</small>
+              <small v-if="m.lopend + m.prognose" class="plan-maand-getal">{{ m.lopend + m.prognose }}</small>
             </div>
           </div>
         </div>
@@ -158,18 +143,17 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
           <div v-if="g.naam" class="plan-groep">{{ g.naam }}<small>{{ telling(g.regels) }}</small></div>
           <div v-for="r in g.regels" :key="`${r.p.id}${r.buddy ? '-buddy' : ''}`" class="plan-rij" :class="[`laag-${r.laag}`, { buddy: r.buddy, prio: r.p.prio }]">
             <div class="plan-lbl">
-              <NuxtLink :to="`/projecten/${r.p.slug}#proces`">{{ r.p.naam }}</NuxtLink>
+              <b class="plan-rij-kleur"><i class="fase-stip" :style="{ background: faseKleur(r.p.fase) }" aria-hidden="true"/><NuxtLink :to="`/projecten/${r.p.slug}#proces`">{{ r.p.naam }}</NuxtLink></b>
               <small>{{ onder(r) }}</small>
             </div>
             <div class="plan-spoor">
               <i v-for="m in as.maanden" :key="m.getTime()" class="plan-raster" :class="{ jaar: m.getMonth() === 0 }" :style="{ left: `${as.pos(m)}%` }" />
               <i class="plan-vandaag" :style="{ left: `${vandaagPos}%` }" />
-              <i
-                v-for="(s, i) in r.segmenten.filter(x => x.tot > as.van)" :key="i" class="plan-seg" :class="[`plan-${r.laag}-${s.stap}`, { open: s.open }]"
-                :style="{ left: `${as.pos(s.van)}%`, width: `max(3px, calc(${as.pos(s.tot) - as.pos(s.van)}% - 2px))` }"
-                role="img" :aria-label="segTekst(r, s)"
-                @pointermove="e => toonSeg(e, r, s)" @pointerleave="tip = null"
-              />
+<i
+  v-for="(s, i) in r.segmenten.filter(x => x.tot > as.van)" :key="i" class="plan-seg" :class="{ open: s.open }"
+  :style="{ background: faseKleur(r.p.fase), opacity: 1 - i * 0.2, left: `${as.pos(s.van)}%`, width: `max(3px, calc(${as.pos(s.tot) - as.pos(s.van)}% - 2px))` }"
+  :aria-label="segTekst(r, s)"
+/>
             </div>
           </div>
         </template>
@@ -177,11 +161,5 @@ const toonMaand = (e: PointerEvent, m: { maand: Date, lopend: number, prognose: 
       </div>
     </div>
     <p v-else class="leeg-staat">Geen projecten met datums in deze selectie.{{ zonderDatums.length ? ` Zonder datums: ${zonderDatums.map(r => r.p.naam).join(', ')}.` : '' }}</p>
-
-    <div v-if="tip" class="plan-tip" :style="{ left: `${tip.x}px`, top: `${tip.y}px` }">
-      <strong>{{ tip.waarde }}</strong>
-      <span>{{ tip.onder }}</span>
-      <span>{{ tip.kop }}</span>
-    </div>
   </div>
 </template>

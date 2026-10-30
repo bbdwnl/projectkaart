@@ -71,8 +71,6 @@ async function maakLead() {
   <main class="wrap">
     <header class="paginakop kop-met-knop">
       <div>
-        <p class="label">Kansen in beeld, nog voor de haalbaarheid</p>
-        <h1>Leads</h1>
         <p v-if="stand === 'klaar'" class="zin">{{ zin }}</p>
       </div>
       <button type="button" class="knop zwart" :aria-expanded="nieuwOpen" aria-controls="nieuwe-lead" @click="nieuwOpen = !nieuwOpen">Nieuwe lead</button>

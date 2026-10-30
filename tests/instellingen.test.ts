@@ -46,6 +46,20 @@ describe('instellingen', () => {
     expect(l.disciplines).toEqual([{ id: 'dak', naam: 'Dak' }])
   })
 
+  it('geeft elke fase een kleur, alleen als hij volgens de regels is', () => {
+    const s = standaard().labels.fasen
+    expect(s.uitvoering.kleur).toBe('#4caf50')
+    expect(s.nazorg.kleur).toBe('#e53935')
+    const l = lees('labels', { fasen: {
+      uitvoering: { kleur: '#1f7a45' },
+      nazorg: { kleur: 'rood' },
+      lead: { kleur: '#abc' },
+    } })
+    expect(l.fasen.uitvoering.kleur).toBe('#1f7a45')
+    expect(l.fasen.nazorg.kleur).toBe(s.nazorg.kleur)
+    expect(l.fasen.lead.kleur).toBe(s.lead.kleur)
+  })
+
   it('past het takenpakket en de overdracht aan, met deadlineregels', () => {
     pasToe([
       { sleutel: 'takenpakket', waarde: { haalbaarheid: [{ titel: 'Overdracht', taken: [

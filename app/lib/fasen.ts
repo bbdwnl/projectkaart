@@ -9,18 +9,22 @@ export interface FaseInfo {
   naam: string
   rol: Rol
   wat: string
+  /** Eigen kleur, onder Instellingen aan te passen (hex). Uitvoering groen, nazorg rood. */
+  kleur: string
 }
 
 /** De procesflow van BBDW, van lead tot nazorg (uit het prototype). */
 export const FASEN: FaseInfo[] = reactive<FaseInfo[]>([
-  { id: 'lead', naam: 'Lead', rol: 'am', wat: 'Kans in beeld' },
-  { id: 'haalbaarheid', naam: 'Haalbaarheid', rol: 'am', wat: 'SO / VO' },
-  { id: 'ontwikkeling', naam: 'Ontwikkeling', rol: 'po', wat: 'Voorbereiding & inkoop' },
-  { id: 'uitvoering', naam: 'Uitvoering', rol: 'pm', wat: 'Bouwvoorbereiding, casco & afbouw' },
-  { id: 'nazorg', naam: 'Nazorg', rol: 'pm', wat: 'Actielijst tot afronding' },
+  { id: 'lead', naam: 'Lead', rol: 'am', wat: 'Kans in beeld', kleur: '#6b6b6b' },
+  { id: 'haalbaarheid', naam: 'Haalbaarheid', rol: 'am', wat: 'SO / VO', kleur: '#6ba4b8' },
+  { id: 'ontwikkeling', naam: 'Ontwikkeling', rol: 'po', wat: 'Voorbereiding & inkoop', kleur: '#d6a461' },
+  { id: 'uitvoering', naam: 'Uitvoering', rol: 'pm', wat: 'Bouwvoorbereiding, casco & afbouw', kleur: '#4caf50' },
+  { id: 'nazorg', naam: 'Nazorg', rol: 'pm', wat: 'Actielijst tot afronding', kleur: '#e53935' },
 ])
 
 export const faseInfo = (f: Fase): FaseInfo => FASEN.find(x => x.id === f)!
+/** De kleur van een fase, zoals die onder Instellingen staat. */
+export const faseKleur = (f: Fase): string => faseInfo(f).kleur
 export const faseIndex = (f: Fase): number => FASEN.findIndex(x => x.id === f)
 
 export const ROLLEN: Record<Rol, { kort: string, naam: string }> = reactive({
@@ -47,6 +51,17 @@ export const DATUMVELDEN: { veld: keyof ProjectDatums, naam: string, kort: strin
   { veld: 'datum_afbouw', naam: 'Start afbouw', kort: 'Start afbouw' },
   { veld: 'datum_oplevering', naam: 'Oplevering', kort: 'Oplevering' },
 ]
+
+/**
+ * Welke harde datums bij een fase horen, voor de tijdlijn op de kaart.
+ * De mijlpaal van de fase is de datum waar de overdracht naartoe werkt; uitvoering heeft daarnaast de start van het casco.
+ */
+export const DATUM_BIJ_FASE: Partial<Record<Fase, (keyof ProjectDatums)[]>> = {
+  haalbaarheid: ['datum_voorbereiding'],
+  ontwikkeling: ['datum_inkoop'],
+  uitvoering: ['datum_casco', 'datum_afbouw'],
+  nazorg: ['datum_oplevering'],
+}
 
 /** De prognose tijdens lead en haalbaarheid: voor het planningsoverzicht, los van de deadlines. */
 export const PROGNOSEVELDEN: { veld: keyof ProjectPrognose, naam: string }[] = [
