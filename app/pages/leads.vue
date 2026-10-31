@@ -71,6 +71,7 @@ async function maakLead() {
   <main class="wrap">
     <header class="paginakop kop-met-knop">
       <div>
+        <h1 class="verborgen">Acquisitie</h1>
         <p v-if="stand === 'klaar'" class="zin">{{ zin }}</p>
       </div>
       <button type="button" class="knop zwart" :aria-expanded="nieuwOpen" aria-controls="nieuwe-lead" @click="nieuwOpen = !nieuwOpen">Nieuwe lead</button>
@@ -98,6 +99,6 @@ async function maakLead() {
     <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad()">Probeer het opnieuw</button></div>
     <div v-else-if="!leads.length" class="leeg-staat leadfilters">Nog geen leads. Voeg er een toe met Nieuwe lead, of zet een project op de kaart op de fase Lead.</div>
     <ProjectLijst v-else fase="lead" :regels="leads" />
-    <footer>Projectkaart BbDW · een lead gaat naar Haalbaarheid zodra je op de kaart de fase op Haalbaarheid zet.</footer>
+    <footer>Projectkaart BbDW · een lead gaat naar Projecten (kolom Haalbaarheid) zodra je op de kaart de fase op Haalbaarheid zet.</footer>
   </main>
 </template>

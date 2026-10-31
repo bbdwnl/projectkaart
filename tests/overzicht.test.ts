@@ -9,8 +9,8 @@ describe('projectenoverzicht', () => {
   const g = maakDemoGegevens(nu, projecten)
   const kaartjes = kaartjesVan(g.projecten.filter(p => KOLOMMEN.includes(p.fase)), g.taken, g.uitzonderingen, nu)
 
-  it('heeft drie kolommen, zonder leads en haalbaarheid', () => {
-    expect(KOLOMMEN).toEqual(['ontwikkeling', 'uitvoering', 'nazorg'])
+  it('heeft vier kolommen, van haalbaarheid tot nazorg, zonder leads', () => {
+    expect(KOLOMMEN).toEqual(['haalbaarheid', 'ontwikkeling', 'uitvoering', 'nazorg'])
     expect(kaartjes.every(k => KOLOMMEN.includes(k.p.fase))).toBe(true)
   })
   it('toont wie in de fase verantwoordelijk is, alleen de voornaam', () => {

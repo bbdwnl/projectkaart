@@ -207,6 +207,11 @@ describe('aftekenen en logboek', () => {
     const [r] = await als<{ gewijzigd_door: string }>(BENNO, `insert into public.instellingen (sleutel, waarde, gewijzigd_door) values ('mensen', '{"eigenaren":["Anna"]}', 'Vervalst') returning gewijzigd_door`)
     expect(r!.gewijzigd_door).toBe('Benno van Bergen')
     await expect(als(BENNO, `insert into public.instellingen (sleutel, waarde) values ('iets', '{}')`)).rejects.toThrow()
+    // De taken die uit het pakket gingen (beslissing 41): ook alleen het MT.
+    await expect(als(MICHIEL, `insert into public.instellingen (sleutel, waarde) values ('vervallen', '{}')`)).rejects.toThrow()
+    await als(BENNO, `insert into public.instellingen (sleutel, waarde) values ('vervallen', '{}')`)
+    expect(await als(MICHIEL, `select sleutel from public.instellingen order by sleutel`)).toEqual([{ sleutel: 'mensen' }, { sleutel: 'vervallen' }])
+    await als(BENNO, `delete from public.instellingen where sleutel = 'vervallen'`)
     expect(await als(MICHIEL, `select sleutel from public.instellingen`)).toEqual([{ sleutel: 'mensen' }])
     expect(await als(MICHIEL, `delete from public.instellingen returning sleutel`)).toHaveLength(0)
     expect(await als(VREEMD, `select sleutel from public.instellingen`)).toHaveLength(0)

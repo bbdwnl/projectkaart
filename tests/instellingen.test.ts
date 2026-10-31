@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { EIGENAREN, EISEN, FASEN, MENSEN, SOORTEN, faseInfo } from '~/lib/fasen'
-import { huidig, lees, nieuweCode, pasToe, standaard } from '~/lib/instellingen'
-import { LIJSTEN, vindStandaardtaak } from '~/lib/taken'
+import { huidig, lees, nieuweCode, pasToe, standaard, vervallenNa } from '~/lib/instellingen'
+import { groepenVoor, LIJSTEN, vindStandaardtaak } from '~/lib/taken'
 import { STATUSSEN, statusNaam } from '~/lib/taak'
-import { eisStand } from '~/lib/stoplicht'
+import { eisStand, takenVan } from '~/lib/stoplicht'
 
 describe('instellingen', () => {
   afterEach(() => pasToe([]))
@@ -80,6 +80,55 @@ describe('instellingen', () => {
     const p = { datum_casco: null, datum_voorbereiding: '2026-10-20', datum_inkoop: null, datum_afbouw: null, datum_oplevering: null }
     expect(eisStand(['haalbaarheid:scope'], p, [], new Date(2026, 9, 14))).toBe('telaat')
     expect(LIJSTEN.ontwikkeling).toEqual(standaard().takenpakket.ontwikkeling)
+  })
+
+  it('houdt een taak die uit het pakket gaat op de projecten die er al waren (beslissing 41)', () => {
+    const oud = standaard().takenpakket
+    const nieuw = standaard().takenpakket
+    nieuw.nazorg[0]!.taken = nieuw.nazorg[0]!.taken.filter(t => t.sleutel !== 'opleverpunten')
+    nieuw.lead = []
+    const weg = vervallenNa(oud, nieuw, standaard().vervallen, '2026-10-31T10:00:00.000Z')
+    expect(weg.nazorg).toEqual([{ sleutel: 'opleverpunten', titel: 'Opleverpunten opgelost', regel: { type: 'oplevering', dagen: 21 }, groep: 'Nazorg', weg: '2026-10-31T10:00:00.000Z' }])
+    expect(weg.lead.map(v => [v.sleutel, v.groep])).toEqual([['betaalde_opdracht', 'Overdracht naar haalbaarheid'], ['risico', 'Overdracht naar haalbaarheid']])
+    expect(weg.uitvoering).toEqual([])
+    pasToe([{ sleutel: 'takenpakket', waarde: nieuw }, { sleutel: 'vervallen', waarde: weg }])
+
+    const datums = { datum_casco: null, datum_voorbereiding: null, datum_inkoop: null, datum_afbouw: null, datum_oplevering: '2026-10-01' }
+    const ouder = { ...datums, aangemaakt_op: '2026-10-07T09:00:00+00:00' }
+    const nieuwer = { ...datums, aangemaakt_op: '2026-11-02T09:00:00+00:00' }
+    // Een project van vóór het weghalen houdt de taak, op zijn plek in de groep en met zijn deadline; een nieuwer niet.
+    expect(takenVan('nazorg', ouder, [], [], new Date(2026, 9, 31)).map(r => [r.titel, r.b.licht])).toEqual([
+      ['Financiële afhandeling', 'letop'], ['Opleverpunten opgelost', 'telaat'],
+    ])
+    expect(takenVan('nazorg', nieuwer, [], [], new Date(2026, 9, 31)).map(r => r.titel)).toEqual(['Financiële afhandeling'])
+    expect(takenVan('nazorg', datums, [], [], new Date(2026, 9, 31)).map(r => r.titel)).toEqual(['Financiële afhandeling'])
+    // Een groep die helemaal weg is, komt op een oud project terug als eigen groep.
+    expect(groepenVoor('lead', ouder.aangemaakt_op)).toEqual([{ titel: 'Overdracht naar haalbaarheid', taken: [
+      { sleutel: 'betaalde_opdracht', titel: 'Betaalde opdracht' }, { sleutel: 'risico', titel: 'Analyse risico\'s & kansen' },
+    ] }])
+    expect(groepenVoor('lead', nieuwer.aangemaakt_op)).toEqual([])
+    expect(eisStand(['nazorg:opleverpunten'], ouder, [], new Date(2026, 9, 31))).toBe('telaat')
+    expect(vindStandaardtaak('nazorg', 'opleverpunten')!.titel).toBe('Opleverpunten opgelost')
+
+    // Terug in het pakket: weer voor iedereen, en niet meer bij wat eruit ging. Later weer weg: vanaf dat moment.
+    const terug = vervallenNa(nieuw, oud, weg, '2026-11-05T10:00:00.000Z')
+    expect(terug.nazorg).toEqual([])
+    expect(terug.lead).toEqual([])
+    const weer = vervallenNa(oud, nieuw, terug, '2026-11-09T10:00:00.000Z')
+    expect(weer.nazorg.map(v => v.weg)).toEqual(['2026-11-09T10:00:00.000Z'])
+  })
+
+  it('leest de lijst met vervallen taken streng: wat niet klopt, valt weg', () => {
+    const l = lees('vervallen', { nazorg: [
+      { sleutel: 'goed', titel: 'Goed', groep: 'Nazorg', weg: '2026-10-31T10:00:00Z', regel: { type: 'oplevering', dagen: 7 } },
+      { sleutel: 'goed', titel: 'Dubbel', groep: 'Nazorg', weg: '2026-10-31T10:00:00Z' },
+      { sleutel: 'zonder_moment', titel: 'Geen moment', groep: 'Nazorg', weg: 'ooit' },
+      { sleutel: 'Fout!', titel: 'Verkeerde sleutel', groep: 'Nazorg', weg: '2026-10-31T10:00:00Z' },
+      { sleutel: 'zonder_groep', titel: 'Geen groep', weg: '2026-10-31T10:00:00Z' },
+    ], lead: 'geen lijst' })
+    expect(l.nazorg.map(v => v.sleutel)).toEqual(['goed'])
+    expect(l.nazorg[0]!.regel).toEqual({ type: 'oplevering', dagen: 7 })
+    expect(l.lead).toEqual([])
   })
 
   it('maakt een nieuwe code uit een naam, uniek', () => {

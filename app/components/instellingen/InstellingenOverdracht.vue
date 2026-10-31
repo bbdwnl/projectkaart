@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Fase } from '~/lib/types'
 import { FASEN, faseInfo } from '~/lib/fasen'
-import { LIJSTEN } from '~/lib/taken'
+import { LIJSTEN, VERVALLEN } from '~/lib/taken'
 
 // Wat er bij elke overdracht klaar moet zijn (Proces & Planning op de kaart). Elke eis haalt zijn stand uit de taken
 // die je eraan koppelt: klaar als die klaar zijn, te laat als er één te laat is. Er is geen harde gate.
@@ -11,7 +11,14 @@ const blok = computed(() => concept.value[fase.value])
 /** De taken van deze fase om aan een eis te koppelen: het opgeslagen takenpakket. */
 const groepen = computed(() => LIJSTEN[fase.value])
 const code = (sleutel: string) => `${fase.value}:${sleutel}`
-const titelVan = (k: string) => LIJSTEN[k.split(':')[0] as Fase]?.flatMap(g => g.taken).find(t => t.sleutel === k.split(':')[1])?.titel
+/** De naam van een gekoppelde taak; ook van een taak die uit het pakket ging (die staat nog op oudere projecten). */
+function titelVan(k: string) {
+  const [lijst, sleutel] = k.split(':') as [Fase, string]
+  const taak = LIJSTEN[lijst]?.flatMap(g => g.taken).find(t => t.sleutel === sleutel)
+  if (taak) return taak.titel
+  const weg = VERVALLEN[lijst]?.find(v => v.sleutel === sleutel)
+  return weg ? `${weg.titel} (uit het pakket, nog op oudere projecten)` : `${k} (niet meer in het pakket)`
+}
 
 function koppel(i: number, k: string, aan: boolean) {
   const eis = blok.value.items[i]!
@@ -53,7 +60,7 @@ const nieuw = () => blok.value.items.push({ titel: '', taken: [] })
         </div>
         <details class="inst-koppel" :open="!eis.taken.length">
           <summary class="klein">
-            <template v-if="eis.taken.length">Gekoppeld: {{ eis.taken.map(k => titelVan(k) ?? `${k} (niet meer in het pakket)`).join(' · ') }}</template>
+            <template v-if="eis.taken.length">Gekoppeld: {{ eis.taken.map(titelVan).join(' · ') }}</template>
             <template v-else><b>Nog aan geen taak gekoppeld</b>: dan blijft hij open.</template>
           </summary>
           <div v-for="g in groepen" :key="g.titel" class="inst-koppelgroep">

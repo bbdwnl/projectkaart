@@ -1,11 +1,12 @@
-import { huidig, type Instellingen, type Sleutel } from '~/lib/instellingen'
+import { huidig, standaard, type Instellingen, type Sleutel } from '~/lib/instellingen'
 
 /**
  * Eén lijst onder Instellingen bewerken: een concept (een kopie van wat nu geldt), Opslaan en Terug naar de standaard.
  * Alleen het MT slaat op; de database dwingt dat ook af. Wijzigt iemand anders de lijst terwijl jij niets hebt
- * veranderd, dan volgt het concept vanzelf.
+ * veranderd, dan volgt het concept vanzelf. voorOpslaan krijgt wat er gaat gelden (het concept, of bij Terug naar de
+ * standaard de standaard) en draait vóór het opslaan; gaat het mis, dan wordt er niets opgeslagen.
  */
-export function useInstellingBewerken<S extends Sleutel>(sleutel: S) {
+export function useInstellingBewerken<S extends Sleutel>(sleutel: S, opties: { voorOpslaan?: (nieuw: Instellingen[S]) => Promise<void> } = {}) {
   const bron = useBron()
   const { toon } = useToast()
   const { gebruiker } = useGebruiker()
@@ -29,6 +30,7 @@ export function useInstellingBewerken<S extends Sleutel>(sleutel: S) {
   async function opslaan() {
     bezig.value = true
     try {
+      await opties.voorOpslaan?.(concept.value)
       bijgewerkt(await bron.bewaarInstelling(sleutel, concept.value))
       herlaad()
       toon('Opgeslagen · geldt meteen voor iedereen')
@@ -43,6 +45,7 @@ export function useInstellingBewerken<S extends Sleutel>(sleutel: S) {
     if (!confirm('Deze lijst terugzetten naar de standaard? Wat hier is aangepast, gaat verloren.')) return
     bezig.value = true
     try {
+      await opties.voorOpslaan?.(standaard()[sleutel])
       await bron.wisInstelling(sleutel)
       bijgewerkt({ sleutel, weg: true })
       herlaad()

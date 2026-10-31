@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { dagen } from '~/lib/datum'
-
 const { weergave } = useWeergave()
-const { mijlpaal } = useKaart()
 const w = computed(() => weergave.value.proces)
 const toont = computed(() => w.value.flow || w.value.tijdlijn || w.value.datums)
-const aftel = computed(() => 'Planning')
 </script>
 
 <template>

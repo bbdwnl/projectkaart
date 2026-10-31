@@ -99,6 +99,20 @@ onMounted(async () => {
           <p>{{ f.wat }}</p>
         </div>
 
+        <!-- Op een telefoon staat de tijdlijn niet in beeld: dan staan de datums bij hun fase. -->
+        <div v-if="w.datums && f.datums.length" class="fase-datums" :class="{ 'naast-tijdlijn': w.tijdlijn }">
+          <button
+            v-for="d in f.datums" :key="d.veld" type="button" class="datumknop" :class="{ leeg: !d.waarde }"
+            :aria-label="`${d.naam} wijzigen`" @click="bewerk(d)"
+          >
+            <span class="label">{{ d.naam }}</span>
+            <span class="datumknop-rij">
+              <b class="n" :class="{ leeg: !d.waarde }">{{ d.waarde ? fmt(naarDatum(d.waarde)) : 'Kies datum' }}</b>
+              <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 1.7a1.6 1.6 0 0 1 2.3 0l.7.7a1.6 1.6 0 0 1 0 2.3l-8 8-3.4 1.1 1.1-3.4 8-8Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>
+            </span>
+          </button>
+        </div>
+
         <div v-if="w.flow" class="eis">
           <h4>{{ f.kop }}</h4>
           <ul>
@@ -113,7 +127,7 @@ onMounted(async () => {
 
     <section v-if="w.datums && metPrognose" class="prognose">
       <p class="label">Prognose</p>
-      <p class="klein">Wanneer de bouw naar verwachting start en klaar is. Staat in het planningsoverzicht van Haalbaarheid, naast de lopende projecten.</p>
+      <p class="klein">Wanneer de bouw naar verwachting start en klaar is. Staat in het planningsoverzicht bij Projecten, naast de lopende projecten.</p>
       <div class="fase-datums prognose-datums">
         <button
           v-for="d in prognose" :key="d.veld" type="button" class="datumknop prognoseknop" :class="{ leeg: !d.waarde }"

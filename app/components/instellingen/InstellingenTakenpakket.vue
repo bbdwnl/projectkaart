@@ -1,24 +1,37 @@
 <script setup lang="ts">
-import type { Fase, Taak } from '~/lib/types'
-import type { DeadlineRegel, Standaardtaak, Takengroep } from '~/lib/taken'
+import type { Fase, Project, Taak } from '~/lib/types'
+import { houdtTaak, VERVALLEN, type DeadlineRegel, type Standaardtaak, type Takengroep, type VervallenTaak } from '~/lib/taken'
 import { FASEN, faseInfo } from '~/lib/fasen'
-import { nieuweCode, REGELTYPES, sleutelsVan } from '~/lib/instellingen'
+import { huidig, lees, nieuweCode, REGELTYPES, sleutelsVan, vervallenNa } from '~/lib/instellingen'
+import { fmt } from '~/lib/datum'
 
 // Het standaardpakket: per fase de groepen met taken, en per taak de deadline. Een nieuwe taak staat meteen op alle
-// projecten in die fase. Een taak weghalen haalt hem van de kaarten; wat er al was ingevuld, blijft in de database
-// en komt terug als de taak terugkomt (dezelfde sleutel).
-const { concept, gewijzigd, bezig, isMt, opgeslagen, opslaan, standaardTerug, herstel } = useInstellingBewerken('takenpakket')
+// projecten in die fase. Een taak weghalen haalt hem alleen van de projecten die daarna komen: de projecten die er al
+// zijn, houden hem, met wat er was ingevuld (beslissing 41). Daarvoor houdt de lijst vervallen bij wat eruit ging en
+// sinds wanneer; die wordt eerst opgeslagen, dan het pakket.
 const bron = useBron()
+const { bijgewerkt } = useInstellingen()
+async function bewaarVervallen(nieuw: Record<Fase, Takengroep[]>) {
+  const nu = huidig()
+  const lijst = vervallenNa(nu.takenpakket, lees('takenpakket', nieuw), nu.vervallen, new Date().toISOString())
+  if (JSON.stringify(lijst) !== JSON.stringify(nu.vervallen)) bijgewerkt(await bron.bewaarInstelling('vervallen', lijst))
+}
+const { concept, gewijzigd, bezig, isMt, opgeslagen, opslaan, standaardTerug, herstel } = useInstellingBewerken('takenpakket', { voorOpslaan: bewaarVervallen })
 const fase = ref<Fase>('haalbaarheid')
 const taken = ref<Taak[]>([])
+const projecten = ref<Project[]>([])
 onMounted(async () => {
-  try { taken.value = await bron.taken() } catch { /* zonder telling */ }
+  try { [taken.value, projecten.value] = await Promise.all([bron.taken(), bron.projecten()]) } catch { /* zonder telling */ }
 })
 /** Hoeveel projecten iets hebben ingevuld bij deze taak: een status, eigenaar of document. */
 const ingevuld = (sleutel: string) => taken.value.filter(t => t.lijst === fase.value && t.sleutel === sleutel
   && (t.status !== 'niet_gestart' || t.eigenaar || t.document_url)).length
 /** Sleutels die al eens gebruikt zijn: een nieuwe taak krijgt die niet, anders komt oude invulling terug. */
-const bezet = computed(() => [...new Set([...sleutelsVan(concept.value[fase.value]), ...taken.value.filter(t => t.lijst === fase.value && t.sleutel).map(t => t.sleutel!)])])
+const bezet = computed(() => [...new Set([
+  ...sleutelsVan(concept.value[fase.value]),
+  ...VERVALLEN[fase.value].map(v => v.sleutel),
+  ...taken.value.filter(t => t.lijst === fase.value && t.sleutel).map(t => t.sleutel!),
+])])
 const groepen = computed(() => concept.value[fase.value])
 const aantal = (f: Fase) => sleutelsVan(concept.value[f]).length
 /** Een taak of groep zonder naam wordt niet bewaard. */
@@ -34,10 +47,22 @@ function titelTaak(t: Standaardtaak, e: Event) {
   t.titel = titel
 }
 function wegTaak(g: Takengroep, i: number) {
-  const t = g.taken[i]!
-  const n = ingevuld(t.sleutel)
-  if (n && !confirm(`Op ${n === 1 ? 'één project' : `${n} projecten`} is bij "${t.titel}" al iets ingevuld. Dat blijft bewaard, maar is niet meer te zien. Weghalen?`)) return
   g.taken.splice(i, 1)
+}
+
+/** Wat uit het pakket ging en nog op bestaande projecten staat; zonder wat je net hebt teruggezet. */
+const weg = computed(() => {
+  const nu = new Set(sleutelsVan(concept.value[fase.value]))
+  return VERVALLEN[fase.value].filter(v => !nu.has(v.sleutel))
+})
+const houden = (v: VervallenTaak) => projecten.value.filter(p => houdtTaak(v, p.aangemaakt_op)).length
+/** Terug in het pakket, in zijn oude groep (of de laatste); na opslaan staat hij weer op alle projecten. */
+function terugzetten(v: VervallenTaak) {
+  const groepen = concept.value[fase.value]
+  const taak: Standaardtaak = { sleutel: v.sleutel, titel: v.titel, ...(v.regel ? { regel: v.regel } : {}) }
+  const g = groepen.find(x => x.titel === v.groep) ?? groepen.at(-1)
+  if (g) g.taken.push(taak)
+  else groepen.push({ titel: v.groep, taken: [taak] })
 }
 function schuif<T>(lijst: T[], i: number, d: -1 | 1) {
   const [x] = lijst.splice(i, 1)
@@ -75,7 +100,7 @@ const eenheid = (t: Standaardtaak) => REGELTYPES.find(r => r.type === t.regel?.t
     <div class="blokkop">
       <div>
         <h2>Takenpakket</h2>
-        <p class="klein">De standaardtaken per fase, in groepen, met hun deadline. Een wijziging geldt meteen voor alle projecten. Haal je een taak weg, dan blijft wat er al was ingevuld bewaard.</p>
+        <p class="klein">De standaardtaken per fase, in groepen, met hun deadline. Een nieuwe taak, een andere naam of deadline geldt meteen voor alle projecten. Haal je een taak weg, dan krijgen nieuwe projecten hem niet meer; de projecten die er al zijn, houden hem.</p>
       </div>
       <div class="seg" role="group" aria-label="Fase">
         <button v-for="f in FASEN" :key="f.id" type="button" :aria-pressed="fase === f.id" @click="fase = f.id">{{ f.naam }} <span class="n">{{ aantal(f.id) }}</span></button>
@@ -118,6 +143,19 @@ const eenheid = (t: Standaardtaak) => REGELTYPES.find(r => r.type === t.regel?.t
       </div>
       <p v-if="!groepen.length" class="leeg-staat">{{ faseInfo(fase).naam }} heeft geen standaardtaken.</p>
       <button type="button" class="knop" @click="nieuweGroep">+ Groep in {{ faseInfo(fase).naam.toLowerCase() }}</button>
+      <div v-if="weg.length" class="kaart inst-groep inst-weg">
+        <div>
+          <span class="label">Uit het pakket gehaald</span>
+          <p class="klein">Nieuwe projecten krijgen deze taken niet meer; de projecten die er toen al waren, houden ze. Zet je er een terug, dan staat hij na opslaan weer op alle projecten.</p>
+        </div>
+        <ol class="inst-taken">
+          <li v-for="v in weg" :key="v.sleutel" class="inst-taak">
+            <span class="titel">{{ v.titel }}</span>
+            <span class="klein">{{ v.groep }} · sinds {{ fmt(new Date(v.weg)) }}<template v-if="projecten.length"> · nog op {{ houden(v) === 1 ? 'één project' : `${houden(v)} projecten` }}</template></span>
+            <span class="inst-knopjes"><button type="button" class="link" @click="terugzetten(v)">Terugzetten</button></span>
+          </li>
+        </ol>
+      </div>
     </fieldset>
     <p v-if="zonderNaam && gewijzigd" class="fout-melding">Er is een taak of groep zonder naam; die wordt bij opslaan niet bewaard.</p>
     <InstellingenOpslaan :gewijzigd="gewijzigd" :bezig="bezig" :is-mt="isMt" :opgeslagen="opgeslagen" @opslaan="opslaan" @herstel="herstel" @standaard="standaardTerug" />

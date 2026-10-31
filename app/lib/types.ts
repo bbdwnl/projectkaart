@@ -63,9 +63,11 @@ export interface Project extends ProjectDatums, ProjectPrognose {
   extern_url: string | null
   notitieblok_url: string | null
   tekeningen_locatie: string | null
+  /** Van de database. Een taak die later uit het takenpakket gaat, blijft op dit project (beslissing 41). */
+  aangemaakt_op?: string | null
   gewijzigd_op: string | null
 }
-export type ProjectWijziging = Partial<Omit<Project, 'id' | 'slug' | 'gewijzigd_op'>>
+export type ProjectWijziging = Partial<Omit<Project, 'id' | 'slug' | 'aangemaakt_op' | 'gewijzigd_op'>>
 /** Een nieuw project: een lead, of een lopend project dat direct in zijn fase begint. De rest vul je op de kaart in. */
 export type NieuwProject = Pick<Project, 'slug' | 'naam' | 'fase'> & Partial<Pick<Project, 'nummer' | 'am' | 'po' | 'pm' | 'slagingskans'>>
 

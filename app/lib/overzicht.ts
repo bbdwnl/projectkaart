@@ -2,11 +2,11 @@ import type { Fase, Licht, Project, Rol, Taak, Uitzondering } from './types'
 import { faseInfo } from './fasen'
 import { ORDE, samen, takenVan, telling, volgendeMijlpaal } from './stoplicht'
 
-// De overzichten Projecten (drie kolommen) en Haalbaarheid: per project een kaartje met het nummer, de naam,
+// Het overzicht Projecten (vier kolommen, van haalbaarheid tot nazorg): per project een kaartje met het nummer, de naam,
 // de kleurenbalk van de taken in de huidige fase en de voornaam van wie in die fase verantwoordelijk is.
 
-/** De kolommen op Projecten. Leads en haalbaarheid hebben een eigen pagina. */
-export const KOLOMMEN: Fase[] = ['ontwikkeling', 'uitvoering', 'nazorg']
+/** De kolommen op Projecten. Leads staan onder Acquisitie. */
+export const KOLOMMEN: Fase[] = ['haalbaarheid', 'ontwikkeling', 'uitvoering', 'nazorg']
 
 export interface Kaartje {
   p: Project

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FASEN, faseInfo } from '~/lib/fasen'
-import { LIJSTEN, UITZONDERINGEN_GROEP } from '~/lib/taken'
+import { groepenVoor, UITZONDERINGEN_GROEP } from '~/lib/taken'
 import { opUrgentie, samen, telling, type TaakRegel } from '~/lib/stoplicht'
 import { kolomSjabloon } from '~/lib/weergave'
 import type { TaakWijziging } from '~/lib/types'
@@ -44,7 +44,7 @@ const zichtbaar = computed(() => {
 })
 
 const groepen = computed(() => [
-  ...LIJSTEN[tabFase.value].map(g => ({ titel: g.titel, uitleg: g.uitleg, uitzondering: false })),
+  ...groepenVoor(tabFase.value, project.value?.aangemaakt_op).map(g => ({ titel: g.titel, uitleg: g.uitleg, uitzondering: false })),
   { titel: UITZONDERINGEN_GROEP, uitleg: undefined, uitzondering: true },
 ].map((g) => {
   const alle = regels.value.filter(r => r.groep === g.titel)

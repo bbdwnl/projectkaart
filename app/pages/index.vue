@@ -5,11 +5,11 @@ import { maakSlug } from '~/lib/leads'
 import { isAfgehandeld, kaartjesVan, KOLOMMEN, namenVan, pastPersoon, pastWie, personen, SORTEERDATUM, sorteerKaartjes, SORTERINGEN, vindt, type Kaartje } from '~/lib/overzicht'
 import { vandaag } from '~/lib/datum'
 import { signalen, SOORTEN } from '~/lib/signalen'
-import { useOverzichtWeergave } from '~/composables/useOverzichtWeergave'
 
-// De lopende projecten in drie kolommen: ontwikkeling, uitvoering en nazorg. Per kolom het dringendste bovenaan.
-// Daarnaast een planningsoverzicht, te filteren op fase, en wat daarin opvalt. Leads en haalbaarheid hebben een eigen pagina.
-// Afgehandelde nazorg staat er alleen als je die laat zien, apart onderaan de kolom Nazorg.
+// De lopende projecten in vier kolommen: haalbaarheid, ontwikkeling, uitvoering en nazorg. Per kolom het dringendste
+// bovenaan; met de knoppen boven de kolommen zie je er één over de hele breedte. Daarnaast een planningsoverzicht (de
+// prognose van haalbaarheid over de lopende projecten heen), te filteren op fase, en wat daarin opvalt. Leads staan
+// onder Acquisitie. Afgehandelde nazorg staat er alleen als je die laat zien, apart onderaan de kolom Nazorg.
 useHead({ title: 'Projecten · Projectkaart' })
 const bron = useBron()
 const { toon } = useToast()
@@ -68,7 +68,7 @@ const aantalAfgehandeld = computed(() => kaartjes.value.filter(k => past(k, 'af'
 const lopend = computed(() => kaartjes.value.filter(k => !isAfgehandeld(k.p)))
 const gefilterd = computed(() => !!zoek.value.trim() || wie.value !== 'alle' || pl.value !== 'alle' || oz.value !== 'alle' || prio.value)
 const kolommen = computed(() => {
-  const fasen = kolom.value === 'alle' ? KOLOMMEN : [kolom.value as Fase]
+  const fasen = kolom.value === 'alle' ? KOLOMMEN : [kolom.value]
   return fasen.map((f) => {
     const inFase = lopend.value.filter(k => k.p.fase === f)
     const gevonden = gezocht.value.filter(k => k.p.fase === f && pastWie(k, wie.value))
@@ -86,12 +86,30 @@ const zin = computed(() => {
 // Nieuw project: begint als lead; een lopend project zet je meteen in zijn fase. De rest vul je op de kaart in.
 const nieuwOpen = ref(false)
 const mailOpen = ref(false)
-const sortOpen = ref(false)
-const filterOpen = ref(false)
 const bezig = ref(false)
 const nieuw = reactive({ naam: '', nummer: '', fase: 'lead' as Fase, wie: '' })
-/** De kolom die in de gridview wordt getoond, of 'alle' voor de normale drie kolommen. Bewaard in een cookie. */
+/** De kolom die over de hele breedte staat, of 'alle' voor alle kolommen naast elkaar. Bewaard in een cookie. */
 const { kolom, zet, herstel } = useOverzichtWeergave()
+/** Sorteren en Filters: één paneel tegelijk open; dicht met Escape of een klik ernaast. */
+const paneel = ref<'sorteer' | 'filter' | null>(null)
+const acties = ref<HTMLElement>()
+const wissel = (p: 'sorteer' | 'filter') => (paneel.value = paneel.value === p ? null : p)
+function klikErnaast(e: MouseEvent) {
+  if (acties.value && !acties.value.contains(e.target as Node)) paneel.value = null
+}
+function toets(e: KeyboardEvent) {
+  if (e.key === 'Escape') paneel.value = null
+}
+onMounted(() => {
+  document.addEventListener('click', klikErnaast)
+  document.addEventListener('keydown', toets)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', klikErnaast)
+  document.removeEventListener('keydown', toets)
+})
+/** Hoeveel filters aan staan: op de knop, want het paneel zelf is meestal dicht. */
+const aantalFilters = computed(() => [wie.value !== 'alle', pl.value !== 'alle', oz.value !== 'alle', prio.value, afgehandeld.value].filter(Boolean).length)
 /** Wie in de gekozen fase verantwoordelijk is: de AM bij lead en haalbaarheid, de PO in ontwikkeling, de PM daarna. */
 const nieuwRol = computed(() => faseInfo(nieuw.fase).rol)
 watch(nieuwRol, (rol) => {
@@ -123,6 +141,7 @@ async function maakProject() {
   <main class="wrap">
     <header class="paginakop kop-met-knop">
       <div>
+        <h1 class="verborgen">Projecten</h1>
         <p v-if="stand === 'klaar'" class="zin">{{ zin }}</p>
       </div>
       <div class="kop-knoppen">
@@ -156,60 +175,60 @@ async function maakProject() {
     <PaginaTabs v-model="weergave" :tabs="tabs" label="Weergave van de projecten" />
     <div v-if="stand === 'laden'" class="laden" aria-busy="true"><span class="laden-regel" /><span class="laden-regel" /></div>
     <div v-else-if="stand === 'fout'" class="leeg-staat">{{ fout }} <button type="button" class="link" @click="laad()">Probeer het opnieuw</button></div>
-    <PlanningOverzicht v-else-if="weergave === 'planning'" :projecten="projecten" :lagen="['lopend']" fasefilter />
+    <PlanningOverzicht v-else-if="weergave === 'planning'" :projecten="projecten" :lagen="['prognose', 'lopend']" fasefilter />
     <PlanningSignalen v-else-if="weergave === 'aandachtspunten'" :lijst="punten" />
     <template v-else>
       <div class="filters projectfilters">
         <input v-model="zoek" class="veld zoekveld" type="search" placeholder="Zoek op naam, nummer, plaats of persoon" aria-label="Zoek een project">
-        <div class="filter-acties">
-        <div class="seg gridview-knoppen" role="group" aria-label="Gridview kolom">
-          <span class="grid-icoon-kop" aria-hidden="true">
-            <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="12" height="12" stroke="currentColor" stroke-width="1.2" rx="1"/><line x1="5" y1="1" x2="5" y2="13" stroke="currentColor" stroke-width="1.2"/><line x1="9" y1="1" x2="9" y2="13" stroke="currentColor" stroke-width="1.2"/><line x1="1" y1="5" x2="13" y2="5" stroke="currentColor" stroke-width="1.2"/><line x1="1" y1="9" x2="13" y2="9" stroke="currentColor" stroke-width="1.2"/></svg>
-          </span>
-          <button v-for="f in KOLOMMEN" :key="f" type="button" :aria-pressed="kolom === f" @click="zet(f)">{{ faseInfo(f).naam }}</button>
-          <button v-if="kolom !== 'alle'" type="button" :aria-pressed="false" @click="herstel">Alle kolommen</button>
-        </div>
-        <button type="button" class="knop" :aria-expanded="sortOpen" @click="sortOpen = !sortOpen">Sorteren</button>
-        <div v-if="sortOpen" class="popup">
-          <div class="filtergroep">
-            <span class="label">Sorteer</span>
-            <div class="seg" role="group" aria-label="Sorteer">
-              <button v-for="s in SORTERINGEN" :key="s.id" type="button" :aria-pressed="sortering === s.id" @click="sortering = s.id">{{ s.naam }}</button>
+        <div ref="acties" class="filter-acties">
+          <div class="seg gridview-knoppen" role="group" aria-label="Eén kolom over de hele breedte">
+            <span class="grid-icoon-kop" aria-hidden="true">
+              <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="12" height="12" stroke="currentColor" stroke-width="1.2" rx="1" /><line x1="5" y1="1" x2="5" y2="13" stroke="currentColor" stroke-width="1.2" /><line x1="9" y1="1" x2="9" y2="13" stroke="currentColor" stroke-width="1.2" /><line x1="1" y1="5" x2="13" y2="5" stroke="currentColor" stroke-width="1.2" /><line x1="1" y1="9" x2="13" y2="9" stroke="currentColor" stroke-width="1.2" /></svg>
+            </span>
+            <button v-for="f in KOLOMMEN" :key="f" type="button" :aria-pressed="kolom === f" @click="kolom === f ? herstel() : zet(f)">{{ faseInfo(f).naam }}</button>
+            <button v-if="kolom !== 'alle'" type="button" :aria-pressed="false" @click="herstel">Alle kolommen</button>
+          </div>
+          <button type="button" class="knop" :aria-expanded="paneel === 'sorteer'" @click="wissel('sorteer')">Sorteren</button>
+          <button type="button" class="knop" :aria-expanded="paneel === 'filter'" @click="wissel('filter')">Filters<span v-if="aantalFilters" class="n"> · {{ aantalFilters }}</span></button>
+          <div v-if="paneel === 'sorteer'" class="popup">
+            <div class="filtergroep">
+              <span class="label">Sorteer</span>
+              <div class="seg" role="group" aria-label="Sorteer">
+                <button v-for="s in SORTERINGEN" :key="s.id" type="button" :aria-pressed="sortering === s.id" @click="sortering = s.id">{{ s.naam }}</button>
+              </div>
             </div>
           </div>
-        </div>
-        <button type="button" class="knop" :aria-expanded="filterOpen" @click="filterOpen = !filterOpen">Filters</button>
-        <div v-if="filterOpen" class="popup">
-          <div class="filtergroep">
-            <span class="label">Verantwoordelijke</span>
-            <div class="seg" role="group" aria-label="Verantwoordelijke">
-              <button type="button" :aria-pressed="wie === 'alle'" @click="wie = 'alle'">Iedereen <span class="n">{{ gezocht.length }}</span></button>
-              <button v-for="m in mensen" :key="m.id" type="button" :aria-pressed="wie === m.id" @click="wie = m.id">{{ m.id === 'geen' ? 'Zonder' : m.id }} <span class="n">{{ m.aantal }}</span></button>
+          <div v-if="paneel === 'filter'" class="popup">
+            <div class="filtergroep">
+              <span class="label">Verantwoordelijke</span>
+              <div class="seg" role="group" aria-label="Verantwoordelijke">
+                <button type="button" :aria-pressed="wie === 'alle'" @click="wie = 'alle'">Iedereen <span class="n">{{ gezocht.length }}</span></button>
+                <button v-for="m in mensen" :key="m.id" type="button" :aria-pressed="wie === m.id" @click="wie = m.id">{{ m.id === 'geen' ? 'Zonder' : m.id }} <span class="n">{{ m.aantal }}</span></button>
+              </div>
+            </div>
+            <div class="filtergroep">
+              <label class="filterkeuze"><span class="label">Projectleider</span>
+                <select v-model="pl" class="veld pil">
+                  <option value="alle">Iedereen</option>
+                  <option v-for="n in projectleiders" :key="n.id" :value="n.id">{{ n.id === 'geen' ? 'Nog niemand' : n.id }} ({{ n.aantal }})</option>
+                </select>
+              </label>
+              <label class="filterkeuze"><span class="label">Opzichter</span>
+                <select v-model="oz" class="veld pil">
+                  <option value="alle">Iedereen</option>
+                  <option v-for="n in opzichters" :key="n.id" :value="n.id">{{ n.id === 'geen' ? 'Nog niemand' : n.id }} ({{ n.aantal }})</option>
+                </select>
+              </label>
+              <label class="schakel"><input v-model="prio" type="checkbox"><span />Alleen prio <small class="n">{{ aantalPrio }}</small></label>
+              <label class="schakel" title="Nazorg die helemaal klaar is"><input v-model="afgehandeld" type="checkbox"><span />Toon afgehandeld <small class="n">{{ aantalAfgehandeld }}</small></label>
             </div>
           </div>
-          <div class="filtergroep">
-            <label class="filterkeuze"><span class="label">Projectleider</span>
-              <select v-model="pl" class="veld pil">
-                <option value="alle">Iedereen</option>
-                <option v-for="n in projectleiders" :key="n.id" :value="n.id">{{ n.id === 'geen' ? 'Nog niemand' : n.id }} ({{ n.aantal }})</option>
-              </select>
-            </label>
-            <label class="filterkeuze"><span class="label">Opzichter</span>
-              <select v-model="oz" class="veld pil">
-                <option value="alle">Iedereen</option>
-                <option v-for="n in opzichters" :key="n.id" :value="n.id">{{ n.id === 'geen' ? 'Nog niemand' : n.id }} ({{ n.aantal }})</option>
-              </select>
-            </label>
-            <label class="schakel"><input v-model="prio" type="checkbox"><span />Alleen prio <small class="n">{{ aantalPrio }}</small></label>
-            <label class="schakel" title="Nazorg die helemaal klaar is"><input v-model="afgehandeld" type="checkbox"><span />Toon afgehandeld <small class="n">{{ aantalAfgehandeld }}</small></label>
-          </div>
-        </div>
         </div>
       </div>
       <div class="kolommen" :class="{ 'gridview': kolom !== 'alle' }">
         <section v-for="k in kolommen" :key="k.fase" class="kolom" :aria-labelledby="`kolom-${k.fase}`">
           <header class="kolom-kop">
-            <h2 :id="`kolom-${k.fase}`"><i class="fase-stip" :style="{ background: k.kleur }" aria-hidden="true"/>{{ k.naam }}</h2>
+            <h2 :id="`kolom-${k.fase}`"><i class="fase-stip" :style="{ background: k.kleur }" aria-hidden="true" />{{ k.naam }}</h2>
             <span class="klein n">{{ gefilterd ? `${k.kaartjes.length} van ${k.totaal}` : k.totaal }} · {{ k.rol }}</span>
           </header>
           <div class="kolom-lijst">

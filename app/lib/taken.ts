@@ -153,14 +153,53 @@ export const LIJSTEN: Record<Fase, Takengroep[]> = reactive({
   ],
 })
 
+/** Een standaardtaak die uit het pakket is gehaald. De projecten die er toen al waren, houden hem. */
+export interface VervallenTaak extends Standaardtaak {
+  /** De groep waar hij in stond: op een bestaande kaart komt hij daar terug. */
+  groep: string
+  /** Wanneer hij uit het pakket ging (ISO). */
+  weg: string
+}
+
+/** Per fase de taken die uit het pakket zijn gehaald; onder Instellingen bijgehouden bij het opslaan van het pakket. */
+export const VERVALLEN: Record<Fase, VervallenTaak[]> = reactive({ lead: [], haalbaarheid: [], ontwikkeling: [], uitvoering: [], nazorg: [] })
+
+/** Of een project een vervallen taak houdt: het bestond al toen de taak uit het pakket ging. */
+export const houdtTaak = (v: Pick<VervallenTaak, 'weg'>, aangemaakt: string | null | undefined) =>
+  !!aangemaakt && Date.parse(aangemaakt) < Date.parse(v.weg)
+
+/**
+ * De standaardtaken van één project in een fase, in groepen: het pakket zoals het nu is, plus de taken die eruit gingen
+ * nadat het project er al was. Die staan in hun oude groep, of (als die er niet meer is) in een eigen groep erachter.
+ */
+export function groepenVoor(fase: Fase, aangemaakt: string | null | undefined): Takengroep[] {
+  const nu = new Set(LIJSTEN[fase].flatMap(g => g.taken.map(t => t.sleutel)))
+  const blijven = VERVALLEN[fase].filter(v => !nu.has(v.sleutel) && houdtTaak(v, aangemaakt))
+  if (!blijven.length) return LIJSTEN[fase]
+  const taak = ({ sleutel, titel, regel }: VervallenTaak): Standaardtaak => ({ sleutel, titel, ...(regel ? { regel } : {}) })
+  const groepen = LIJSTEN[fase].map(g => ({ ...g, taken: [...g.taken, ...blijven.filter(v => v.groep === g.titel).map(taak)] }))
+  for (const v of blijven) {
+    if (LIJSTEN[fase].some(g => g.titel === v.groep)) continue
+    const eigen = groepen.find(g => g.titel === v.groep)
+    if (eigen) eigen.taken.push(taak(v))
+    else groepen.push({ titel: v.groep, taken: [taak(v)] })
+  }
+  return groepen
+}
+
 export const UITZONDERINGEN_GROEP = 'Uitzonderingen in dit project'
 
+/** Een standaardtaak uit het pakket, of anders een die eruit is gehaald (voor de naam in het logboek en de analyses). */
 export function vindStandaardtaak(lijst: Fase, sleutel: string): Standaardtaak | undefined {
   for (const g of LIJSTEN[lijst]) {
     const gevonden = g.taken.find(x => x.sleutel === sleutel)
     if (gevonden) return gevonden
   }
-  return undefined
+  return VERVALLEN[lijst].find(v => v.sleutel === sleutel)
 }
+
+/** De standaardtaak zoals hij voor één project geldt: uit het pakket, of eruit gehaald nadat het project er al was. */
+export const standaardtaakVoor = (lijst: Fase, sleutel: string, aangemaakt: string | null | undefined): Standaardtaak | undefined =>
+  groepenVoor(lijst, aangemaakt).flatMap(g => g.taken).find(t => t.sleutel === sleutel)
 
 export const standaardtaken = (fase: Fase): Standaardtaak[] => LIJSTEN[fase].flatMap(g => g.taken)

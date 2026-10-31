@@ -69,7 +69,6 @@ section.blok{padding:58px 0 0}
 
 /* ---------- kop ---------- */
 .kop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:48px;padding-top:44px;align-items:flex-start}
-  .kop > div:last-child{display:flex;align-items:flex-start;justify-content:flex-end}
   .stoplicht{height:auto;max-width:100%}
 .kop .label{margin-bottom:14px;display:flex;gap:10px;align-items:center}
 .kop .label .tab{height:20px}
@@ -102,6 +101,7 @@ section.blok{padding:58px 0 0}
   .lamp:hover i{transform:scale(1.06)}
   .stoplicht .balkje{display:flex;height:8px;border-radius:var(--rond);overflow:hidden;background:#2a2a2a;margin:0}
   .stoplicht .balkje span{height:100%;transform-origin:left;transition:flex-grow .8s var(--uit)}
+.seg-telaat{background:var(--baksteen)}.seg-letop{background:var(--oker)}.seg-klaar{background:var(--salie)}.stoplicht .seg-open{background:#3a3a3a}
   .stoplicht .voet{display:flex;justify-content:space-between;font-size:12.5px;color:#9a9a9a}
 
 /* ---------- procesflow ---------- */
@@ -114,8 +114,6 @@ section.blok{padding:58px 0 0}
 .spoor .knoopplek{display:grid;place-items:center;height:30px}
 .spoor .stop-datums{display:grid;gap:1px;justify-items:center;max-width:100%;text-align:center}
 .spoor .stop-datum{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:11px;line-height:14px;white-space:nowrap;background:none;border:none;padding:0;cursor:pointer;color:var(--stil)}
-  .stop-datum leeg{color:var(--stil)}
-  .stop-datum leeg b{font-weight:400;color:#9a9a9a}
   .stop-datum .bewerk-icoon{flex:none;width:12px;height:12px;color:var(--stil)}
 .spoor .stop-datum-naam{overflow:hidden;text-overflow:ellipsis;max-width:104px}
 .spoor .stop-datum b{font-size:12px;color:var(--zwart)}
@@ -132,6 +130,7 @@ section.blok{padding:58px 0 0}
 .fasen{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:16px}
 .fase{display:flex;flex-direction:column;gap:14px}
 .fase-datums{display:grid;gap:8px}
+.fase-datums.naast-tijdlijn{display:none}
 .datumknop{display:inline-flex;align-items:center;gap:8px;background:none;border:none;border-radius:var(--rond);padding:0;cursor:pointer;transition:color .2s}
   .datumknop:hover{color:var(--zwart)}
   .datumknop .label{margin:0;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--stil)}
@@ -399,6 +398,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .kop{grid-template-columns:1fr}
   .spoor .stop-datum-naam{display:none}
   .stoplicht{max-width:420px}
+  .lampen{display:grid;gap:12px}
   .geld{grid-template-columns:repeat(2,minmax(0,1fr))}
   .kolkop{display:none}
   .rij-hoofd{grid-template-columns:92px minmax(0,1fr) 34px;grid-template-areas:"tab titel knop" ". eig eig" ". dl dl" ". akk akk" ". doc doc" ". st st"}
@@ -407,6 +407,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .wrap{padding:0 16px}
   .nav{display:none}
   .banden,.spoor{display:none}
+  .fase-datums.naast-tijdlijn{display:grid}
   .fasen,.datums,.datums.drie,.prognose-datums{grid-template-columns:1fr}
   .datums.drie,.prognose-datums{max-width:none}
   .tl-as{display:none}
@@ -521,17 +522,20 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
   .projectkaartje .kaartje-telling .telling-open{color:var(--stil)}
 .mini-balk{display:flex;height:6px;border-radius:6px;overflow:hidden;background:var(--grijs);margin:6px 0 2px}
 .projectkaartje .mini-balk{height:12px;border-radius:7px;margin:8px 0 4px}
-/* projecten: drie kolommen */
-  .kolommen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;align-items:start;padding-top:26px}
-  .kolommen.gridview{grid-template-columns:1fr}
-  .kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
+/* projecten: vier kolommen, van haalbaarheid tot nazorg; of één over de hele breedte */
+.kolommen{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;align-items:start;padding-top:26px}
+.kolommen.gridview{grid-template-columns:1fr}
+.kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
 .kolom-kop h2{display:flex;align-items:center;gap:9px;font-size:24px}
 .kolom-lijst{display:grid;gap:16px}
 .kolom-scheiding{margin:8px 0 -4px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--stil)}
 .projectkaartje.afgehandeld h3{color:var(--stil)}
 .projectkaartje .afgehandeld-tab{align-self:flex-start}
 .kolom .leeg-staat{padding:18px}
-@media (max-width:900px){
+@media (max-width:1100px){
+  .kolommen{grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 22px}
+}
+@media (max-width:760px){
   .kolommen{grid-template-columns:1fr;gap:34px}
 }
 .mini-balk .seg-open{background:var(--grijs)}
@@ -1192,5 +1196,8 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
   .meeting-fase{margin-top:24px}
 }
 
-.filter-acties{margin-left:auto;display:flex;gap:8px;position:relative}
-.popup{position:absolute;right:0;top:44px;background:#fff;border:var(--rand);padding:12px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;min-width:260px}
+/* projecten: de kolomknoppen, Sorteren en Filters; op een smal scherm onder elkaar, de knoppen scrollen zijwaarts */
+.filter-acties{margin-left:auto;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;position:relative;min-width:0;max-width:100%}
+.gridview-knoppen{max-width:100%;overflow-x:auto;scrollbar-width:none}
+.gridview-knoppen button{flex:none;white-space:nowrap}
+.popup{position:absolute;right:0;top:calc(100% + 6px);max-width:calc(100vw - 32px);background:#fff;border:var(--rand);padding:12px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;min-width:260px}

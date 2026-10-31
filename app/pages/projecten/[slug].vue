@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { TABS, type Tab } from '~/lib/weergave'
-import { dagen } from '~/lib/datum'
 
 const route = useRoute()
 const kaart = useProjectkaart(String(route.params.slug))
-const { project, stand, fout, lichten, mijlpaal, tabFase, filter, openPunten, openActies, nu } = kaart
+const { project, stand, fout, lichten, tabFase, filter, openPunten, openActies, nu } = kaart
 const { weergave } = useWeergave()
 
 // Een link met #taken, #proces, #acties, #controle of #details opent dat tabblad; anders het laatst gebruikte.
@@ -17,11 +16,10 @@ watch(() => weergave.value.tab, (nieuw, oud) => {
   history.replaceState(history.state, '', `#${nieuw}`)
 })
 
-// In het menu staat de naam achter het menu-item van zijn fase: Leads, Haalbaarheid of Projecten.
-const kruimel = useState<{ naam: string, groep: 'leads' | 'haalbaarheid' | 'projecten' } | null>('kruimel', () => null)
+// In het menu staat de naam achter het menu-item van zijn fase: Acquisitie (leads) of Projecten.
+const kruimel = useState<{ naam: string, groep: 'leads' | 'projecten' } | null>('kruimel', () => null)
 watch(() => project.value && `${project.value.fase}:${project.value.naam}`, () => {
-  const fase = project.value?.fase
-  kruimel.value = project.value ? { naam: project.value.naam, groep: fase === 'lead' ? 'leads' : fase === 'haalbaarheid' ? 'haalbaarheid' : 'projecten' } : null
+  kruimel.value = project.value ? { naam: project.value.naam, groep: project.value.fase === 'lead' ? 'leads' : 'projecten' } : null
 }, { immediate: true })
 onBeforeUnmount(() => (kruimel.value = null))
 useHead({ title: () => project.value ? `${project.value.naam} · Projectkaart` : 'Projectkaart · BbDW' })
@@ -78,7 +76,7 @@ function planning() {
     <template v-else-if="project">
       <KaartKop @lamp="lamp" @planning="planning" />
       <div id="tabanker" />
-      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-proces="pilProces" :pil-acties="pilActies" :pil-controle="pilControle" />
+      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-acties="pilActies" :pil-controle="pilControle" />
       <Transition :name="richting > 0 ? 'paneel-vooruit' : 'paneel-terug'" mode="out-in">
         <KaartTaken v-if="weergave.tab === 'taken'" key="taken" />
         <KaartProces v-else-if="weergave.tab === 'proces'" key="proces" />

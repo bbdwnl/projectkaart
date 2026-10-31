@@ -1,5 +1,5 @@
 import type { Fase, Licht, Project, ProjectDatums, Taak, Uitzondering } from './types'
-import { LIJSTEN, UITZONDERINGEN_GROEP, vindStandaardtaak, type DeadlineRegel, type Standaardtaak } from './taken'
+import { groepenVoor, standaardtaakVoor, UITZONDERINGEN_GROEP, type DeadlineRegel, type Standaardtaak } from './taken'
 import { dagen, dagenTussen, fmt, naarDatum, plusDagen } from './datum'
 import { MIJLPAAL } from './fasen'
 
@@ -99,10 +99,13 @@ export interface TaakRegel {
 
 export const regelId = (lijst: Fase, sleutel: string) => `std:${lijst}:${sleutel}`
 
-export function takenVan(fase: Fase, project: ProjectDatums, taken: Taak[], catalogus: Uitzondering[], nu: Date): TaakRegel[] {
+/** Wanneer het project is aangemaakt: een taak die daarna uit het pakket ging, houdt het (groepenVoor). */
+type MetAanmaak = ProjectDatums & { aangemaakt_op?: string | null }
+
+export function takenVan(fase: Fase, project: MetAanmaak, taken: Taak[], catalogus: Uitzondering[], nu: Date): TaakRegel[] {
   const perSleutel = new Map(taken.filter(t => t.sleutel).map(t => [`${t.lijst}:${t.sleutel}`, t]))
   const regels: TaakRegel[] = []
-  for (const g of LIJSTEN[fase]) {
+  for (const g of groepenVoor(fase, project.aangemaakt_op)) {
     for (const s of g.taken) {
       const taak = perSleutel.get(`${fase}:${s.sleutel}`)
       regels.push({ id: regelId(fase, s.sleutel), titel: s.titel, groep: g.titel, uitleg: g.uitleg, fase, standaard: s, taak, b: beoordeel(deadlineVan(s.regel, project), taak, nu) })
@@ -129,10 +132,10 @@ export function opUrgentie<T extends { b: Beoordeling }>(regels: T[]): T[] {
 }
 
 /** De stand van een overdrachtseis, afgeleid uit de gekoppelde taken ('lijst:sleutel'). */
-export function eisStand(koppelingen: string[], project: ProjectDatums, taken: Taak[], nu: Date): Licht {
+export function eisStand(koppelingen: string[], project: MetAanmaak, taken: Taak[], nu: Date): Licht {
   return samen(koppelingen.map((k) => {
     const [lijst, sleutel] = k.split(':') as [Fase, string]
-    const s = vindStandaardtaak(lijst, sleutel)
+    const s = standaardtaakVoor(lijst, sleutel, project.aangemaakt_op)
     const taak = taken.find(t => t.lijst === lijst && t.sleutel === sleutel)
     return beoordeel(deadlineVan(s?.regel, project), taak, nu).licht
   }))

@@ -14,7 +14,7 @@ describe('leesWeergave', () => {
   it('negeert onbekende sleutels, verkeerde typen en een onbekend tabblad', () => {
     const w = leesWeergave({ tab: 'iets', kop: { stoplicht: 'nee', extra: true }, onzin: 1 })
     expect(w.tab).toBe('proces')
-    expect(w.kop).toEqual({ stoplicht: true, planningstrook: true })
+    expect(w.kop).toEqual({ stoplicht: true, planningstrook: false })
     expect('onzin' in w).toBe(false)
   })
   it('verandert de standaard niet', () => {

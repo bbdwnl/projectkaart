@@ -1,6 +1,6 @@
 import type { Fase, Rol, Status } from './types'
 import { BUDDIES, DISCIPLINES, EIGENAREN, EISEN, FASEN, MENSEN, ROLLEN, SOORTEN, SUBFASEN, type Eis } from './fasen'
-import { LIJSTEN, type DeadlineRegel, type Takengroep } from './taken'
+import { LIJSTEN, VERVALLEN, type DeadlineRegel, type Takengroep, type VervallenTaak } from './taken'
 import { STATUSSEN } from './taak'
 
 // De keuzelijsten onder Instellingen (alleen het MT past ze aan). In de database één rij per lijst, de inhoud als JSON
@@ -10,6 +10,9 @@ import { STATUSSEN } from './taak'
 // Waar de app mee rekent, ligt vast: de statussen en de fasen (alleen de namen en de kleur zijn aan te passen), de
 // rollen en de soorten deadline. De rest is vrij: wie welke rol kan hebben, soorten, subfasen, disciplines, het takenpakket en wat
 // er bij elke overdracht klaar moet zijn.
+//
+// Een taak die uit het takenpakket gaat, blijft staan op de projecten die er toen al waren (beslissing 41). Bij het
+// opslaan van het pakket houdt de lijst vervallen bij welke taken dat zijn en sinds wanneer (vervallenNa).
 
 export const FASE_IDS: Fase[] = ['lead', 'haalbaarheid', 'ontwikkeling', 'uitvoering', 'nazorg']
 export const ROL_IDS: Rol[] = ['am', 'po', 'pm', 'opzichter']
@@ -29,9 +32,10 @@ export interface Instellingen {
   }
   takenpakket: Record<Fase, Takengroep[]>
   overdracht: Record<Fase, { kop: string, items: Eis[] }>
+  vervallen: Record<Fase, VervallenTaak[]>
 }
 export type Sleutel = keyof Instellingen
-export const SLEUTELS: Sleutel[] = ['mensen', 'labels', 'takenpakket', 'overdracht']
+export const SLEUTELS: Sleutel[] = ['mensen', 'labels', 'takenpakket', 'overdracht', 'vervallen']
 
 /** De soorten deadline, met hoe je ze leest; de getallen zijn dagen (bij inkoop: weken). */
 export const REGELTYPES: { type: DeadlineRegel['type'], naam: string, eenheid: 'dagen' | 'weken' }[] = [
@@ -57,6 +61,7 @@ export function huidig(): Instellingen {
     },
     takenpakket: per(FASE_IDS, f => LIJSTEN[f]),
     overdracht: per(FASE_IDS, f => EISEN[f]),
+    vervallen: per(FASE_IDS, f => VERVALLEN[f]),
   })
 }
 
@@ -146,6 +151,21 @@ function overdracht(v: unknown): { kop: string, items: Eis[] } | null {
   return { kop, items }
 }
 
+/** Taken die uit het pakket gingen: zoals in het pakket, met de groep en een geldig moment. Een sleutel één keer. */
+function vervallen(v: unknown): VervallenTaak[] | null {
+  if (!Array.isArray(v)) return null
+  const uit: VervallenTaak[] = []
+  for (const t of v.slice(0, 500)) {
+    if (!isObject(t) || typeof t.sleutel !== 'string' || !SLEUTEL.test(t.sleutel) || uit.some(x => x.sleutel === t.sleutel)) continue
+    const titel = tekst(t.titel, 200)
+    const groep = tekst(t.groep, 120)
+    if (!titel || !groep || typeof t.weg !== 'string' || Number.isNaN(Date.parse(t.weg))) continue
+    const r = regel(t.regel)
+    uit.push({ sleutel: t.sleutel, titel, ...(r ? { regel: r } : {}), groep, weg: t.weg })
+  }
+  return uit
+}
+
 /**
  * Een rij uit de database, gecontroleerd; wat er ontbreekt of niet klopt, komt uit de standaard. Zo kan een
  * verkeerde rij de app nooit stilleggen.
@@ -188,9 +208,13 @@ export function lees<S extends Sleutel>(sleutel: S, waarde: unknown): Instelling
       const s = std as Instellingen['takenpakket']
       return Object.fromEntries(FASE_IDS.map(f => [f, pakket(w[f]) ?? s[f]])) as Instellingen[S]
     }
-    default: {
+    case 'overdracht': {
       const s = std as Instellingen['overdracht']
       return Object.fromEntries(FASE_IDS.map(f => [f, overdracht(w[f]) ?? s[f]])) as Instellingen[S]
+    }
+    default: {
+      const s = std as Instellingen['vervallen']
+      return Object.fromEntries(FASE_IDS.map(f => [f, vervallen(w[f]) ?? s[f]])) as Instellingen[S]
     }
   }
 }
@@ -229,6 +253,26 @@ export function pasToe(rijen: { sleutel: string, waarde: unknown }[]) {
     EISEN[f].kop = o[f].kop
     vervang(EISEN[f].items, o[f].items)
   }
+
+  const v = van('vervallen')
+  for (const f of FASE_IDS) vervang(VERVALLEN[f], v[f])
+}
+
+/**
+ * Wat er na het opslaan van het takenpakket uit is: een taak die nu uit het pakket gaat, komt erbij met dit moment
+ * (in de groep waar hij stond); een taak die terug in het pakket staat, gaat eraf. De projecten die er vóór dat moment
+ * al waren, houden de taak (groepenVoor in taken.ts).
+ */
+export function vervallenNa(
+  oud: Record<Fase, Takengroep[]>, nieuw: Record<Fase, Takengroep[]>, eerder: Record<Fase, VervallenTaak[]>, nu: string,
+): Record<Fase, VervallenTaak[]> {
+  return Object.fromEntries(FASE_IDS.map((f) => {
+    const blijft = new Set(sleutelsVan(nieuw[f]))
+    const weg: VervallenTaak[] = oud[f].flatMap(g => g.taken.filter(t => !blijft.has(t.sleutel))
+      .map(t => ({ sleutel: t.sleutel, titel: t.titel, ...(t.regel ? { regel: t.regel } : {}), groep: g.titel, weg: nu })))
+    const nieuwWeg = new Set(weg.map(t => t.sleutel))
+    return [f, [...eerder[f].filter(v => !blijft.has(v.sleutel) && !nieuwWeg.has(v.sleutel)), ...weg]]
+  })) as Record<Fase, VervallenTaak[]>
 }
 
 // ---------- hulp bij bewerken ----------

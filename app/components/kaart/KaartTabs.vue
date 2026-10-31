@@ -49,7 +49,6 @@ function toets(e: KeyboardEvent) {
       >
         {{ NAMEN[t] }}
         <span v-if="t === 'taken'" class="tab" :class="pilTaken.licht">{{ pilTaken.tekst }}</span>
-        <span v-else-if="t === 'proces' && pilProces" class="tab nu">{{ pilProces }}</span>
         <span v-else-if="t === 'acties' && pilActies" class="tab" :class="pilActies.licht">{{ pilActies.tekst }}</span>
         <span v-else-if="t === 'controle' && pilControle" class="tab letop">{{ pilControle }}</span>
       </button>

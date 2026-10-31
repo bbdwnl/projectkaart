@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import type { Fase, Project } from '~/lib/types'
-import { faseInfo, faseKleur, ROLLEN, SUBFASEN } from '~/lib/fasen'
-import { begin, bezetting, LAAG_FASEN, planRegels, STAPPEN, tijdas, type Laag, type PlanRegel, type Segment } from '~/lib/planning'
+import { FASEN, faseInfo, faseKleur, ROLLEN, SUBFASEN } from '~/lib/fasen'
+import { begin, bezetting, LAAG_FASEN, planRegels, tijdas, type Laag, type PlanRegel, type Segment } from '~/lib/planning'
 import { fmt, vandaag } from '~/lib/datum'
 
 // Het planningsoverzicht: per verantwoordelijke de projecten onder elkaar in de tijd, met bovenaan per maand hoeveel
-// er lopen. Op Haalbaarheid twee lagen (prognose en lopend) om de overlap te zien; op Projecten een filter op fase.
+// er lopen. Op Projecten twee lagen (prognose van haalbaarheid en lopend) om de overlap te zien, en een filter op fase.
 const props = defineProps<{
   projecten: Project[]
   /** De lagen die je aan en uit kunt zetten; de eerste staat bovenaan in de legenda. */
   lagen: Laag[]
-  /** Filter op ontwikkeling, uitvoering en nazorg. */
+  /** Filter op de fasen van de lagen: haalbaarheid (prognose), ontwikkeling, uitvoering en nazorg. */
   fasefilter?: boolean
 }>()
 
@@ -43,7 +43,7 @@ const mensen = computed(() => {
       buddy: metDatums.value.filter(r => wieVan(r) === id && r.buddy).length,
     }))
 })
-const fasen = computed(() => LAAG_FASEN.lopend.map(f => ({ id: f, naam: faseInfo(f).naam, kleur: faseKleur(f), aantal: alle.value.filter(r => r.p.fase === f && r.segmenten.length).length })))
+const fasen = computed(() => FASEN.map(f => f.id).filter(f => props.lagen.some(l => LAAG_FASEN[l].includes(f))).map(f => ({ id: f, naam: faseInfo(f).naam, kleur: faseKleur(f), aantal: alle.value.filter(r => r.p.fase === f && r.segmenten.length).length })))
 
 const vanWie = (r: PlanRegel) => wie.value === 'alle' || wieVan(r) === wie.value
 const gekozen = computed(() => metDatums.value.filter(vanWie))
@@ -60,7 +60,6 @@ const telling = (regels: PlanRegel[]) => [
 ].filter(([, n]) => n).map(([l, n]) => `${n} ${l}`).join(' · ')
 
 const maanden = computed(() => bezetting(gekozen.value, as.value.maanden))
-const hoogste = computed(() => Math.max(1, ...maanden.value.map(m => m.lopend + m.prognose)))
 const MAAND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
 const maandNaam = (d: Date) => (d.getMonth() === 0 ? `${MAAND[0]} ’${String(d.getFullYear()).slice(2)}` : MAAND[d.getMonth()]!)
 const breedte = (d: Date) => as.value.pos(new Date(d.getFullYear(), d.getMonth() + 1, 1)) - as.value.pos(d)
@@ -92,7 +91,8 @@ const segTekst = (r: PlanRegel, s: Segment) => `${r.p.naam}, ${r.laag === 'progn
           <button v-for="f in fasen" :key="f.id" type="button" :aria-pressed="fase === f.id" @click="fase = f.id"><i class="fase-stip" :style="{ background: f.kleur }" aria-hidden="true"/>{{ f.naam }} <span class="n">{{ f.aantal }}</span></button>
         </div>
       </div>
-      <div v-if="lagen.length > 1" class="filtergroep">
+      <!-- Met een fasefilter zijn de lagen dubbel: de prognose is de fase haalbaarheid. -->
+      <div v-if="lagen.length > 1 && !fasefilter" class="filtergroep">
         <span class="label">Lagen</span>
         <label v-for="l in lagen" :key="l" class="schakel"><input v-model="aan[l]" type="checkbox"><span />{{ LAAG_NAAM[l] }}</label>
       </div>
@@ -130,9 +130,11 @@ const segTekst = (r: PlanRegel, s: Segment) => `${r.p.naam}, ${r.laag === 'progn
           <div class="plan-spoor">
             <i v-for="m in as.maanden" :key="m.getTime()" class="plan-raster" :class="{ jaar: m.getMonth() === 0 }" :style="{ left: `${as.pos(m)}%` }" />
             <i class="plan-vandaag" :style="{ left: `${vandaagPos}%` }" />
-<div
+            <div
               v-for="m in maanden" :key="m.maand.getTime()" class="plan-kolom"
               :style="{ left: `calc(${as.pos(m.maand)}% + 2px)`, width: `calc(${breedte(m.maand)}% - 4px)` }"
+              :aria-label="`${MAAND[m.maand.getMonth()]} ${m.maand.getFullYear()}: ${m.lopend} lopend${lagen.length > 1 ? `, ${m.prognose} prognose` : ''}`"
+              role="img"
             >
               <small v-if="m.lopend + m.prognose" class="plan-maand-getal">{{ m.lopend + m.prognose }}</small>
             </div>
@@ -149,11 +151,11 @@ const segTekst = (r: PlanRegel, s: Segment) => `${r.p.naam}, ${r.laag === 'progn
             <div class="plan-spoor">
               <i v-for="m in as.maanden" :key="m.getTime()" class="plan-raster" :class="{ jaar: m.getMonth() === 0 }" :style="{ left: `${as.pos(m)}%` }" />
               <i class="plan-vandaag" :style="{ left: `${vandaagPos}%` }" />
-<i
-  v-for="(s, i) in r.segmenten.filter(x => x.tot > as.van)" :key="i" class="plan-seg" :class="{ open: s.open }"
-  :style="{ background: faseKleur(r.p.fase), opacity: 1 - i * 0.2, left: `${as.pos(s.van)}%`, width: `max(3px, calc(${as.pos(s.tot) - as.pos(s.van)}% - 2px))` }"
-  :aria-label="segTekst(r, s)"
-/>
+              <i
+                v-for="(s, i) in r.segmenten.filter(x => x.tot > as.van)" :key="i" class="plan-seg" :class="{ open: s.open }"
+                :style="{ background: faseKleur(r.p.fase), opacity: 1 - i * 0.2, left: `${as.pos(s.van)}%`, width: `max(3px, calc(${as.pos(s.tot) - as.pos(s.van)}% - 2px))` }"
+                role="img" :aria-label="segTekst(r, s)"
+              />
             </div>
           </div>
         </template>

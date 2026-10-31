@@ -101,6 +101,7 @@ async function weg(l: Leverancier) {
 <template>
   <main class="wrap">
     <header class="paginakop">
+      <h1 class="verborgen">Instellingen</h1>
       <p v-if="!gebruiker?.isMt" class="zin">De keuzelijsten past alleen het MT aan; je ziet hier wat er nu geldt.</p>
     </header>
 

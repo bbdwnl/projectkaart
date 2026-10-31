@@ -2,13 +2,12 @@
 
 const { gebruiker, initialen, uitloggen } = useGebruiker()
 const route = useRoute()
-const kruimel = useState<{ naam: string, groep: 'leads' | 'haalbaarheid' | 'projecten' } | null>('kruimel', () => null)
+const kruimel = useState<{ naam: string, groep: 'leads' | 'projecten' } | null>('kruimel', () => null)
 /** De projectnaam achter dit menu-item, als je op een kaart bent. */
 const kruimelBij = (groep: string) => (kruimel.value && route.path.startsWith('/projecten/') && kruimel.value.groep === groep ? kruimel.value.naam : null)
 const MENU = [
   { pad: '/', naam: 'Projecten', groep: 'projecten' },
   { pad: '/leads', naam: 'Acquisitie', groep: 'leads' },
-  { pad: '/haalbaarheid', naam: 'Haalbaarheid', groep: 'haalbaarheid' },
   { pad: '/controle', naam: 'Controle', groep: '' },
   { pad: '/maandmeeting', naam: 'Maand meeting', groep: '' },
 ]
