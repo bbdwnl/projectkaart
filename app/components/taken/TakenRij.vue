@@ -164,6 +164,12 @@ watch(nadruk, async (id) => {
         {{ regel.titel }}
         <small v-if="regel.uitzondering">Uitzondering<span v-if="kandidaat" class="kandidaat">komt vaak voor</span></small>
         <small v-else-if="t?.status === 'nvt' && t.reden_nvt">{{ t.reden_nvt }}</small>
+        <button
+          type="button" class="taak-weg" :title="regel.uitzondering ? 'Uitzondering weghalen' : 'Niet nodig in dit project: weghalen (terug te zetten)'"
+          :aria-label="`${regel.titel} weghalen bij dit project`" @click="emit('verwijder')"
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        </button>
       </span>
       <span data-kol="eigenaar">
         <select class="eigenaar" :value="t?.eigenaar ?? ''" :aria-label="`Eigenaar ${regel.titel}`" @change="e => emit('wijzig', { eigenaar: tekst(e) })">
@@ -250,7 +256,7 @@ watch(nadruk, async (id) => {
           <p class="klein spoor-regel">{{ definitiefTekst }}<template v-if="t?.klantakkoord_door"><br>{{ akkoordTekst }}</template></p>
           <div class="notitie-knoppen">
             <button type="button" class="knop klein" @click="sluitNotitie">Klaar</button>
-            <button v-if="regel.uitzondering" type="button" class="link" @click="notitieOpen = false; emit('verwijder')">Uitzondering weghalen</button>
+            <button type="button" class="link" @click="notitieOpen = false; emit('verwijder')">{{ regel.uitzondering ? 'Uitzondering weghalen' : 'Weghalen bij dit project' }}</button>
           </div>
         </div>
       </Transition>

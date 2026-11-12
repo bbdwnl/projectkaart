@@ -94,9 +94,11 @@ export interface Taak {
   afgetekend_op: string | null
   gewijzigd_op: string | null
   gewijzigd_door: string | null
+  /** Alleen bij standaardtaken: niet nodig in dit project. De regel blijft, zodat terugzetten alles terugbrengt. */
+  weggehaald?: boolean
 }
 export type TaakWijziging = Partial<Pick<Taak,
-  'status' | 'eigenaar' | 'reden_nvt' | 'aanleiding' | 'klantakkoord' | 'document_url' | 'document_naam' | 'deadline'>>
+  'status' | 'eigenaar' | 'reden_nvt' | 'aanleiding' | 'klantakkoord' | 'document_url' | 'document_naam' | 'deadline' | 'weggehaald'>>
 
 /** Een opmerking bij een taak. Project, wie en wanneer vult de database in; daarna ligt hij vast. */
 export interface Opmerking {

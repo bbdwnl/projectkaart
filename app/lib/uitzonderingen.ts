@@ -53,11 +53,11 @@ export interface NvtAnalyse {
   redenen: string[]
 }
 
-/** De keerzijde: standaardtaken die vaak niet van toepassing zijn. Kandidaat om te schrappen of af te laten hangen van de soort project. */
+/** De keerzijde: standaardtaken die vaak niet van toepassing zijn, of bij een project zijn weggehaald. Kandidaat om te schrappen of af te laten hangen van de soort project. */
 export function vaakNvt(taken: Taak[], projecten: Project[], minimaal = 2): NvtAnalyse[] {
   const groepen = new Map<string, Taak[]>()
   for (const t of taken) {
-    if (t.status !== 'nvt' || !t.lijst || !t.sleutel) continue
+    if ((t.status !== 'nvt' && !t.weggehaald) || !t.lijst || !t.sleutel) continue
     const k = `${t.lijst}:${t.sleutel}`
     groepen.set(k, [...(groepen.get(k) ?? []), t])
   }

@@ -2,7 +2,7 @@ import type { InjectionKey } from 'vue'
 import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
 import type { Actie, ActieWijziging, Discipline, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
-import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, type TaakRegel } from '~/lib/stoplicht'
+import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, weggehaaldVan, type TaakRegel, type WeggehaaldeTaak } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
 import { leegTaak } from '~/lib/taak'
 import { vandaag } from '~/lib/datum'
@@ -97,6 +97,12 @@ function maakKaart(slug: string) {
     if (!p) return null
     return Object.fromEntries(FASEN.map(f => [f.id, takenVan(f.id, p, taken.value, catalogus.value, nu)])) as Record<Fase, TaakRegel[]>
   })
+  /** Per fase de standaardtaken die bij dit project zijn weggehaald (om terug te zetten). */
+  const weggehaald = computed(() => {
+    const p = project.value
+    if (!p) return null
+    return Object.fromEntries(FASEN.map(f => [f.id, weggehaaldVan(f.id, p, taken.value)])) as Record<Fase, WeggehaaldeTaak[]>
+  })
   const huidig = computed(() => (project.value && regelsPerFase.value?.[project.value.fase]) || [])
   const lichten = computed(() => telling(huidig.value))
   const zin = computed(() => project.value ? standZin(project.value, huidig.value) : [])
@@ -136,6 +142,33 @@ function maakKaart(slug: string) {
       else taken.value.push(opgeslagen)
       const nieuw = vindRegel(regel.id)
       toon(nieuw && nieuw.b.licht !== oudLicht ? `Opgeslagen · ${regel.titel}: ${nieuw.b.woord.toLowerCase()}` : 'Opgeslagen · in het logboek')
+      verversLog()
+      return true
+    } catch (e) {
+      taken.value = vorige
+      toon(foutTekst(e), 'fout')
+      return false
+    }
+  }
+
+  /**
+   * Standaardtaken bij dit project weghalen (niet nodig) of terugzetten; één taak of een hele groep in één keer.
+   * Meteen op het scherm; bij een fout gaat alles terug. Status, document en opmerkingen blijven bewaard.
+   */
+  async function zetWeggehaald(fase: Fase, sleutels: string[], weg: boolean, naam: string): Promise<boolean> {
+    const p = project.value
+    if (!p || !sleutels.length) return false
+    const vorige = kopie(taken.value)
+    for (const sleutel of sleutels) {
+      const t = taken.value.find(x => x.lijst === fase && x.sleutel === sleutel)
+      if (t) t.weggehaald = weg
+      else taken.value.push(leegTaak({ id: `tijdelijk:${fase}:${sleutel}`, project_id: p.id, fase, lijst: fase, sleutel, weggehaald: weg }))
+    }
+    try {
+      const opgeslagen = await bron.zetWeggehaald(p.id, fase, sleutels, weg)
+      const nieuw = new Map(opgeslagen.map(t => [`${t.lijst}:${t.sleutel}`, t]))
+      taken.value = taken.value.map(t => (t.lijst && t.sleutel && nieuw.get(`${t.lijst}:${t.sleutel}`)) || t)
+      toon(weg ? `${naam} weggehaald bij dit project · terug te zetten onderaan de fase` : `${naam} staat weer bij dit project`, 'ok', weg ? 4000 : undefined)
       verversLog()
       return true
     } catch (e) {
@@ -428,7 +461,7 @@ function maakKaart(slug: string) {
 
   return {
     project, taken, catalogus, gebruik, financien, logboek, leveranciers, globaleLeveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
-    regelsPerFase, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
+    regelsPerFase, weggehaald, zetWeggehaald, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
     laad, gaNaar, wijzigTaak, wijzigProject, voegUitzonderingToe, verwijderUitzondering, opmerkingenVan, plaatsOpmerking,
     disciplines, disciplineVan, kiesDiscipline, bewaarDiscipline, acties, openActies, nieuweActie, wijzigActie, verwijderActie,
     nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, keurAf, kiesLeverancier, verwijderControlepunt,

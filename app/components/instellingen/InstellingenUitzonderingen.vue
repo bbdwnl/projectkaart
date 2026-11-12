@@ -84,7 +84,7 @@ async function zetStatus(u: Uitzondering, status: UitzonderingStatus) {
       </section>
 
       <section class="blok analyse">
-        <div class="blokkop"><div><h2>Standaardtaken die vaak n.v.t. zijn</h2><p class="klein">De keerzijde: misschien horen deze niet in het standaardpakket, of alleen bij een bepaalde soort project.</p></div></div>
+        <div class="blokkop"><div><h2>Standaardtaken die vaak n.v.t. zijn of worden weggehaald</h2><p class="klein">De keerzijde: misschien horen deze niet in het standaardpakket, of alleen bij een bepaalde soort project.</p></div></div>
         <div v-if="nvt.length" class="lijst nvt-lijst">
           <div class="kolkop"><span>Fase</span><span>Standaardtaak</span><span>N.v.t. in</span><span>Redenen</span></div>
           <div v-for="n in nvt" :key="`${n.lijst}:${n.sleutel}`" class="rij">

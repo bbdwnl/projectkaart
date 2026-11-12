@@ -45,4 +45,12 @@ describe('vaakNvt', () => {
     expect(uit).toHaveLength(1)
     expect(uit[0]).toMatchObject({ titel: 'Sloopplan', aantal: 2, bereikt: 3, redenen: ['Nieuwbouw'] })
   })
+  it('telt een standaardtaak die bij een project is weggehaald net zo mee als n.v.t.', () => {
+    const projecten = [project('a', 'ontwikkeling'), project('b', 'ontwikkeling')]
+    const taken = [
+      taak('a', { lijst: 'ontwikkeling', sleutel: 'sloopplan', status: 'nvt', reden_nvt: 'Nieuwbouw' }),
+      taak('b', { lijst: 'ontwikkeling', sleutel: 'sloopplan', weggehaald: true }),
+    ]
+    expect(vaakNvt(taken, projecten)[0]).toMatchObject({ titel: 'Sloopplan', aantal: 2 })
+  })
 })

@@ -28,6 +28,7 @@ export function beschrijf(r: LogRegel, catalogus: Uitzondering[]): LogDeel[] {
       // notitie: van voor de opmerkingen.
       case 'opmerking': case 'notitie': return [t('schreef een opmerking bij '), n(titel)]
       case 'aanleiding': return [t('beschreef de aanleiding van '), n(titel)]
+      case 'weggehaald': return r.nieuw === 'true' ? [t('haalde '), n(titel), t(' weg bij dit project')] : [t('zette '), n(titel), t(' terug')]
       case 'toegevoegd': return [t('voegde uitzondering '), n(titel), t(' toe')]
       case 'verwijderd': return [t('haalde uitzondering '), n(titel), t(' weg')]
       default: return [t(`wijzigde ${r.veld} van `), n(titel)]

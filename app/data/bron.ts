@@ -17,6 +17,8 @@ export interface Bron {
   /** Maakt de taakregel aan als die er nog niet is. */
   bewaarStandaardtaak(projectId: string, lijst: Fase, sleutel: string, wijziging: TaakWijziging): Promise<Taak>
   bewaarTaak(taakId: string, wijziging: TaakWijziging): Promise<Taak>
+  /** Een groep standaardtaken in één keer weghalen of terugzetten; maakt de regels aan die er nog niet zijn. */
+  zetWeggehaald(projectId: string, lijst: Fase, sleutels: string[], weggehaald: boolean): Promise<Taak[]>
   voegUitzonderingToe(projectId: string, invoer: NieuweUitzondering): Promise<{ taak: Taak, uitzondering: Uitzondering }>
   verwijderTaak(taakId: string): Promise<void>
   /** De opmerkingen bij de taken van één project, oudste eerst. */

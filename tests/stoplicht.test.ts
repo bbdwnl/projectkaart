@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beoordeel, deadlineVan, eisStand, opUrgentie, samen, standZin, takenVan, telling, volgendeMijlpaal } from '~/lib/stoplicht'
+import { beoordeel, deadlineVan, eisStand, opUrgentie, samen, standZin, takenVan, telling, volgendeMijlpaal, weggehaaldVan } from '~/lib/stoplicht'
 import { fmt, naarDatum } from '~/lib/datum'
 import type { ProjectDatums, Taak } from '~/lib/types'
 
@@ -110,6 +110,31 @@ describe('takenVan en de standzin', () => {
     expect(klaar.map(z => z.tekst).join('')).toBe('Alles voor inkoop gereed op 20-10-2026 is klaar.')
     const open = standZin({ fase: 'uitvoering', ...P }, [{ b: beoordeel(null, undefined, NU) }])
     expect(open.map(z => z.tekst).join('')).toBe('1 taak open voor start afbouw op 01-12-2026.')
+  })
+})
+
+describe('weghalen bij één project', () => {
+  const taken = [
+    taak({ lijst: 'ontwikkeling', sleutel: 'sloopplan', status: 'definitief', document_naam: 's.pdf', weggehaald: true }),
+    taak({ lijst: 'ontwikkeling', sleutel: 'rioolplan', weggehaald: true }),
+    taak({ lijst: 'ontwikkeling', sleutel: 'terreinplan', weggehaald: false }),
+  ]
+  it('laat een weggehaalde standaardtaak niet meer zien en niet meetellen', () => {
+    const regels = takenVan('ontwikkeling', P, taken, [], NU)
+    expect(regels).toHaveLength(26)
+    expect(regels.some(r => r.standaard?.sleutel === 'sloopplan' || r.standaard?.sleutel === 'rioolplan')).toBe(false)
+    expect(regels.some(r => r.standaard?.sleutel === 'terreinplan')).toBe(true)
+  })
+  it('geeft de weggehaalde taken terug met hun groep, in de volgorde van het pakket, met wat er was ingevuld', () => {
+    const weg = weggehaaldVan('ontwikkeling', P, taken)
+    expect(weg.map(w => [w.standaard.sleutel, w.groep])).toEqual([['sloopplan', 'Te realiseren tijdens de fase'], ['rioolplan', 'Te realiseren tijdens de fase']])
+    expect(weg[0]!.taak.status).toBe('definitief')
+    expect(weggehaaldVan('uitvoering', P, taken)).toEqual([])
+  })
+  it('telt een weggehaalde taak niet mee in een overdrachtseis; alles weg is grijs', () => {
+    const t = [taak({ lijst: 'ontwikkeling', sleutel: 'do_casco', weggehaald: true }), taak({ lijst: 'ontwikkeling', sleutel: 'do_installaties', status: 'definitief', document_naam: 'a' })]
+    expect(eisStand(['ontwikkeling:do_casco', 'ontwikkeling:do_installaties'], P, t, NU)).toBe('klaar')
+    expect(eisStand(['ontwikkeling:do_casco'], P, t, NU)).toBe('later')
   })
 })
 

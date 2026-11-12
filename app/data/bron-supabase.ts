@@ -83,6 +83,12 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     async bewaarTaak(taakId, wijziging) {
       return uitkomst(await sb.from('taken').update(wijziging).eq('id', taakId).select().single(), 'opslaan') as Taak
     },
+    async zetWeggehaald(projectId, lijst, sleutels, weggehaald) {
+      if (!sleutels.length) return []
+      return uitkomst(await sb.from('taken')
+        .upsert(sleutels.map(sleutel => ({ project_id: projectId, lijst, sleutel, fase: lijst, weggehaald })), { onConflict: 'project_id,lijst,sleutel' })
+        .select(), 'opslaan') as Taak[]
+    },
 
     async voegUitzonderingToe(projectId, invoer: NieuweUitzondering) {
       let uitzondering: Uitzondering

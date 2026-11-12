@@ -525,6 +525,12 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 /* projecten: vier kolommen, van haalbaarheid tot nazorg; of één over de hele breedte */
 .kolommen{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;align-items:start;padding-top:26px}
 .kolommen.gridview{grid-template-columns:1fr}
+/* één kolom over de hele breedte: de projecten als vierkante tegels, de naam boven en de stand onderaan */
+.gridview .kolom-lijst{grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr))}
+.gridview .projectkaartje{aspect-ratio:1/1;min-height:0;overflow:hidden}
+.gridview .projectkaartje h3{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;flex:none}
+.gridview .projectkaartje .mini-balk{margin-top:auto}
+.gridview .kolom-scheiding{grid-column:1/-1}
 .kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
 .kolom-kop h2{display:flex;align-items:center;gap:9px;font-size:24px}
 .kolom-lijst{display:grid;gap:16px}
@@ -1201,3 +1207,20 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
 .gridview-knoppen{max-width:100%;overflow-x:auto;scrollbar-width:none}
 .gridview-knoppen button{flex:none;white-space:nowrap}
 .popup{position:absolute;right:0;top:calc(100% + 6px);max-width:calc(100vw - 32px);background:#fff;border:var(--rand);padding:12px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;min-width:260px}
+
+/* taken: weghalen bij dit project (kruisje in de regel en bij de groep), en terugzetten onderaan de fase */
+.taak-weg{display:inline-grid;place-items:center;width:22px;height:22px;margin-left:6px;padding:0;border:0;border-radius:50%;background:none;color:var(--stil);vertical-align:-4px;cursor:pointer;opacity:0;transition:opacity .2s,background-color .2s,color .2s}
+.rij:hover .taak-weg,.rij:focus-within .taak-weg,.groep-kop:hover .taak-weg,.taak-weg:focus-visible{opacity:1}
+.taak-weg:hover,.taak-weg:focus-visible{background:var(--grijs);color:var(--zwart)}
+@media (hover:none){.taak-weg{opacity:.7}}
+.groep-rechts{display:inline-flex;align-items:center;white-space:nowrap}
+.weggehaald{margin-top:26px;padding-top:14px;border-top:var(--lijn-dun)}
+.weggehaald summary{cursor:pointer;padding:4px 0;font-weight:700}
+.weggehaald>p{margin:6px 0 0}
+.weg-groep{margin-top:14px}
+.weg-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.weg-kop h3{font-size:14px}
+.weg-groep ul{list-style:none;margin:6px 0 0;padding:0}
+.weg-groep li{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:var(--lijn-dun);font-size:14px;color:var(--stil)}
+.weggehaald .link{font-size:14px;flex:none}
+@media print{.taak-weg,.weggehaald{display:none}}

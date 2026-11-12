@@ -237,6 +237,25 @@ describe('aftekenen en logboek', () => {
     expect(log.map(r => r.veld)).toEqual(['toegevoegd', 'deadline', 'verwijderd'])
   })
 
+  it('haalt een standaardtaak weg bij één project en zet hem terug, met wat er was ingevuld, en logt beide', async () => {
+    const [t] = await als<{ id: string }>(MICHIEL,
+      `insert into public.taken (project_id, lijst, sleutel, fase, status) values ($1, 'ontwikkeling', 'sloopplan', 'ontwikkeling', 'loopt') returning id`, [projectId])
+    await als(MICHIEL, `insert into public.taken (project_id, lijst, sleutel, fase, weggehaald) values ($1, 'ontwikkeling', 'sloopplan', 'ontwikkeling', true), ($1, 'ontwikkeling', 'rioolplan', 'ontwikkeling', true)
+      on conflict (project_id, lijst, sleutel) do update set weggehaald = excluded.weggehaald`, [projectId])
+    const [weg] = await als<{ status: string, weggehaald: boolean }>(MICHIEL, `select status, weggehaald from public.taken where id = $1`, [t!.id])
+    expect(weg).toEqual({ status: 'loopt', weggehaald: true })
+    await als(MICHIEL, `update public.taken set weggehaald = false where id = $1`, [t!.id])
+    const log = await als<{ veld: string, nieuw: string }>(MICHIEL, `select veld, nieuw from public.logboek where taak_id = $1 and veld = 'weggehaald' order by id`, [t!.id])
+    expect(log).toEqual([{ veld: 'weggehaald', nieuw: 'true' }, { veld: 'weggehaald', nieuw: 'false' }])
+    const riool = await als<{ veld: string }>(MICHIEL, `select l.veld from public.logboek l join public.taken t on t.id = l.taak_id where t.project_id = $1 and t.sleutel = 'rioolplan'`, [projectId])
+    expect(riool.map(r => r.veld)).toEqual(['weggehaald'])
+  })
+
+  it('haalt een uitzondering niet weg met de vlag, maar echt', async () => {
+    const [u] = await als<{ id: string }>(MICHIEL, `insert into public.uitzonderingen (titel, fase) values ('Asbestinventarisatie extra', 'ontwikkeling') returning id`)
+    await expect(als(MICHIEL, `insert into public.taken (project_id, uitzondering_id, fase, weggehaald) values ($1, $2, 'ontwikkeling', true)`, [projectId, u!.id])).rejects.toThrow()
+  })
+
   it('weigert een standaardtaak zonder lijst of met een fase die niet bij de lijst past', async () => {
     await expect(als(MICHIEL, `insert into public.taken (project_id, sleutel, fase) values ($1, 'demarcatie', 'ontwikkeling')`, [projectId])).rejects.toThrow()
     await expect(als(MICHIEL, `insert into public.taken (project_id, lijst, sleutel, fase) values ($1, 'ontwikkeling', 'demarcatie', 'uitvoering')`, [projectId])).rejects.toThrow()

@@ -108,6 +108,7 @@ export function takenVan(fase: Fase, project: MetAanmaak, taken: Taak[], catalog
   for (const g of groepenVoor(fase, project.aangemaakt_op)) {
     for (const s of g.taken) {
       const taak = perSleutel.get(`${fase}:${s.sleutel}`)
+      if (taak?.weggehaald) continue
       regels.push({ id: regelId(fase, s.sleutel), titel: s.titel, groep: g.titel, uitleg: g.uitleg, fase, standaard: s, taak, b: beoordeel(deadlineVan(s.regel, project), taak, nu) })
     }
   }
@@ -117,6 +118,19 @@ export function takenVan(fase: Fase, project: MetAanmaak, taken: Taak[], catalog
     regels.push({ id: `uitz:${taak.id}`, titel: u?.titel ?? 'Onbekende uitzondering', groep: UITZONDERINGEN_GROEP, fase, uitzondering: u, taak, b: beoordeel(naarDatum(taak.deadline), taak, nu) })
   }
   return regels
+}
+
+/** Een standaardtaak die bij dit project is weggehaald: hij telt nergens meer mee, maar is terug te zetten. */
+export interface WeggehaaldeTaak { id: string, groep: string, standaard: Standaardtaak, taak: Taak }
+
+/** De standaardtaken die bij dit project zijn weggehaald, in de volgorde van het pakket. */
+export function weggehaaldVan(fase: Fase, project: MetAanmaak, taken: Taak[]): WeggehaaldeTaak[] {
+  const weg = new Map(taken.filter(t => t.weggehaald && t.lijst === fase && t.sleutel).map(t => [t.sleutel!, t]))
+  if (!weg.size) return []
+  return groepenVoor(fase, project.aangemaakt_op).flatMap(g => g.taken.flatMap((s) => {
+    const taak = weg.get(s.sleutel)
+    return taak ? [{ id: regelId(fase, s.sleutel), groep: g.titel, standaard: s, taak }] : []
+  }))
 }
 
 export function telling(regels: { b: Beoordeling }[]): Record<Licht, number> {
@@ -133,11 +147,12 @@ export function opUrgentie<T extends { b: Beoordeling }>(regels: T[]): T[] {
 
 /** De stand van een overdrachtseis, afgeleid uit de gekoppelde taken ('lijst:sleutel'). */
 export function eisStand(koppelingen: string[], project: MetAanmaak, taken: Taak[], nu: Date): Licht {
-  return samen(koppelingen.map((k) => {
+  // Een taak die bij dit project is weggehaald, telt niet mee; zijn ze allemaal weg, dan is de eis grijs.
+  return samen(koppelingen.flatMap((k) => {
     const [lijst, sleutel] = k.split(':') as [Fase, string]
     const s = standaardtaakVoor(lijst, sleutel, project.aangemaakt_op)
     const taak = taken.find(t => t.lijst === lijst && t.sleutel === sleutel)
-    return beoordeel(deadlineVan(s?.regel, project), taak, nu).licht
+    return taak?.weggehaald ? [] : [beoordeel(deadlineVan(s?.regel, project), taak, nu).licht]
   }))
 }
 
