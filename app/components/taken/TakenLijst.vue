@@ -93,12 +93,16 @@ async function wijzig(regel: TaakRegel, w: TaakWijziging) {
 // Een standaardtaak (of een hele groep) die hier niet nodig is, gaat van de kaart en telt nergens meer mee.
 // Status, document en opmerkingen blijven bewaard: terugzetten brengt alles terug. Een uitzondering gaat echt weg.
 function weghalen(regel: TaakRegel) {
-  if (regel.standaard) return kaart.zetWeggehaald(regel.fase, [regel.standaard.sleutel], true, regel.titel)
+  if (regel.standaard) {
+    if (confirm(`Weet je het zeker? "${regel.titel}" gaat weg bij dit project. Je kunt hem altijd weer terugzetten onderaan de takenlijst.`)) kaart.zetWeggehaald(regel.fase, [regel.standaard.sleutel], true, regel.titel)
+    return
+  }
   if (confirm(`Uitzondering "${regel.titel}" weghalen uit dit project? De status en de opmerkingen gaan verloren.`)) kaart.verwijderUitzondering(regel)
 }
 function groepWeghalen(g: { titel: string, alle: TaakRegel[] }) {
   const sleutels = g.alle.flatMap(r => r.standaard ? [r.standaard.sleutel] : [])
-  if (sleutels.length > 1 && !confirm(`Alle ${sleutels.length} taken van "${g.titel}" weghalen bij dit project? Terugzetten kan onderaan de fase.`)) return
+  const wat = sleutels.length > 1 ? `Alle ${sleutels.length} taken van "${g.titel}" gaan` : `"${g.alle[0]!.titel}" gaat`
+  if (!confirm(`Weet je het zeker? ${wat} weg bij dit project. Je kunt ze altijd weer terugzetten onderaan de takenlijst.`)) return
   kaart.zetWeggehaald(tabFase.value, sleutels, true, sleutels.length > 1 ? g.titel : g.alle[0]!.titel)
 }
 

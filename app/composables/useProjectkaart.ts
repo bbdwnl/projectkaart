@@ -168,7 +168,7 @@ function maakKaart(slug: string) {
       const opgeslagen = await bron.zetWeggehaald(p.id, fase, sleutels, weg)
       const nieuw = new Map(opgeslagen.map(t => [`${t.lijst}:${t.sleutel}`, t]))
       taken.value = taken.value.map(t => (t.lijst && t.sleutel && nieuw.get(`${t.lijst}:${t.sleutel}`)) || t)
-      toon(weg ? `${naam} weggehaald bij dit project · terug te zetten onderaan de fase` : `${naam} staat weer bij dit project`, 'ok', weg ? 4000 : undefined)
+      toon(weg ? `${naam} weggehaald bij dit project · terug te zetten onderaan de takenlijst` : `${naam} staat weer bij dit project`, 'ok', weg ? 4000 : undefined)
       verversLog()
       return true
     } catch (e) {
