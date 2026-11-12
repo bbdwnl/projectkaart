@@ -6,6 +6,7 @@ import { fmt } from '~/lib/datum'
 // De tekeningen van dit project (pdf). Onder Controle zet je een aandachtspunt op de plek waar het om gaat.
 const { tekeningen, controlepunten, nummers, uploadTekening, hernoemTekening, verwijderTekening } = useKaart()
 const uploaden = ref(false)
+const { bevestig } = useBevestig()
 const bekijk = ref<string | null>(null)
 
 const pins = computed(() => pinsVan(controlepunten.value, p => nummers.value.get(p.id) ?? '?'))
@@ -29,7 +30,7 @@ function hernoem(t: Tekening, e: Event) {
   if (naam !== t.naam) hernoemTekening(t, naam)
 }
 async function weg(t: Tekening) {
-  if (confirm(`${t.naam} weghalen? De pdf gaat ook weg.`)) await verwijderTekening(t)
+  if (await bevestig({ titel: `${t.naam} weghalen?`, tekst: 'De pdf gaat ook weg.', ja: 'Weghalen', gevaar: true })) await verwijderTekening(t)
 }
 </script>
 

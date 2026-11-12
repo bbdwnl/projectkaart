@@ -9,6 +9,7 @@ import { huidig, standaard, type Instellingen, type Sleutel } from '~/lib/instel
 export function useInstellingBewerken<S extends Sleutel>(sleutel: S, opties: { voorOpslaan?: (nieuw: Instellingen[S]) => Promise<void> } = {}) {
   const bron = useBron()
   const { toon } = useToast()
+  const { bevestig } = useBevestig()
   const { gebruiker } = useGebruiker()
   const { rijen, bijgewerkt, rij } = useInstellingen()
   const concept = ref(huidig()[sleutel]) as Ref<Instellingen[S]>
@@ -42,7 +43,7 @@ export function useInstellingBewerken<S extends Sleutel>(sleutel: S, opties: { v
   }
 
   async function standaardTerug() {
-    if (!confirm('Deze lijst terugzetten naar de standaard? Wat hier is aangepast, gaat verloren.')) return
+    if (!(await bevestig({ titel: 'Terug naar de standaard?', tekst: 'Wat hier is aangepast, gaat verloren.', ja: 'Terugzetten', gevaar: true }))) return
     bezig.value = true
     try {
       await opties.voorOpslaan?.(standaard()[sleutel])
@@ -58,7 +59,7 @@ export function useInstellingBewerken<S extends Sleutel>(sleutel: S, opties: { v
   }
 
   // Niet zomaar weg met wijzigingen die nog niet zijn opgeslagen.
-  onBeforeRouteLeave(() => !gewijzigd.value || confirm('Je wijzigingen zijn nog niet opgeslagen. Toch weggaan?'))
+  onBeforeRouteLeave(() => !gewijzigd.value || bevestig({ titel: 'Niet opgeslagen', tekst: 'Je wijzigingen zijn nog niet opgeslagen. Toch weggaan?', ja: 'Weggaan zonder opslaan', nee: 'Blijven', gevaar: true }))
 
   return { concept, gewijzigd, bezig, isMt, opgeslagen, opslaan, standaardTerug, herstel: herlaad }
 }

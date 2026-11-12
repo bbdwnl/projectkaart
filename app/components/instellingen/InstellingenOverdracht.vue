@@ -7,6 +7,7 @@ import { LIJSTEN, VERVALLEN } from '~/lib/taken'
 // die je eraan koppelt: klaar als die klaar zijn, te laat als er één te laat is. Er is geen harde gate.
 const { concept, gewijzigd, bezig, isMt, opgeslagen, opslaan, standaardTerug, herstel } = useInstellingBewerken('overdracht')
 const fase = ref<Fase>('haalbaarheid')
+const { bevestig } = useBevestig()
 const blok = computed(() => concept.value[fase.value])
 /** De taken van deze fase om aan een eis te koppelen: het opgeslagen takenpakket. */
 const groepen = computed(() => LIJSTEN[fase.value])
@@ -29,8 +30,8 @@ function schuif(i: number, d: -1 | 1) {
   const [x] = l.splice(i, 1)
   l.splice(i + d, 0, x!)
 }
-function weg(i: number) {
-  if (blok.value.items[i]!.titel && !confirm(`"${blok.value.items[i]!.titel}" weghalen?`)) return
+async function weg(i: number) {
+  if (blok.value.items[i]!.titel && !(await bevestig({ titel: `"${blok.value.items[i]!.titel}" weghalen?`, ja: 'Weghalen' }))) return
   blok.value.items.splice(i, 1)
 }
 const nieuw = () => blok.value.items.push({ titel: '', taken: [] })

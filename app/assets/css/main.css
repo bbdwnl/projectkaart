@@ -1224,3 +1224,10 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
 .weg-groep li{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:var(--lijn-dun);font-size:14px;color:var(--stil)}
 .weggehaald .link{font-size:14px;flex:none}
 @media print{.taak-weg,.weggehaald{display:none}}
+
+/* een vraag in een eigen venster (useBevestig), in plaats van confirm() of prompt() van de browser */
+.bevestig{width:min(440px,calc(100vw - 24px))}
+.bevestig .datumvenster-kop h2{font-size:22px;line-height:1.2}
+.bevestig-tekst{margin:-6px 0 0;font-size:15px;line-height:1.45}
+.bevestig textarea.veld{min-height:84px;padding:10px 12px;font-size:15px;resize:vertical}
+.knop.zwart.gevaar{background:var(--baksteen-diep);border-color:var(--baksteen-diep)}

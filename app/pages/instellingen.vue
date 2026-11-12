@@ -18,6 +18,7 @@ const tab = useTabblad<Tab>('leveranciers', TABS.map(t => t.id))
 const { gebruiker } = useGebruiker()
 const bron = useBron()
 const { toon } = useToast()
+const { bevestig } = useBevestig()
 const stand = ref<'laden' | 'klaar' | 'fout'>('laden')
 const fout = ref('')
 const leveranciers = ref<Leverancier[]>([])
@@ -83,10 +84,10 @@ async function wijzig(l: Leverancier, veld: 'naam' | 'vak', e: Event) {
 /** Op geen project: helemaal weg. Wel op projecten: alleen uit de globale lijst, op die projecten blijft hij staan. */
 async function weg(l: Leverancier) {
   const n = projecten(l.id)
-  const vraag = n
-    ? `${l.naam} uit de globale lijst halen? Op de ${n === 1 ? 'één project' : `${n} projecten`} waar hij al staat, blijft hij staan; op nieuwe projecten kies je hem niet meer.`
-    : `${l.naam} uit de globale lijst halen? Hij staat op geen enkel project en is daarna weg.`
-  if (!confirm(vraag)) return
+  const tekst = n
+    ? `Op de ${n === 1 ? 'één project' : `${n} projecten`} waar hij al staat, blijft hij staan; op nieuwe projecten kies je hem niet meer.`
+    : 'Hij staat op geen enkel project en is daarna weg.'
+  if (!(await bevestig({ titel: `${l.naam} uit de globale lijst halen?`, tekst, ja: 'Uit de lijst halen', gevaar: !n }))) return
   try {
     if (n) await bron.wijzigLeverancier(l.id, { globaal: false })
     else await bron.verwijderLeverancier(l.id)

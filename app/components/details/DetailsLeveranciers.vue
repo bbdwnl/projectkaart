@@ -6,6 +6,7 @@ import { DISCIPLINES } from '~/lib/fasen'
 // Onder Controle koppel je een aandachtspunt aan een van deze leveranciers.
 const { leveranciers, globaleLeveranciers, controlepunten, nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, disciplineVan, kiesDiscipline, bewaarDiscipline } = useKaart()
 const { toon } = useToast()
+const { bevestig } = useBevestig()
 const gekozen = ref('')
 const naam = ref('')
 const vak = ref('')
@@ -53,10 +54,10 @@ async function maak() {
   bezig.value = false
 }
 async function weg(l: Leverancier) {
-  const vraag = l.globaal
-    ? `${l.naam} weghalen bij dit project? Hij blijft in de globale lijst staan.`
-    : `${l.naam} weghalen bij dit project? Hij staat niet in de globale lijst; staat hij ook op geen ander project, dan is hij daarna helemaal weg.`
-  if (confirm(vraag)) await ontkoppelLeverancier(l)
+  const tekst = l.globaal
+    ? 'Hij blijft in de globale lijst staan.'
+    : 'Hij staat niet in de globale lijst; staat hij ook op geen ander project, dan is hij daarna helemaal weg.'
+  if (await bevestig({ titel: `${l.naam} weghalen bij dit project?`, tekst, ja: 'Weghalen', gevaar: !l.globaal })) await ontkoppelLeverancier(l)
 }
 </script>
 

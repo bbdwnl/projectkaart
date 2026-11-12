@@ -6,6 +6,7 @@ import { nieuweCode, type Keuze } from '~/lib/instellingen'
 const keuzes = defineModel<Keuze[]>({ required: true })
 const props = defineProps<{ label: string, voorbeeld?: string, inGebruik?: Record<string, number> }>()
 const nieuw = ref('')
+const { bevestig } = useBevestig()
 
 function voegToe() {
   const naam = nieuw.value.trim().replace(/\s+/g, ' ')
@@ -27,10 +28,10 @@ function schuif(i: number, d: -1 | 1) {
   ;[l[i], l[i + d]] = [l[i + d]!, l[i]!]
   keuzes.value = l
 }
-function weg(i: number) {
+async function weg(i: number) {
   const k = keuzes.value[i]!
   const n = props.inGebruik?.[k.id] ?? 0
-  if (n && !confirm(`${k.naam} staat op ${n === 1 ? 'één project' : `${n} projecten`}. Daar blijft het staan, maar je kiest het niet meer. Weghalen?`)) return
+  if (n && !(await bevestig({ titel: `${k.naam} weghalen?`, tekst: `Het staat op ${n === 1 ? 'één project' : `${n} projecten`}. Daar blijft het staan, maar je kiest het niet meer.`, ja: 'Weghalen' }))) return
   keuzes.value = keuzes.value.filter((_, j) => j !== i)
 }
 </script>

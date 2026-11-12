@@ -8,6 +8,7 @@ import { fmtMoment } from '~/lib/datum'
 // de leverancier die het oplost kies je meteen of later in de lijst.
 const { controlepunten, leveranciers, nu, openPunten, zetOpgelost, keurAf, kiesLeverancier, verwijderControlepunt, tekeningen, nummers, zetPlek } = useKaart()
 const bron = useBron()
+const { bevestig, vraagTekst } = useBevestig()
 const filter = ref<ControleFilter>('open')
 const leverancier = ref('alle')
 const nieuwOpen = ref(false)
@@ -67,8 +68,8 @@ function plekGekozen(plek: BladPlek & { tekening_id: string }) {
 }
 
 /** De leverancier meldde het opgelost, maar het klopt niet. De reden ziet hij op zijn pagina. */
-function afkeuren(p: Controlepunt) {
-  const reden = prompt(`#${nummers.value.get(p.id)} afkeuren: wat klopt er nog niet? De leverancier ziet dit op zijn pagina.`)
+async function afkeuren(p: Controlepunt) {
+  const reden = await vraagTekst({ titel: `#${nummers.value.get(p.id)} afkeuren`, tekst: 'De leverancier ziet dit op zijn pagina.', label: 'Wat klopt er nog niet?', ja: 'Afkeuren' })
   if (reden !== null) keurAf(p, reden)
 }
 const STAND = {
@@ -79,7 +80,7 @@ const STAND = {
 } as const
 
 async function weg(p: Controlepunt) {
-  if (confirm('Dit aandachtspunt weghalen? De foto gaat ook weg.')) await verwijderControlepunt(p)
+  if (await bevestig({ titel: 'Aandachtspunt weghalen?', tekst: 'De foto gaat ook weg.', ja: 'Weghalen', gevaar: true })) await verwijderControlepunt(p)
 }
 </script>
 

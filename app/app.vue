@@ -11,4 +11,5 @@ const metBalk = computed(() => route.path !== '/login' && !route.meta.extern)
   <NuxtPage />
   <div class="schil"><AppFeedback v-if="metBalk" /></div>
   <AppToast />
+  <AppBevestig />
 </template>

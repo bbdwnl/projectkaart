@@ -19,6 +19,7 @@ const emit = defineEmits<{ sluit: [], link: [link: Deellink] }>()
 const bron = useBron()
 const { gebruiker } = useGebruiker()
 const { toon } = useToast()
+const { bevestig } = useBevestig()
 const venster = ref<HTMLDialogElement>()
 onMounted(() => venster.value?.showModal())
 const sluit = () => venster.value?.close()
@@ -79,7 +80,7 @@ async function maakLink() {
   }
 }
 async function trekIn() {
-  if (!actief.value || !confirm(`De link voor ${naam.value} intrekken? De pagina gaat meteen dicht.`)) return
+  if (!actief.value || !(await bevestig({ titel: 'Link intrekken?', tekst: `De pagina van ${naam.value} gaat meteen dicht.`, ja: 'Intrekken', gevaar: true }))) return
   bezig.value = true
   try {
     emit('link', await bron.trekDeellinkIn(actief.value.id))

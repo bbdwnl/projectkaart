@@ -8,6 +8,7 @@ import { fmt, naarDatum } from '~/lib/datum'
 // zijn open acties.
 const { project, acties, openActies, nieuweActie, wijzigActie, verwijderActie, nu } = useKaart()
 const toonGereed = ref(false)
+const { bevestig } = useBevestig()
 const lijstEl = ref<HTMLElement>()
 
 const nummers = computed(() => new Map(acties.value.map((a, i) => [a.id, i + 1])))
@@ -31,8 +32,8 @@ function tekst(a: Actie, e: Event) {
   const waarde = (e.target as HTMLInputElement).value.trim()
   if (waarde !== a.tekst) wijzigActie(a, { tekst: waarde })
 }
-function weg(a: Actie) {
-  if (!a.tekst || confirm(`Actie ${nummers.value.get(a.id)} weghalen: ${a.tekst}?`)) verwijderActie(a)
+async function weg(a: Actie) {
+  if (!a.tekst || await bevestig({ titel: `Actie ${nummers.value.get(a.id)} weghalen?`, tekst: a.tekst, ja: 'Weghalen', gevaar: true })) verwijderActie(a)
 }
 const gemaakt = (a: Actie) => fmt(new Date(a.aangemaakt_op))
 </script>

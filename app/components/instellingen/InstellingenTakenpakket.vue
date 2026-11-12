@@ -10,6 +10,7 @@ import { fmt } from '~/lib/datum'
 // zijn, houden hem, met wat er was ingevuld (beslissing 41). Daarvoor houdt de lijst vervallen bij wat eruit ging en
 // sinds wanneer; die wordt eerst opgeslagen, dan het pakket.
 const bron = useBron()
+const { bevestig } = useBevestig()
 const { bijgewerkt } = useInstellingen()
 async function bewaarVervallen(nieuw: Record<Fase, Takengroep[]>) {
   const nu = huidig()
@@ -76,9 +77,9 @@ function naarGroep(gi: number, ti: number, d: -1 | 1) {
 function nieuweGroep() {
   groepen.value.push({ titel: 'Nieuwe groep', taken: [] })
 }
-function wegGroep(i: number) {
+async function wegGroep(i: number) {
   const g = groepen.value[i]!
-  if (g.taken.length && !confirm(`De groep "${g.titel}" met ${g.taken.length} taken weghalen?`)) return
+  if (g.taken.length && !(await bevestig({ titel: `Groep "${g.titel}" weghalen?`, tekst: `Met ${g.taken.length === 1 ? 'één taak' : `${g.taken.length} taken`}. Pas na Opslaan geldt het; de projecten die er al zijn, houden de taken.`, ja: 'Weghalen' }))) return
   groepen.value.splice(i, 1)
 }
 
