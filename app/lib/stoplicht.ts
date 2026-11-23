@@ -42,12 +42,12 @@ export interface Beoordeling {
   dagen: number | null
 }
 
-type TaakStand = Pick<Taak, 'status' | 'document_url' | 'document_naam' | 'reden_nvt'>
+type TaakStand = Pick<Taak, 'status' | 'reden_nvt'>
 
 /**
  * Het stoplicht van één taak. Nooit met de hand gezet:
- * - groen: definitief én een document gekoppeld
- * - oranje: definitief zonder document, n.v.t. zonder reden, of deadline binnen 14 dagen
+ * - groen: definitief, met of zonder document (beslissing 44)
+ * - oranje: n.v.t. zonder reden, of deadline binnen 14 dagen
  * - rood: deadline voorbij en nog niet definitief
  * - grijs: n.v.t. (met reden) of volgende fase
  */
@@ -59,11 +59,7 @@ export function beoordeel(deadline: Date | null, taak: TaakStand | undefined, nu
       : { licht: 'letop', woord: 'Let op', reden: 'N.v.t., maar de reden ontbreekt', deadline, dagen: null }
   }
   if (status === 'volgende_fase') return { licht: 'later', woord: 'Later', reden: 'Schuift door naar de volgende fase', deadline, dagen: null }
-  if (status === 'definitief') {
-    return taak?.document_url || taak?.document_naam
-      ? { licht: 'klaar', woord: 'Klaar', reden: 'Definitief', deadline, dagen: null }
-      : { licht: 'letop', woord: 'Let op', reden: 'Definitief, maar nog geen document', deadline, dagen: null }
-  }
+  if (status === 'definitief') return { licht: 'klaar', woord: 'Klaar', reden: 'Definitief', deadline, dagen: null }
   if (!deadline) return { licht: 'open', woord: 'Open', reden: 'Geen deadline', deadline: null, dagen: null }
   const n = dagenTussen(nu, deadline)
   if (n < 0) return { licht: 'telaat', woord: 'Te laat', reden: `${dagen(-n)} te laat`, deadline, dagen: n }

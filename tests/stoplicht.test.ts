@@ -51,9 +51,9 @@ describe('deadlineVan', () => {
 })
 
 describe('beoordeel', () => {
-  it('groen alleen met document', () => {
+  it('definitief is klaar, ook zonder document', () => {
     expect(beoordeel(d('2026-01-01'), taak({ status: 'definitief', document_naam: 'x.pdf' }), NU).licht).toBe('klaar')
-    expect(beoordeel(d('2026-01-01'), taak({ status: 'definitief' }), NU)).toMatchObject({ licht: 'letop', reden: 'Definitief, maar nog geen document' })
+    expect(beoordeel(d('2026-01-01'), taak({ status: 'definitief' }), NU)).toMatchObject({ licht: 'klaar', woord: 'Klaar' })
   })
   it('n.v.t. vraagt een reden', () => {
     expect(beoordeel(null, taak({ status: 'nvt', reden_nvt: 'Nieuwbouw' }), NU)).toMatchObject({ licht: 'later', woord: 'N.v.t.' })

@@ -7,8 +7,8 @@ const { project, lichten } = useKaart()
 
 const LAMPEN = [
   { licht: 'telaat', naam: 'Te laat', uitleg: 'Deadline voorbij' },
-  { licht: 'letop', naam: 'Let op', uitleg: 'Binnen 14 dagen, zonder document/reden' },
-  { licht: 'klaar', naam: 'Klaar', uitleg: 'Definitief, met document' },
+  { licht: 'letop', naam: 'Let op', uitleg: 'Binnen 14 dagen, of n.v.t. zonder reden' },
+  { licht: 'klaar', naam: 'Klaar', uitleg: 'Definitief' },
 ] as const
 const tellers = {
   telaat: useTeller(() => lichten.value.telaat, { vertraging: 200 }),
