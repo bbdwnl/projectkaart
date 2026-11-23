@@ -50,6 +50,7 @@ onBeforeUnmount(() => {
         </template>
       </nav>
       <div class="rechts">
+        <ThemaKeuze v-if="gebruiker" class="alleen-breed" />
         <div v-if="gebruiker" ref="menu" class="gebruiker-menu alleen-breed">
           <button type="button" class="avatar" :aria-expanded="menuOpen" aria-haspopup="true" :title="gebruiker.naam" @click="menuOpen = !menuOpen">{{ initialen || '?' }}</button>
           <Transition name="pop">
@@ -75,6 +76,10 @@ onBeforeUnmount(() => {
                 </template>
                 <NuxtLink to="/instellingen">Instellingen</NuxtLink>
               </nav>
+              <section class="mm-groep">
+                <h4 class="label">Weergave</h4>
+                <ThemaKeuze />
+              </section>
               <section v-if="route.path.startsWith('/projecten/')" class="mm-groep">
                 <WeergaveKeuzes />
               </section>

@@ -1,6 +1,6 @@
 import type { Fase, Licht, Project, Rol, Taak, Uitzondering } from './types'
-import { faseInfo } from './fasen'
-import { ORDE, samen, takenVan, telling, volgendeMijlpaal } from './stoplicht'
+import { faseInfo, ROLLEN, SUBFASEN } from './fasen'
+import { ORDE, samen, takenVan, telling, volgendeMijlpaal, type Mijlpaal } from './stoplicht'
 
 // Het overzicht Projecten (vier kolommen, van haalbaarheid tot nazorg): per project een kaartje met het nummer, de naam,
 // de kleurenbalk van de taken in de huidige fase en de voornaam van wie in die fase verantwoordelijk is.
@@ -96,4 +96,33 @@ export function vindt(k: Kaartje, zoek: string): boolean {
 export function balkTekst(t: Record<Licht, number>): string {
   const delen = [t.telaat && `${t.telaat} te laat`, t.letop && `${t.letop} let op`, t.klaar && `${t.klaar} klaar`, t.open && `${t.open} open`].filter(Boolean)
   return delen.length ? `Taken: ${delen.join(', ')}` : 'Nog geen taken in deze fase'
+}
+
+/** De extra regels van een kaartje in de weergave Zakelijk (beslissing 45). */
+export interface KaartjeInfo {
+  /** Plaats en, in haalbaarheid, de subfase. Leeg als die er geen van beide zijn. */
+  waar: string
+  /** Wie verantwoordelijk is, en ook de PM en de opzichter als die er zijn: alleen de voornaam. */
+  mensen: { rol: string, naam: string }[]
+  mijlpaal: Mijlpaal | null
+  /** Taken in deze fase die meetellen (zonder n.v.t.). */
+  totaal: number
+}
+
+export function kaartjeInfo(k: Kaartje, nu: Date): KaartjeInfo {
+  const p = k.p
+  const subfase = p.fase === 'haalbaarheid' ? SUBFASEN.find(s => s.id === p.subfase)?.naam : null
+  const rollen = [k.rol, ...(['pm', 'opzichter'] as const).filter(r => r !== k.rol)]
+  return {
+    waar: [p.plaats, subfase].filter(Boolean).join(' · '),
+    mensen: rollen.flatMap(r => { const naam = voornaam(p[r]); return naam ? [{ rol: ROLLEN[r].kort, naam }] : [] }),
+    mijlpaal: volgendeMijlpaal(p, nu),
+    totaal: k.t.telaat + k.t.letop + k.t.open + k.t.klaar,
+  }
+}
+
+/** Hoe ver een datum weg is, kort: "over 12 d", "vandaag", "3 d geleden". */
+export function dagenKort(dagen: number): string {
+  if (dagen === 0) return 'vandaag'
+  return dagen > 0 ? `over ${dagen} d` : `${-dagen} d geleden`
 }

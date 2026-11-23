@@ -1,0 +1,301 @@
+/* =========================================================
+   Thema Zakelijk (beslissing 45): sober en compact, voor wie meer per scherm wil zien.
+   Te kiezen bovenin de balk; staat dan als data-thema="zakelijk" op <html> (useThema, app.vue).
+   Alles hieronder geldt alleen in dat thema: het thema Kaarten (tokens.css + main.css) blijft ongemoeid.
+   Inspiratie: het prototype van de opdrachtgever. Grijsgroene ondergrond, witte panelen, 1px-lijnen, kleine
+   hoofdletterlabels en datums en nummers in een vaste breedte. Kleur alleen waar het iets zegt (de stand), en dan
+   getint in plaats van vol. De letter is die van het systeem: Segoe UI op Windows, zoals Outlook en Teams.
+   ========================================================= */
+:root[data-thema="zakelijk"]{
+  --grond:#f3f4f1;
+  --wit:#ffffff;
+  --zwart:#1b2320;
+  --grijs:#eceeea;
+  --grijs-2:#f6f7f4;
+  --stil:#5f6a65;
+  --lijn:#d9ddd8;
+  --marker:#e3eee8;
+  --tint-telaat:#f6e4e0; --tint-letop:#f7ecd9; --tint-klaar:#e3eee8; --tint-nu:#e1eef3;
+  --verloop-zacht:none;
+  --verloop-zwart:var(--zwart);
+  --rand:1px solid var(--lijn);
+  --rand-sterk:1px solid #b9bfb9;
+  --lijn-dun:1px solid #e8ebe6;
+  --radius:6px; --radius-s:4px; --radius-l:8px; --rond:4px;
+  --zacht:none;
+  --zacht-hoog:0 6px 20px -8px rgba(27,35,32,.22);
+  --stapel:none;
+  --ruimte:16px;
+  --kolom:1560px;
+  --veer:cubic-bezier(.22,1,.36,1);
+  --font:"Segoe UI Variable Text","Segoe UI",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+  scroll-padding-top:64px;
+
+  & body{background:var(--grond);font-size:14px;line-height:20px;-webkit-font-smoothing:auto}
+  & :focus-visible{outline:2px solid var(--blauw-diep);outline-offset:1px;border-radius:3px}
+
+  /* ---------- typografie: geen 900 meer, kleiner en rustiger ---------- */
+  & .label{font-size:10.5px;line-height:14px;font-weight:600;letter-spacing:.06em}
+  & h1,& .kop-1{font-weight:600;font-size:22px;line-height:28px;letter-spacing:-.01em}
+  & h2,& .kop-2{font-weight:600;font-size:17px;line-height:22px;letter-spacing:0}
+  & h3,& .kop-3{font-weight:600;font-size:14px;line-height:19px}
+  & .klein{font-size:12.5px;line-height:17px}
+  & .lead{font-size:15px;line-height:22px}
+  & .link{font-weight:600;font-size:13px;text-decoration-thickness:1px}
+  & .zin{font-weight:500;font-size:15px;line-height:21px;letter-spacing:0;margin-top:6px;min-height:0;max-width:60em}
+  & .zin .w{animation:none;opacity:1;transform:none}
+
+  /* ---------- tab: klein label, getint ---------- */
+  & .tab{height:18px;padding:0 6px;border-width:1px;font-size:10px;font-weight:600;letter-spacing:.04em;gap:4px}
+  & .tab.telaat{background:var(--tint-telaat);border-color:var(--tint-telaat);color:var(--baksteen-diep)}
+  & .tab.letop{background:var(--tint-letop);border-color:var(--tint-letop);color:var(--oker-diep)}
+  & .tab.klaar{background:var(--tint-klaar);border-color:var(--tint-klaar);color:var(--salie-diep)}
+  & .tab.nu{background:var(--tint-nu);border-color:var(--tint-nu);color:var(--blauw-diep)}
+  & .tab.open{background:var(--wit);border-color:var(--lijn)}
+  & .tab.later{background:var(--grijs);border-color:var(--grijs);color:var(--stil)}
+  & .tab.uitz{border-color:var(--stil)}
+
+  /* ---------- kaart: plat, dunne lijn, de tab in de kaart in plaats van erboven ---------- */
+  & .kaart{padding:12px 14px;box-shadow:none;transition:border-color .15s}
+  & .kaart>.tab:first-child{position:static;margin-bottom:6px;align-self:flex-start}
+  & .kaart.til:hover{transform:none;box-shadow:none;border-color:var(--stil)}
+  & .kaart.til:hover>.tab:first-child{animation:none}
+
+  /* ---------- knoppen en velden ---------- */
+  & .knop{height:30px;padding:0 12px;border:var(--rand-sterk);font-size:13px;font-weight:600;gap:6px}
+  & .knop:hover{transform:none;background:var(--grijs-2)}
+  & .knop.zwart{border-color:var(--zwart)}
+  & .knop.zwart:hover{background:#33403b}
+  & .knop.klein{height:26px;padding:0 10px;font-size:12.5px}
+  & .veld{height:30px;border:var(--rand-sterk);font-size:13px;padding:0 8px}
+  & select.veld.pil{font-weight:500;font-size:13px;height:28px}
+  & .seg{border:var(--rand-sterk);padding:2px;gap:1px;background:var(--wit)}
+  & .seg button{padding:3px 10px;font-size:12.5px;font-weight:500;border-radius:3px}
+  & .seg button:hover:not([aria-pressed="true"]){background:var(--grijs)}
+  & .chip{min-height:28px;padding:2px 10px 2px 8px;border:var(--rand-sterk);font-size:13px;background:var(--wit)}
+  & .chip select{font-weight:600;font-size:13px}
+  & .schakel{font-size:13.5px;gap:10px;padding:3px 0}
+  & .schakel span{width:30px;height:18px;border-radius:999px;border:var(--rand-sterk)}
+  & .schakel span::after{width:12px;height:12px;top:2px;left:2px;background:var(--stil)}
+  & .schakel input:checked+span{background:var(--blauw-diep);border-color:var(--blauw-diep)}
+  & .schakel input:checked+span::after{transform:translateX(12px);background:var(--wit)}
+  & .kolpil span{padding:2px 10px;border:var(--rand-sterk);font-size:12.5px;font-weight:500}
+  & .kolpil span:hover{transform:none}
+  & .akkoord input{width:16px;height:16px;border:var(--rand-sterk);border-radius:3px}
+  & .akkoord input:checked{background:var(--blauw-diep);border-color:var(--blauw-diep)}
+  & .akkoord input:checked::after{border-color:var(--wit);border-width:0 0 2px 2px;width:8px;height:4px}
+  & .leeg-staat{border:1px dashed var(--lijn);padding:14px;font-size:13px}
+  & .popup{border-radius:var(--radius);box-shadow:var(--zacht-hoog)}
+
+  /* ---------- balk ---------- */
+  & .wrap{padding:0 24px}
+  & .balk{background:var(--wit);backdrop-filter:none;border-bottom:var(--rand)}
+  & .balk .wrap{height:48px;gap:16px}
+  & .merk{gap:10px}
+  & .merk .logo{height:18px}
+  & .merk .streep{width:1px;height:18px}
+  & .merk b{font-weight:600;font-size:15px;letter-spacing:0}
+  & .nav{gap:2px;margin-left:6px}
+  & .nav a,& .nav .kruimel{font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;padding:5px 10px;border-width:1px}
+  & .nav a:hover{background:var(--grijs)}
+  & .nav a[aria-current],& .nav a.router-link-exact-active{border-color:transparent;background:var(--grijs);font-weight:600}
+  & .nav .kruimel{border-color:var(--lijn);color:var(--stil)}
+  & .balk .rechts{gap:10px}
+  & .avatar{width:28px;height:28px;font-size:11px;font-weight:600}
+  & .hamburger{width:32px;height:32px;border-radius:var(--radius-s);border:var(--rand-sterk)}
+  & .menu-paneel{padding:10px 12px;font-size:13.5px}
+  & .mobiel-paneel{top:48px;max-height:calc(100dvh - 48px)}
+  & .mm-nav a{font-weight:600;font-size:17px;letter-spacing:0;padding:7px 0}
+  & .mm-nav a[aria-current="page"]{text-decoration-thickness:2px}
+  & .mm-groep{border-top:var(--rand)}
+
+  /* ---------- paginakop, tabbladen, filters ---------- */
+  & .paginakop{padding-top:16px}
+  & .paginakop .zin{margin:0}
+  & .paginatabs{margin-top:14px;border-bottom:var(--rand);gap:2px}
+  & .paginatabs button{font-weight:600;font-size:13.5px;letter-spacing:0;padding:8px 12px 9px;color:var(--stil)}
+  & .paginatabs button[aria-selected="true"]::after{height:2px;border-radius:0;background:var(--zwart)}
+  & .paginatabs+*>.filters:first-child,& .paginatabs+.filters,& .paginatabs+*>.leadfilters:first-child{margin-top:12px}
+  & .filters{gap:10px;margin-bottom:8px}
+  & .projectfilters,& .leadfilters{margin-top:12px}
+  & .zoekveld{height:30px;padding:0 10px}
+  & .filterkeuze select.veld.pil{height:28px}
+  & .gridview-knoppen{border:var(--rand-sterk);padding:2px 2px 2px 8px;background:var(--wit)}
+  & .gridview-knoppen button{min-height:24px;padding:0 10px;font-size:12.5px;font-weight:500;border-radius:3px}
+  & .telregel{margin:2px 0 8px}
+  & .kop-knoppen{gap:6px}
+  & .nieuw-formulier,& .mail-actiehouders{margin-top:14px;padding-top:12px}
+
+  /* ---------- projecten: vier kolommen, compacte kaartjes met meer per regel ---------- */
+  & .kolommen{gap:12px;padding-top:12px}
+  & .kolom-kop{padding-bottom:6px;margin-bottom:8px;border-bottom:var(--rand)}
+  & .kolom-kop h2{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;gap:7px}
+  & .kolom-kop .fase-stip{width:8px;height:8px}
+  & .kolom-kop .klein{font-size:12px}
+  & .kolom-lijst{gap:6px}
+  & .kolom-scheiding{margin:6px 0 0}
+  & .gridview .kolom-lijst{grid-template-columns:repeat(auto-fill,minmax(min(290px,100%),1fr))}
+  & .gridview .projectkaartje{aspect-ratio:auto}
+  & .gridview .projectkaartje .mini-balk{margin-top:4px}
+  & .projectkaartje{padding:8px 10px 8px 11px;gap:2px;animation-duration:.25s;animation-delay:0s}
+  & .projectkaartje h3{font-weight:600;font-size:14px;line-height:18px;letter-spacing:0}
+  & .projectkaartje.met-telaat{border-color:var(--lijn);box-shadow:inset 3px 0 0 var(--baksteen)}
+  & .projectkaartje[data-licht="letop"]{box-shadow:inset 3px 0 0 var(--oker)}
+  & .projectkaartje.afgehandeld{background:var(--grijs-2)}
+  & .projectkaartje .mini-balk{height:4px;border-radius:2px;margin:4px 0 2px}
+  & .zk-kop{display:flex;align-items:center;gap:6px;min-height:16px}
+  & .zk-kop .tab{height:16px;font-size:9.5px;padding:0 5px}
+  & .zk-nummer{font-family:var(--mono);font-size:11.5px;line-height:16px;color:var(--stil);margin-right:auto}
+  & .zk-regel{display:flex;flex-wrap:wrap;gap:0 10px;font-size:12px;line-height:17px;color:var(--stil);min-width:0}
+  & .zk-mensen{color:var(--zwart)}
+  & .zk-mensen small{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--stil)}
+  & .zk-leeg{color:var(--stil);font-style:italic}
+  & .zk-waar{color:var(--stil)}
+  & .zk-cijfers{font-family:var(--mono);font-size:11px;gap:0 8px}
+  & .zk-cijfers .telaat{color:var(--baksteen-diep);font-weight:600}
+  & .zk-cijfers .letop{color:var(--oker-diep);font-weight:600}
+  & .zk-datum b{font-family:var(--mono);font-weight:500;font-size:11.5px;color:var(--zwart)}
+  & .zk-datum{display:block}
+  & .zk-datum::first-letter{text-transform:uppercase}
+
+  /* ---------- lijsten en tabellen: kortere rijen, kleinere letter ---------- */
+  & .lijst{box-shadow:none}
+  & .kolkop{height:30px;border-bottom:var(--rand);font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--stil);background:var(--grijs-2)}
+  & .kolkop,& .rij-hoofd{gap:10px;padding:0 10px}
+  & .rij-hoofd{min-height:36px;padding-top:3px;padding-bottom:3px}
+  & .rij:hover{background:var(--grijs-2)}
+  & .rij .titel{font-size:13.5px;line-height:18px}
+  & .rij .titel small{font-size:11.5px;line-height:15px}
+  & .rij .deadline{font-size:12.5px;line-height:16px}
+  & .rij .deadline small{font-size:11px}
+  & .rij select.eigenaar{font-size:13px;padding:2px 0}
+  & .rij-hoofd .n{font-family:var(--mono);font-size:12.5px}
+  & .doc,& .doc-leeg{font-size:12px;padding:2px 6px;border-width:1px}
+  & .notitie-knop,& .doc-wijzig{width:26px;height:26px;border-radius:var(--radius-s)}
+  & .notitie-knop.heeft{background:var(--grijs);color:var(--zwart)}
+  & .notitie-aantal{border-width:1px;background:var(--zwart);color:var(--wit);border-color:var(--zwart)}
+  & .lijst-scheiding{padding:8px 10px 6px;border-top:var(--rand)}
+  & .leadrij .titel .prio{height:16px;font-size:9px;padding:0 5px}
+  & .voortgang{height:4px;border-radius:2px}
+  & .voortgang i{border-radius:2px}
+  & .uitz-balk{padding:8px 10px}
+  & .groep{margin-top:14px}
+  & .groep-kop{padding:0 2px 6px}
+  & .groep-kop h3{font-size:13.5px}
+  & .tabel{font-size:13.5px;margin-top:14px;box-shadow:none}
+  & .tabel th{padding:7px 10px;font-weight:600;letter-spacing:.06em;color:var(--stil);background:var(--grijs-2);border-bottom:var(--rand)}
+  & .tabel td{padding:6px 10px}
+  & .tabel .r{font-family:var(--mono);font-size:12.5px}
+  & .actielijst .rij-hoofd,& .maillijst .rij-hoofd,& .disciplinelijst .rij-hoofd{min-height:38px;padding-top:4px;padding-bottom:4px}
+  & .actielijst .rij.te-laat{box-shadow:inset 3px 0 0 var(--baksteen)}
+  & .suggesties{padding:4px}
+  & .suggesties button{padding:6px 8px;font-size:13px;border-radius:3px}
+
+  /* ---------- de kaart van een project ---------- */
+  & .kop{gap:24px;padding-top:18px}
+  & .kop .label{margin-bottom:6px}
+  & .kop .label .tab{height:18px}
+  & .meta{gap:6px;margin-top:12px}
+  & .links{margin-top:10px;font-size:13px}
+  & .links a{font-weight:600;text-decoration-thickness:1px}
+  & .stoplicht{background:var(--wit);color:var(--zwart);border:var(--rand);border-radius:var(--radius);box-shadow:none;padding:10px 12px;gap:8px}
+  & .stoplicht .label{color:var(--stil)}
+  & .lamp{gap:8px}
+  & .lamp i{width:30px;height:30px;font-weight:600;font-size:13px;letter-spacing:0;background:var(--grijs);color:var(--stil);box-shadow:none}
+  & .lamp b{font-size:12.5px;font-weight:600;line-height:16px}
+  & .lamp small{font-size:11px;line-height:14px;color:var(--stil)}
+  & .lamp.aan.telaat i{background:var(--baksteen);box-shadow:none;color:var(--wit)}
+  & .lamp.aan.letop i{background:var(--oker);box-shadow:none;color:var(--zwart)}
+  & .lamp.aan.klaar i{background:var(--salie);box-shadow:none;color:var(--wit)}
+  & .lamp:hover i{transform:none}
+  & .stoplicht .balkje{height:4px;background:var(--grijs)}
+  & .stoplicht .seg-open{background:var(--grijs)}
+  & .stoplicht .voet{font-size:11.5px;color:var(--stil)}
+  & .strook{margin-top:12px;box-shadow:none;padding:8px 12px 6px}
+  & .strook:hover{transform:none;box-shadow:none;border-color:var(--stil)}
+  & .tabbalk{top:48px;margin-top:18px;background:var(--grond);backdrop-filter:none;border-bottom:var(--rand)}
+  & #tabanker{scroll-margin-top:48px}
+  & .tabrij{gap:2px}
+  & .tabrij button{font-weight:600;font-size:14px;letter-spacing:0;padding:9px 12px 10px;color:var(--stil);gap:6px}
+  & .tabrij button .tab{height:16px;font-size:9px}
+  & .tab-indicator{height:2px;border-radius:0}
+  & .paneel section.blok{padding-top:20px}
+  & .paneel-leeg{margin-top:20px}
+  & section.blok{padding-top:28px}
+  & .blokkop{margin-bottom:12px;gap:12px}
+  & .fasetabs{border-bottom:var(--rand);margin-bottom:10px}
+  & .fasetabs button{font-size:13.5px;font-weight:600;padding:7px 10px 8px;gap:6px}
+  & .fasetabs .indicator{height:2px;border-radius:0;bottom:-1px}
+  & .weergave{padding:12px 14px 10px}
+  & .wg-kop h3{font-weight:600;font-size:15px;letter-spacing:0}
+  & .wg-groep{padding:8px 0 6px}
+
+  /* procesflow en planning */
+  & .banden,& .spoor,& .fasen{gap:10px}
+  & .band{border-top-width:1px;font-weight:600}
+  & .knoop{width:16px;height:16px;border:1.5px solid var(--zwart)}
+  & .knoop.nu{width:20px;height:20px;background:var(--blauw-diep);border-color:var(--blauw-diep)}
+  & .spoor .lijn{height:2px;top:14px}
+  & .fase .kaart{padding:10px 12px;min-height:0}
+  & .fase .kaart h3{font-weight:600;font-size:15px;letter-spacing:0}
+  & .fase .kaart p{font-size:12.5px;line-height:17px}
+  & .fase .kaart .rol{width:24px;height:24px;top:9px;right:9px;font-size:9px;border-width:1px}
+  & .fase.nu .kaart{border-color:var(--blauw-diep);box-shadow:inset 0 3px 0 var(--blauw-diep)}
+  & .fase.straks .kaart{border-color:var(--lijn);background:var(--grijs-2)}
+  & .eis{border-radius:var(--radius-s);padding:8px 10px 6px}
+  & .eis li{font-size:12.5px;line-height:17px;gap:6px}
+  & .punt{width:10px;height:10px;border-width:1.5px}
+  & .datumknop-rij b{font-family:var(--mono);font-size:12.5px;font-weight:500}
+  & .datum{padding:6px 10px}
+  & .datum input{font-family:var(--mono);font-size:13px;font-weight:500}
+  & .datums{gap:8px;margin-top:12px}
+  & .tl-as .basis,& .tl-seg{height:2px;top:59px}
+  & .tl-punt{width:14px;height:14px;margin-left:-7px;top:53px;border:1.5px solid var(--zwart)}
+  & .tl-tekst b{font-size:12.5px;font-weight:600}
+  & .tl-tekst span{font-family:var(--mono);font-size:11.5px}
+  & .tl-vandaag span{border-radius:3px;font-weight:600}
+  & .plan-scroll{box-shadow:none}
+  & .plan-lbl a,& .plan-lbl b{font-weight:600;font-size:13px}
+  & .plan-groep{font-weight:600;font-size:14px;letter-spacing:0}
+
+  /* details, geld, logboek, open punten */
+  & .gegevens{gap:12px}
+  & .gegevens .kaart{padding:12px 14px}
+  & .velden{gap:8px}
+  & .velden dd{font-size:13.5px}
+  & .velden dd a,& .linklijst a{font-weight:600;text-decoration-thickness:1px}
+  & .geld{gap:10px}
+  & .geld .kaart{padding:12px 14px}
+  & .cijfer{font-weight:600;font-size:22px;letter-spacing:0;font-family:var(--mono)}
+  & .meter{height:4px}
+  & .log{border-left:1px solid var(--lijn);margin-left:5px}
+  & .log li{padding:0 0 10px 18px;font-size:13.5px;line-height:19px}
+  & .log li::before{left:-5px;top:5px;width:9px;height:9px;border:1.5px solid var(--stil)}
+  & .log time{font-family:var(--mono);font-size:11.5px}
+  & .open-grid{gap:10px;padding-top:8px}
+  & .open-grid .kaart{padding:10px 12px}
+  & .open-grid .kaart h3{font-size:14px;line-height:19px;margin-bottom:6px}
+  & .open-grid dl{font-size:12.5px;line-height:17px}
+  & .disciplines-kop h3,& .leveranciers-kop{font-weight:600;font-size:14px;letter-spacing:0}
+  & .meeting-rij{padding:10px 12px;gap:6px}
+  & .meeting-naam{font-weight:600;font-size:15px;letter-spacing:0}
+  & .puntgroep h3,& .delen-deel h3{font-weight:600;font-size:15px;letter-spacing:0}
+  & .code-cijfers,& .code-invoer{font-weight:600;font-family:var(--mono)}
+
+  /* vensters, toast, feedbackknop */
+  & .datumvenster{border:var(--rand-sterk)}
+  & .datumvenster-kop h2,& .bevestig .datumvenster-kop h2{font-size:17px;line-height:22px}
+  & .bevestig-tekst{font-size:14px}
+  & .notitie-paneel{padding:10px 12px 12px;gap:10px}
+  & .toast{border-radius:var(--radius-s);padding:8px 14px 8px 12px;font-size:13px}
+  & .feedback-knop{height:32px;padding:0 12px 0 10px;font-size:13px;box-shadow:var(--zacht-hoog)}
+
+  @media (max-width:760px){
+    & .wrap{padding:0 16px}
+  }
+}
+
+/* De keuze tussen de thema's in de balk. Hoort bij beide thema's: hier, bij het thema waar hij om draait. */
+.themakeuze button{padding:4px 12px;font-size:12px}
+.mm-groep>.label{margin:0 0 8px}

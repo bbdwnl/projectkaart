@@ -1,6 +1,9 @@
 <script setup lang="ts">
 const route = useRoute()
 const metBalk = computed(() => route.path !== '/login' && !route.meta.extern)
+// De vormgeving (Kaarten of Zakelijk) als attribuut op <html>: thema-zakelijk.css hangt daaraan.
+const { thema } = useThema()
+useHead({ htmlAttrs: { 'data-thema': thema } })
 </script>
 
 <template>

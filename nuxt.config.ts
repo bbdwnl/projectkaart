@@ -45,6 +45,7 @@ export default defineNuxtConfig({
     '@fontsource-variable/schibsted-grotesk',
     '~/assets/css/tokens.css',
     '~/assets/css/main.css',
+    '~/assets/css/thema-zakelijk.css',
   ],
 
   app: {
