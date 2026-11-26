@@ -61,7 +61,7 @@ const fasetabs = computed(() => FASEN.map((f) => {
 
 const FILTERS: { id: Filter, naam: string }[] = [{ id: 'open', naam: 'Open' }, { id: 'klaar', naam: 'Klaar' }, { id: 'alles', naam: 'Alles' }]
 const UITLEG: Record<Filter, string> = {
-  open: 'Wat nog moet gebeuren, het dringendste bovenaan.', klaar: 'Wat definitief is.', alles: 'Alle taken van deze fase.',
+  open: 'Wat nog moet gebeuren, het dringendste bovenaan.', klaar: 'Wat definitief is of akkoord.', alles: 'Alle taken van deze fase.',
   telaat: 'Alleen wat te laat is.', letop: 'Alleen wat aandacht vraagt.',
 }
 const leegTekst = computed(() => {

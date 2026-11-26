@@ -55,6 +55,11 @@ describe('beoordeel', () => {
     expect(beoordeel(d('2026-01-01'), taak({ status: 'definitief', document_naam: 'x.pdf' }), NU).licht).toBe('klaar')
     expect(beoordeel(d('2026-01-01'), taak({ status: 'definitief' }), NU)).toMatchObject({ licht: 'klaar', woord: 'Klaar' })
   })
+  it('een klantakkoord is klaar, ook als de status nog loopt of de deadline voorbij is', () => {
+    expect(beoordeel(d('2026-01-01'), taak({ status: 'loopt', klantakkoord: true }), NU)).toMatchObject({ licht: 'klaar', woord: 'Klaar', reden: 'Klantakkoord' })
+    expect(beoordeel(null, taak({ klantakkoord: true }), NU).licht).toBe('klaar')
+    expect(beoordeel(d('2026-01-01'), taak({ status: 'loopt', klantakkoord: false }), NU).licht).toBe('telaat')
+  })
   it('n.v.t. vraagt een reden', () => {
     expect(beoordeel(null, taak({ status: 'nvt', reden_nvt: 'Nieuwbouw' }), NU)).toMatchObject({ licht: 'later', woord: 'N.v.t.' })
     expect(beoordeel(null, taak({ status: 'nvt' }), NU).licht).toBe('letop')

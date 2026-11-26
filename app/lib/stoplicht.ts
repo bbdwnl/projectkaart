@@ -42,13 +42,13 @@ export interface Beoordeling {
   dagen: number | null
 }
 
-type TaakStand = Pick<Taak, 'status' | 'reden_nvt'>
+type TaakStand = Pick<Taak, 'status' | 'reden_nvt'> & Partial<Pick<Taak, 'klantakkoord'>>
 
 /**
  * Het stoplicht van één taak. Nooit met de hand gezet:
- * - groen: definitief, met of zonder document (beslissing 44)
+ * - groen: definitief, met of zonder document (beslissing 44), of de klant ging akkoord (beslissing 47)
  * - oranje: n.v.t. zonder reden, of deadline binnen 14 dagen
- * - rood: deadline voorbij en nog niet definitief
+ * - rood: deadline voorbij en nog niet definitief of akkoord
  * - grijs: n.v.t. (met reden) of volgende fase
  */
 export function beoordeel(deadline: Date | null, taak: TaakStand | undefined, nu: Date): Beoordeling {
@@ -60,6 +60,7 @@ export function beoordeel(deadline: Date | null, taak: TaakStand | undefined, nu
   }
   if (status === 'volgende_fase') return { licht: 'later', woord: 'Later', reden: 'Schuift door naar de volgende fase', deadline, dagen: null }
   if (status === 'definitief') return { licht: 'klaar', woord: 'Klaar', reden: 'Definitief', deadline, dagen: null }
+  if (taak?.klantakkoord) return { licht: 'klaar', woord: 'Klaar', reden: 'Klantakkoord', deadline, dagen: null }
   if (!deadline) return { licht: 'open', woord: 'Open', reden: 'Geen deadline', deadline: null, dagen: null }
   const n = dagenTussen(nu, deadline)
   if (n < 0) return { licht: 'telaat', woord: 'Te laat', reden: `${dagen(-n)} te laat`, deadline, dagen: n }
