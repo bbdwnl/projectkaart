@@ -3,7 +3,7 @@
 Eén plek per project: wat klaar is, wat openstaat en wie wat heeft afgetekend. Per project een
 kaart met een stoplicht dat zichzelf uitrekent, de procesflow van lead tot nazorg, de planning,
 standaardtaken plus uitzonderingen, documentlinks naar SharePoint en een logboek.
-Nuxt 4 + Supabase (Frankfurt).
+Nuxt 4 + Supabase (Frankfurt). Live op **https://projectkaart.bbdw.nl** (Vercel).
 
 - **Vormgeving:** [design-referentie.html](design-referentie.html), open in de browser
 - **Beslissingen, advies en open vragen:** [docs/BESLISSINGEN.md](docs/BESLISSINGEN.md) ← lees dit eerst
@@ -46,12 +46,14 @@ npm run build
    - **Providers**: Email aan, met Confirm email aan. De link is een uur geldig (Email OTP Expiration 3600).
      Alle andere providers uit (ook Azure van eerder, en Anonymous Sign-Ins). Alleen een inlog met een link per
      mail geeft toegang; de database bewaart geen wachtwoorden, dus inloggen met een wachtwoord kan niet.
-   - **URL Configuration**: Site URL = het adres van de app op Vercel. Bij Redirect URLs dat adres en
-     `http://localhost:3000`, elk met `/**` erachter.
+   - **URL Configuration**: Site URL = `https://projectkaart.bbdw.nl` (zonder `/` aan het eind). De link in de
+     inlogmail is daarop gebouwd (`{{ .SiteURL }}`), dus een ander adres hier stuurt iedereen naar dat adres.
+     Bij Redirect URLs `https://projectkaart.bbdw.nl/**` en `http://localhost:3000/**`.
    - Optioneel, op een betaald plan: Sessions → Time-box user sessions op 168 uur. De app en de database
      houden de week ook zelf bij.
 3. **Omgeving** (Vercel en `.env`, zie [.env.example](.env.example)):
-   `NUXT_PUBLIC_SUPABASE_URL` en `NUXT_PUBLIC_SUPABASE_KEY`.
+   `NUXT_PUBLIC_SUPABASE_URL` en `NUXT_PUBLIC_SUPABASE_KEY`. In Vercel onder Domains: `projectkaart.bbdw.nl` als
+   hoofddomein, en het oude `projectkaart-nine.vercel.app` met een doorverwijzing (308) daarnaartoe.
 4. **Delen met leveranciers.** Zet in Vercel `NUXT_SUPABASE_SERVICE_KEY` (Supabase → Project Settings → API:
    de service-role of secret key). Die sleutel blijft op de server: alleen `server/api/punten` gebruikt hem om
    de pagina van een leverancier te vullen, na controle van de link en de code. Zonder sleutel werkt de rest
