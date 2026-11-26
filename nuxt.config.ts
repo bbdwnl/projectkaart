@@ -81,7 +81,16 @@ export default defineNuxtConfig({
     // server/api/punten de open punten voor de pagina van een leverancier, en maakt server/api/backup de back-up.
     // Leeg = delen en de back-up werken nog niet.
     supabaseServiceKey: '',
+    // Het geheim waarmee de server de sessies achter de koppelingen met Copilot versleutelt (NUXT_COPILOT_GEHEIM), alleen
+    // op de server, minstens 32 tekens. Leeg = Copilot (/api/mcp, OAuth) werkt nog niet. Zie server/utils/copilot.ts.
+    copilotGeheim: '',
+    // Extra hosts die als terugadres van Microsoft (Copilot Studio) gelden, met komma's (NUXT_COPILOT_TERUGADRESSEN),
+    // bijvoorbeeld .example.microsoft.com. Alleen nodig als Copilot Studio een ander adres gebruikt dan *.consent.azure-apim.net.
+    copilotTerugadressen: '',
     public: {
+      // Het vaste adres van de app (NUXT_PUBLIC_APP_URL), https://projectkaart.bbdw.nl: de uitgever van
+      // de OAuth-tokens voor Copilot. Leeg = het adres waarop het verzoek binnenkomt.
+      appUrl: '',
       // Supabase (NUXT_PUBLIC_SUPABASE_URL en _KEY). Verplicht: zonder start de app niet.
       supabaseUrl: '',
       supabaseKey: '',

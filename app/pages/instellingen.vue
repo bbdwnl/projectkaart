@@ -3,9 +3,10 @@ import type { Leverancier, ProjectLeverancier } from '~/lib/types'
 
 // Instellingen voor alle projecten: de globale lijst met leveranciers (iedereen), en de keuzelijsten van de app (alleen
 // het MT past die aan): mensen per rol, de namen in de keuzelijsten, het takenpakket en wat er bij elke overdracht klaar
-// moet zijn. Alle tabbladen blijven staan bij wisselen, zodat wat je nog niet opsloeg niet verloren gaat.
+// moet zijn. Alle tabbladen blijven staan bij wisselen, zodat wat je nog niet opsloeg niet verloren gaat. Copilot: je eigen
+// sleutel voor de MCP-server (iedereen).
 useHead({ title: 'Instellingen · Projectkaart' })
-type Tab = 'leveranciers' | 'mensen' | 'keuzelijsten' | 'takenpakket' | 'overdracht' | 'uitzonderingen'
+type Tab = 'leveranciers' | 'mensen' | 'keuzelijsten' | 'takenpakket' | 'overdracht' | 'uitzonderingen' | 'copilot'
 const TABS: { id: Tab, naam: string }[] = [
   { id: 'leveranciers', naam: 'Leveranciers' },
   { id: 'mensen', naam: 'Mensen' },
@@ -13,6 +14,7 @@ const TABS: { id: Tab, naam: string }[] = [
   { id: 'takenpakket', naam: 'Takenpakket' },
   { id: 'overdracht', naam: 'Overdracht' },
   { id: 'uitzonderingen', naam: 'Uitzonderingen' },
+  { id: 'copilot', naam: 'Copilot' },
 ]
 const tab = useTabblad<Tab>('leveranciers', TABS.map(t => t.id))
 const { gebruiker } = useGebruiker()
@@ -112,6 +114,7 @@ async function weg(l: Leverancier) {
     <InstellingenTakenpakket v-show="tab === 'takenpakket'" />
     <InstellingenOverdracht v-show="tab === 'overdracht'" />
     <InstellingenUitzonderingen v-show="tab === 'uitzonderingen'" />
+    <InstellingenCopilot v-show="tab === 'copilot'" />
 
     <section v-show="tab === 'leveranciers'" id="leveranciers" class="blok instellingen">
       <div class="blokkop">

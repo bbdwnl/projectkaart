@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bestandVan, maakSql, TABELLEN, teOud } from '../server/utils/backup'
+import { bestandVan, maakSql, NIET_IN_BACKUP, TABELLEN, teOud } from '../server/utils/backup'
 
 describe('back-up', () => {
   const nu = new Date('2026-10-29T03:00:00Z')
@@ -30,7 +30,7 @@ describe('back-up', () => {
     const sql = readdirSync(map).map(f => readFileSync(new URL(f, map), 'utf8')).join('\n')
     const gemaakt = [...sql.matchAll(/create table public\.([a-z_]+)/g)].map(m => m[1]!)
     const weg = [...sql.matchAll(/drop table (?:if exists )?public\.([a-z_]+)/g)].map(m => m[1]!)
-    expect(TABELLEN.map(t => t.naam).sort()).toEqual(gemaakt.filter(t => !weg.includes(t)).sort())
+    expect(TABELLEN.map(t => t.naam).sort()).toEqual(gemaakt.filter(t => !weg.includes(t) && !NIET_IN_BACKUP.includes(t)).sort())
   })
 
   it('bewaart dertig dagen, op naam van het bestand', () => {

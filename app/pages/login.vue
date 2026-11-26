@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { EmailOtpType } from '@supabase/supabase-js'
-import { veiligPad } from '~/lib/inlog'
+import { leesCode, MAX_FOUTE_CODES, veiligPad } from '~/lib/inlog'
 
 // Inloggen met een link per mail: je vult je adres in, krijgt een link, en blijft een week ingelogd. Het scherm zegt
 // niet welk domein mag. Na vijf foute adressen op rij gaat het adresveld vijf minuten dicht, ook dat zonder melding.
@@ -9,11 +9,14 @@ import { veiligPad } from '~/lib/inlog'
 useHead({ title: 'Inloggen · Projectkaart' })
 const route = useRoute()
 const router = useRouter()
-const { gebruiker, stuurLink, devInloggen, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, melding, geblokkeerdTot } = useGebruiker()
+const { gebruiker, stuurLink, devInloggen, metLink, metCode, terugNaInloggen, bewaarNaam, naamVoorstel, melding, geblokkeerdTot } = useGebruiker()
 const bezig = ref(false)
 const email = ref('')
 const naam = ref('')
 const verstuurd = ref(false)
+/** De code uit de mail: inloggen in dit venster, ook als de link in een andere browser opengaat. */
+const code = ref('')
+const fouteCodes = ref(0)
 const tokenHash = computed(() => (typeof route.query.token_hash === 'string' ? route.query.token_hash : ''))
 const TYPES: EmailOtpType[] = ['email', 'magiclink', 'signup', 'invite']
 const linkType = computed(() => TYPES.find(t => t === route.query.type) ?? 'email')
@@ -62,6 +65,17 @@ async function verstuur() {
         return
       }
       if (!gebruiker.value?.naamNodig) await navigateTo(terug())
+    } else if (stap.value === 'verstuurd') {
+      const c = leesCode(code.value)
+      if (!c) {
+        melding.value = 'Typ de code uit de mail: alleen cijfers.'
+        return
+      }
+      // Gelukt: de watch hierboven gaat verder (naar waar je was), of de vraag naar je naam verschijnt.
+      if (!await metCode(email.value, c)) {
+        fouteCodes.value++
+        if (fouteCodes.value >= MAX_FOUTE_CODES) melding.value = 'Te veel verkeerde codes. Vraag een nieuwe link aan.'
+      }
     } else {
       // Op localhost in dev: direct inloggen zonder mail (devInloggen). Anders de gewone weg: een link per mail.
       if (!await devInloggen(email.value, typeof route.query.terug === 'string' ? route.query.terug : '/')) {
@@ -75,10 +89,12 @@ async function verstuur() {
 
 function anderAdres() {
   verstuurd.value = false
+  code.value = ''
+  fouteCodes.value = 0
   melding.value = ''
 }
 
-const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['', ''], link: ['Inloggen', 'Inloggen…'], naam: ['Verder', 'Opslaan…'] } as const
+const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['Inloggen met code', 'Inloggen…'], link: ['Inloggen', 'Inloggen…'], naam: ['Verder', 'Opslaan…'] } as const
 </script>
 
 <template>
@@ -97,6 +113,11 @@ const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['', ''], 
       </template>
       <template v-else-if="stap === 'verstuurd'">
         <p class="lead">De inloglink staat klaar in <b>{{ email.trim().toLowerCase() }}</b>. Open hem en klik op Inloggen. De link werkt één keer en een uur lang.</p>
+        <div class="login-veld">
+          <label for="code">Of typ hier de code uit de mail</label>
+          <input id="code" v-model="code" class="veld login-code" autocomplete="one-time-code" inputmode="numeric" maxlength="14" :disabled="fouteCodes >= MAX_FOUTE_CODES">
+          <small class="klein">Handig als de link in een andere browser opengaat, bijvoorbeeld vanuit het inlogvenster van Copilot.</small>
+        </div>
         <p class="klein">Niets gekregen? Kijk ook bij ongewenste mail. <button type="button" class="link" @click="anderAdres">Ander adres of opnieuw sturen</button></p>
       </template>
       <template v-else-if="stap === 'link'">
@@ -110,7 +131,7 @@ const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['', ''], 
         </div>
       </template>
 
-      <button v-if="stap !== 'verstuurd'" type="submit" class="knop zwart groot" :disabled="bezig || (stap === 'adres' && dicht)">{{ KNOP[stap][bezig ? 1 : 0] }}</button>
+      <button type="submit" class="knop zwart groot" :disabled="bezig || (stap === 'adres' && dicht) || (stap === 'verstuurd' && fouteCodes >= MAX_FOUTE_CODES)">{{ KNOP[stap][bezig ? 1 : 0] }}</button>
       <p v-if="melding" class="fout-melding" role="alert">{{ melding }}</p>
     </form>
   </main>

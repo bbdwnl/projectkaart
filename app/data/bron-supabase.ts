@@ -23,7 +23,9 @@ const TEKENINGEN = 'tekeningen'
 /** De pagina van de leverancier praat met de server (server/api/punten), niet met de database. */
 async function viaServer<T>(pad: string, body: { code: string } & Record<string, unknown>): Promise<T> {
   try {
-    return await ($fetch(pad, { method: 'POST', body }) as Promise<T>)
+    // Zonder de getypeerde routes van Nitro: die worden te diep sinds deze bron ook op de server draait (Copilot).
+    const haal = $fetch as unknown as (pad: string, opties: { method: 'POST', body: object }) => Promise<T>
+    return await haal(pad, { method: 'POST', body })
   } catch (e) {
     const status = (e as { statusCode?: number }).statusCode
     throw new BronFout(status === 503

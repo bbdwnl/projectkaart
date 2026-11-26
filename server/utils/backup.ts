@@ -23,6 +23,12 @@ export const TABELLEN: { naam: string, volgorde: string, identity?: string }[] =
   { naam: 'feedback', volgorde: 'id' },
 ]
 
+/**
+ * Niet in de back-up: de koppelingen met Copilot (OAuth). Daarin staan versleutelde sessies en hashes van tokens; die
+ * horen niet in een bestand dat 30 dagen blijft liggen, en na terugzetten koppelt iedereen Copilot gewoon opnieuw.
+ */
+export const NIET_IN_BACKUP = ['oauth_clients', 'oauth_codes', 'copilot_koppelingen']
+
 export const BUCKET = 'backups'
 /** Zoveel dagen blijven bewaard; oudere bestanden gaan weg. */
 export const BEWAAR_DAGEN = 30

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FOUT_ADRES, GEEN_POGINGEN, inlogMoment, leesPogingen, naamUitEmail, naFoutAdres, vanDomein, veiligPad, verlooptOp } from '~/lib/inlog'
+import { FOUT_ADRES, GEEN_POGINGEN, inlogMoment, leesCode, leesPogingen, naamUitEmail, naFoutAdres, vanDomein, veiligPad, verlooptOp } from '~/lib/inlog'
 
 /** Een access token zoals Supabase het geeft; alleen het middelste deel telt hier. */
 const token = (claims: object) => `kop.${btoa(JSON.stringify(claims)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}.handtekening`
@@ -66,5 +66,17 @@ describe('inloggen met een link', () => {
     expect(naamUitEmail('jan.de.vries@bbdw.nl')).toBe('Jan de Vries')
     expect(naamUitEmail('b.van.bergen@bbdw.nl')).toBe('B. van Bergen')
     expect(naamUitEmail('MICHIEL_JANSEN@bbdw.nl')).toBe('Michiel Jansen')
+  })
+})
+
+describe('inloggen met de code uit de mail', () => {
+  it('leest de code zoals je hem typt of plakt, en niets anders', () => {
+    expect(leesCode('123456')).toBe('123456')
+    expect(leesCode(' 123 456 ')).toBe('123456')
+    expect(leesCode('1234-5678')).toBe('12345678')
+    expect(leesCode('12345')).toBeNull()
+    expect(leesCode('12345678901')).toBeNull()
+    expect(leesCode('12a456')).toBeNull()
+    expect(leesCode('')).toBeNull()
   })
 })

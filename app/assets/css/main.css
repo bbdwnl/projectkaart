@@ -962,6 +962,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .login-veld{display:grid;gap:6px;margin:0 0 16px;max-width:360px}
 .login-veld label{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
 .login-veld .veld{height:42px;font-size:15px}
+.login-veld .login-code{font-family:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;font-size:20px;letter-spacing:.25em}
+.login-veld small{color:var(--stil)}
 .login-kaart .lead b{font-weight:700;overflow-wrap:anywhere}
 .login-kaart .klein{margin:0;color:var(--stil)}
 .login-kaart .klein .link{font-size:inherit}
@@ -1231,3 +1233,20 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
 .bevestig-tekst{margin:-6px 0 0;font-size:15px;line-height:1.45}
 .bevestig textarea.veld{min-height:84px;padding:10px 12px;font-size:15px;resize:vertical}
 .knop.zwart.gevaar{background:var(--baksteen-diep);border-color:var(--baksteen-diep)}
+
+/* instellingen: copilot */
+.copilot-uitleg{display:grid;gap:12px;margin-top:34px;padding-top:26px}
+.copilot-uitleg p.klein{margin:0}
+.copilot-rij{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.copilot-rij .veld{flex:1 1 320px;min-width:0;height:38px}
+.copilot-code,.copilot code{font-family:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;font-size:13px}
+.copilot-lijst{margin-top:26px}
+.copilot-lijst .kolkop,.copilot-lijst .rij-hoofd{grid-template-columns:minmax(0,1.3fr) 170px 120px 120px}
+.copilot-naam{display:block;font-weight:400}
+
+/* copilot koppelen (OAuth) */
+.koppelen-kaart{max-width:640px;margin:40px auto;display:grid;gap:12px}
+.koppelen-kaart h1{font-size:24px;line-height:1.2;margin:0}
+.koppelen-kaart p,.koppelen-kaart ul{margin:0}
+.koppelen-kaart ul{padding-left:20px;display:grid;gap:4px}
+.koppelen-knoppen{display:flex;align-items:center;gap:14px;margin-top:8px}

@@ -145,6 +145,24 @@ export function useGebruiker() {
     return !!gebruiker.value
   }
 
+  /**
+   * De code uit dezelfde mail: inloggen in dít venster, ook als de link in een andere browser opengaat (bijvoorbeeld
+   * het inlogvenster van Copilot in Outlook of Teams). Even goed als de link: amr otp, een week geldig.
+   */
+  async function metCode(email: string, code: string): Promise<boolean> {
+    melding.value = ''
+    if (!sb) return false
+    const { data, error } = await sb.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code, type: 'email' })
+    if (error || !data.session) {
+      melding.value = error?.status === 429
+        ? 'Te veel pogingen. Wacht een paar minuten, of vraag een nieuwe link aan.'
+        : 'Deze code klopt niet of is verlopen. Kijk of je de nieuwste mail hebt.'
+      return false
+    }
+    await zet(data.session)
+    return !!gebruiker.value
+  }
+
   /** Waar je heen gaat na het inloggen: waar je was toen je de link aanvroeg, anders het begin. */
   function terugNaInloggen(): string {
     try {
@@ -191,5 +209,5 @@ export function useGebruiker() {
   const initialen = computed(() => (gebruiker.value?.naam ?? '')
     .split(/[\s.@]+/).filter(Boolean).slice(0, 2).map(w => w[0]!.toUpperCase()).join(''))
 
-  return { gebruiker, melding, geblokkeerdTot, start, stuurLink, devInloggen, metLink, terugNaInloggen, bewaarNaam, naamVoorstel, uitloggen, initialen }
+  return { gebruiker, melding, geblokkeerdTot, start, stuurLink, devInloggen, metLink, metCode, terugNaInloggen, bewaarNaam, naamVoorstel, uitloggen, initialen }
 }

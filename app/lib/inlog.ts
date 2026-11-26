@@ -34,6 +34,18 @@ export function inlogMoment(accessToken: string): Date | null {
   }
 }
 
+/**
+ * De code uit de mail, zoals je hem typt of plakt: spaties en streepjes tellen niet. Supabase maakt hem 6 tot 10 cijfers
+ * lang (Email OTP Length). Null als het er geen code van kan zijn.
+ */
+export function leesCode(tekst: string): string | null {
+  const code = tekst.replace(/[\s-]/g, '')
+  return /^\d{6,10}$/.test(code) ? code : null
+}
+
+/** Na zoveel verkeerde codes op rij vraag je een nieuwe link aan. Supabase remt het raden zelf ook af. */
+export const MAX_FOUTE_CODES = 5
+
 /** Tot wanneer een inlog van dit moment geldt. */
 export const verlooptOp = (moment: Date) => new Date(moment.getTime() + INLOGDUUR_DAGEN * 24 * 3600 * 1000)
 

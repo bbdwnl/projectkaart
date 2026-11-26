@@ -602,3 +602,60 @@ describe('beveiliging', () => {
     expect(zonder.rows.map(r => r.proname)).toEqual([])
   })
 })
+
+describe('copilot (oauth)', () => {
+  const SERVER = { role: 'service_role' }
+  const hash = (n: number) => n.toString(16).padStart(64, '0')
+  const CLIENT = `pkc_${'a'.repeat(43)}`
+  const koppel = (n: number, extra = '') => db.query<{ id: string, geldig_tot: string, aangemaakt_op: string }>(
+    `insert into public.copilot_koppelingen (gebruiker_id, client_id, sessie, toegang, toegang_hash, toegang_tot, ververs_hash${extra ? ', geldig_tot' : ''})
+     values ($1, $2, 'v1.a.b.c', 'v1.d.e.f', $3, now() + interval '1 hour', $4${extra ? `, ${extra}` : ''}) returning id, geldig_tot, aangemaakt_op`,
+    [MICHIEL.sub, CLIENT, hash(n), hash(n + 1000)])
+
+  beforeAll(async () => {
+    await db.query(`insert into public.oauth_clients (id, naam, redirect_uris) values ($1, 'Copilot Studio', array['https://global.consent.azure-apim.net/redirect/x'])`, [CLIENT])
+  })
+
+  it('zijn voor de browser niet te lezen of te maken, ook niet de eigen', async () => {
+    await koppel(1)
+    for (const t of ['oauth_clients', 'oauth_codes', 'copilot_koppelingen']) {
+      expect(await als(MICHIEL, `select * from public.${t}`), t).toHaveLength(0)
+    }
+    await expect(als(MICHIEL, `insert into public.oauth_clients (id, naam, redirect_uris) values ($1, 'x', array['https://vscode.dev/redirect'])`, [`pkc_${'b'.repeat(43)}`])).rejects.toThrow()
+    await expect(als(MICHIEL, `insert into public.oauth_codes (hash, client_id, gebruiker_id, redirect_uri, code_challenge, verloopt_op) values ($1, $2, $3, 'x', $4, now())`,
+      [hash(7), CLIENT, MICHIEL.sub, 'c'.repeat(43)])).rejects.toThrow()
+    expect(await als(SERVER, `select id from public.copilot_koppelingen`, [], 'service_role')).toHaveLength(1)
+  })
+
+  it('een code geldt vijf minuten, wat de server ook meestuurt', async () => {
+    const [c] = (await db.query<{ aangemaakt_op: string, verloopt_op: string }>(
+      `insert into public.oauth_codes (hash, client_id, gebruiker_id, redirect_uri, code_challenge, verloopt_op) values ($1, $2, $3, 'https://global.consent.azure-apim.net/redirect/x', $4, now() + interval '1 year') returning aangemaakt_op, verloopt_op`,
+      [hash(8), CLIENT, MICHIEL.sub, 'c'.repeat(43)])).rows
+    expect((Date.parse(c!.verloopt_op) - Date.parse(c!.aangemaakt_op)) / 60_000).toBeCloseTo(5, 5)
+  })
+
+  it('een koppeling geldt een week vanaf toestaan, en dat is niet op te rekken', async () => {
+    const [k] = (await koppel(2, `now() + interval '1 year'`)).rows
+    expect((Date.parse(k!.geldig_tot) - Date.parse(k!.aangemaakt_op)) / 864e5).toBeCloseTo(7, 5)
+    await db.query(`update public.copilot_koppelingen set geldig_tot = now() + interval '1 year', gebruiker_id = $2 where id = $1`, [k!.id, BENNO.sub])
+    const [na] = (await db.query<{ geldig_tot: string, gebruiker_id: string }>(`select geldig_tot, gebruiker_id from public.copilot_koppelingen where id = $1`, [k!.id])).rows
+    expect(na).toMatchObject({ geldig_tot: k!.geldig_tot, gebruiker_id: MICHIEL.sub })
+  })
+
+  it('verliest sessie en tokens bij intrekken, en ingetrokken blijft ingetrokken', async () => {
+    const [k] = (await koppel(3)).rows
+    await db.query(`update public.copilot_koppelingen set ingetrokken_op = now() where id = $1`, [k!.id])
+    await db.query(`update public.copilot_koppelingen set ingetrokken_op = null, sessie = 'v1.x.y.z', toegang_hash = $2 where id = $1`, [k!.id, hash(4)])
+    const [na] = (await db.query<Record<string, string | null>>(`select sessie, toegang, toegang_hash, ververs_hash, ingetrokken_op from public.copilot_koppelingen where id = $1`, [k!.id])).rows
+    expect(na).toMatchObject({ sessie: null, toegang: null, toegang_hash: null, ververs_hash: null })
+    expect(na!.ingetrokken_op).not.toBeNull()
+  })
+
+  it('hoogstens tien geldige koppelingen per persoon', async () => {
+    await db.query(`delete from public.copilot_koppelingen`)
+    for (let i = 10; i < 20; i++) await koppel(i)
+    await expect(koppel(20)).rejects.toThrow(/tien/)
+    await db.query(`update public.copilot_koppelingen set ingetrokken_op = now() where toegang_hash = $1`, [hash(10)])
+    await expect(koppel(20)).resolves.toBeTruthy()
+  })
+})

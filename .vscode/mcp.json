@@ -1,0 +1,15 @@
+{
+  // De Projectkaart als MCP-server voor GitHub Copilot (chat in de modus Agent). Copilot werkt namens jou: bij de
+  // eerste start opent VS Code de app om in te loggen en toe te staan (OAuth). Zie README, Copilot.
+  "servers": {
+    "projectkaart": {
+      "type": "http",
+      "url": "https://projectkaart.bbdw.nl/api/mcp"
+    },
+    // De app lokaal (npm run dev), met een lokale of de echte database (wat er in .env staat).
+    "projectkaart-lokaal": {
+      "type": "http",
+      "url": "http://localhost:3000/api/mcp"
+    }
+  }
+}
