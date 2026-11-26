@@ -66,6 +66,7 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
     async bewaarProject(id, wijziging) {
       const res = await sb.from('projecten').update(wijziging).eq('id', id).select().single()
       if (res.error?.code === UNIEK && res.error.message.includes('nummer')) throw new BronFout(`Er is al een project met projectnummer ${wijziging.nummer}.`)
+      if (res.error?.code === ZELF_GEMELD) throw new BronFout(res.error.message)
       return uitkomst(res, 'opslaan') as Project
     },
     async nieuwProject(invoer) {

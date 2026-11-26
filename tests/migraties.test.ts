@@ -271,8 +271,16 @@ describe('aftekenen en logboek', () => {
     await expect(als(MICHIEL, `insert into public.taken (project_id, lijst, sleutel, fase) values ($1, 'ontwikkeling', 'demarcatie', 'uitvoering')`, [projectId])).rejects.toThrow()
   })
 
+  it('laat alleen het MT de fase wisselen', async () => {
+    await expect(als(MICHIEL, `update public.projecten set fase = 'uitvoering' where id = $1`, [projectId])).rejects.toThrow('Alleen het MT')
+    // Dezelfde fase meesturen (zoals een formulier doet) is geen wissel.
+    await als(MICHIEL, `update public.projecten set fase = fase where id = $1`, [projectId])
+    const [nieuw] = await als<{ fase: string }>(MICHIEL, `insert into public.projecten (slug, naam, fase) values ('meteen-uitvoering', 'Meteen uitvoering', 'uitvoering') returning fase`)
+    expect(nieuw!.fase).toBe('uitvoering')
+  })
+
   it('logt een faseswitch op het project', async () => {
-    await als(MICHIEL, `update public.projecten set fase = 'uitvoering', postcode = '7311 AB', plaats = 'Apeldoorn-Zuid' where id = $1`, [projectId])
+    await als(BENNO, `update public.projecten set fase = 'uitvoering', postcode = '7311 AB', plaats = 'Apeldoorn-Zuid' where id = $1`, [projectId])
     const log = await als<{ veld: string, nieuw: string }>(MICHIEL, `select veld, nieuw from public.logboek where tabel = 'projecten' and project_id = $1 order by id`, [projectId])
     expect(log).toEqual([{ veld: 'fase', nieuw: 'uitvoering' }, { veld: 'postcode', nieuw: '7311 AB' }, { veld: 'plaats', nieuw: 'Apeldoorn-Zuid' }])
   })

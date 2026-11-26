@@ -6,6 +6,9 @@ import type { Fase, Subfase } from '~/lib/types'
 const emit = defineEmits<{ lamp: [licht: 'telaat' | 'letop' | 'klaar'], planning: [] }>()
 const { project, zin, wijzigProject } = useKaart()
 const { weergave } = useWeergave()
+const { gebruiker } = useGebruiker()
+/** Alleen het MT wisselt de fase (beslissing 49); de database dwingt het ook af. */
+const magFase = computed(() => !!gebruiker.value?.isMt)
 
 const rol = computed(() => faseInfo(project.value!.fase).rol)
 const eigenaar = computed(() => project.value?.[rol.value] ?? null)
@@ -53,7 +56,7 @@ function kiesFase(e: Event) {
     </div>
     <div class="meta">
       <label class="chip"><span class="label">Fase</span>
-        <select :value="project.fase" aria-label="Fase van het project" @change="kiesFase">
+        <select :value="project.fase" aria-label="Fase van het project" :disabled="!magFase" :title="magFase ? undefined : 'Alleen het MT kan de fase wisselen'" @change="kiesFase">
           <option v-for="f in FASEN" :key="f.id" :value="f.id">{{ f.naam }}</option>
         </select>
       </label>

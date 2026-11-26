@@ -82,6 +82,7 @@ section.blok{padding:58px 0 0}
 .chip.leeg{border-style:dashed;color:var(--stil)}
 .chip.leeg select{color:var(--stil);font-weight:500}
 .chip select{border:0;background:transparent;font-weight:700;font-size:14px;padding:0 2px;cursor:pointer}
+.chip select:disabled{cursor:default;color:inherit;opacity:1;appearance:none}
 .links{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:18px;font-size:14px}
 .links a{font-weight:700;text-underline-offset:3px;text-decoration-thickness:2px}
 .links .pad{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--grijs);border-radius:var(--radius-s);padding:2px 8px}
