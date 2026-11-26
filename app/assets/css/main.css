@@ -384,7 +384,8 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .velden dt{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--stil);margin-bottom:4px}
 .velden dd{margin:0;font-size:15px}
 .velden dd a{font-weight:700;text-underline-offset:3px;text-decoration-thickness:2px;white-space:nowrap}
-.velden select.veld{width:100%}
+/* een veld vult zijn vak en kan smaller worden dan zijn standaardbreedte, zodat het nooit buiten het kaartje loopt */
+.velden .veld{width:100%;min-width:0}
 .linklijst{list-style:none;margin:0;padding:0;display:grid;gap:14px}
 .linklijst a{font-weight:700;text-underline-offset:3px;text-decoration-thickness:2px}
 .linklijst small{display:block;font-size:12.5px;line-height:18px;color:var(--stil);margin-top:2px}
@@ -512,12 +513,14 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .projectgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:28px 18px;padding-top:22px}
 .projectkaartje{display:flex;flex-direction:column;gap:6px;text-decoration:none;padding:18px 18px 16px;animation:binnen-zacht .5s var(--uit) both;animation-delay:calc(var(--i,0)*35ms)}
 .projectkaartje .label{margin:0}
-.projectkaartje h3{font-weight:900;font-size:22px;line-height:1.05;letter-spacing:-.02em}
-.projectkaartje .chip.wie{align-self:flex-start;margin-top:4px;font-size:15px}
+/* even hoge kaartjes: de kop, drie regels naam en de telling hebben altijd hun plek */
+.projectkaartje .kaartje-kop{display:flex;align-items:center;justify-content:space-between;gap:8px;height:22px;flex:none}
+.projectkaartje h3{font-weight:900;font-size:22px;line-height:1.05;letter-spacing:-.02em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;height:3.15em;flex:none}
+.projectkaartje .chip.wie{align-self:flex-start;margin-top:4px;font-size:15px;max-width:100%;white-space:nowrap;overflow:hidden}
 .projectkaartje .chip.wie .label{font-size:9.5px}
 .projectkaartje .kaartje-datum{margin:0}
   .projectkaartje.met-telaat{border-color:var(--baksteen);box-shadow:0 0 0 3px rgba(194,110,96,.18),var(--zacht)}
-  .projectkaartje .kaartje-telling{display:flex;gap:10px;margin:4px 0 0;font-size:12.5px;line-height:18px;font-weight:700}
+  .projectkaartje .kaartje-telling{display:flex;gap:10px;margin:4px 0 0;font-size:12.5px;line-height:18px;height:18px;font-weight:700}
   .projectkaartje .kaartje-telling .telling-telaat{color:var(--baksteen-diep)}
   .projectkaartje .kaartje-telling .telling-open{color:var(--stil)}
 .mini-balk{display:flex;height:6px;border-radius:6px;overflow:hidden;background:var(--grijs);margin:6px 0 2px}
@@ -528,7 +531,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 /* één kolom over de hele breedte: de projecten als vierkante tegels, de naam boven en de stand onderaan */
 .gridview .kolom-lijst{grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr))}
 .gridview .projectkaartje{aspect-ratio:1/1;min-height:0;overflow:hidden}
-.gridview .projectkaartje h3{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;flex:none}
+.gridview .projectkaartje h3{height:auto}
 .gridview .projectkaartje .mini-balk{margin-top:auto}
 .gridview .kolom-scheiding{grid-column:1/-1}
 .kolom-kop{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;margin-bottom:18px;border-bottom:var(--rand)}
@@ -536,7 +539,6 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .kolom-lijst{display:grid;gap:16px}
 .kolom-scheiding{margin:8px 0 -4px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--stil)}
 .projectkaartje.afgehandeld h3{color:var(--stil)}
-.projectkaartje .afgehandeld-tab{align-self:flex-start}
 .kolom .leeg-staat{padding:18px}
 @media (max-width:1100px){
   .kolommen{grid-template-columns:repeat(2,minmax(0,1fr));gap:34px 22px}

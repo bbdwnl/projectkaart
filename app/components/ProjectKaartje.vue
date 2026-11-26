@@ -9,6 +9,8 @@ import { fmt, naarDatum, vandaag } from '~/lib/datum'
 // De balk zegt zijn stand in woorden in de tooltip en voor schermlezers.
 // In de weergave Zakelijk (beslissing 45) een compacte versie met meer per regel: plaats en subfase, ook PM en
 // opzichter, de taken in getallen en de volgende mijlpaal van de fase.
+// Alle kaartjes zijn even hoog: elke regel heeft een vaste plek, ook als hij leeg is, en een lange naam wordt
+// afgekapt (de hele naam staat in de tooltip).
 const props = defineProps<{
   k: Kaartje
   volgorde?: number
@@ -21,12 +23,12 @@ const info = computed(() => (zakelijk.value ? kaartjeInfo(props.k, vandaag()) : 
 
 <template>
   <NuxtLink v-if="info" :to="`/projecten/${k.p.slug}`" class="kaart til projectkaartje zakelijk-kaartje" :data-licht="k.licht" :class="{ afgehandeld: isAfgehandeld(k.p), 'met-telaat': k.t.telaat > 0, prio: k.p.prio }" :style="{ '--i': Math.min(volgorde ?? 0, 12) }">
-    <span v-if="k.p.nummer || k.p.prio || isAfgehandeld(k.p)" class="zk-kop">
+    <span class="zk-kop">
       <span class="zk-nummer">{{ k.p.nummer }}</span>
       <span v-if="k.p.prio" class="tab telaat">Prio</span>
       <span v-if="isAfgehandeld(k.p)" class="tab">Afgehandeld</span>
     </span>
-    <h3>{{ k.p.naam }}</h3>
+    <h3 :title="k.p.naam">{{ k.p.naam }}</h3>
     <span class="zk-regel zk-mensen">
       <span v-if="info.waar" class="zk-waar">{{ info.waar }}</span>
       <template v-if="info.mensen.length"><span v-for="m in info.mensen" :key="m.rol"><small>{{ m.rol }}</small> {{ m.naam }}</span></template>
@@ -42,15 +44,17 @@ const info = computed(() => (zakelijk.value ? kaartjeInfo(props.k, vandaag()) : 
       <span v-if="k.t.open">{{ k.t.open }} open</span>
       <span class="klaar">{{ k.t.klaar }}/{{ info.totaal }} klaar</span>
     </span>
-    <span v-if="datum" class="zk-regel zk-datum">{{ datum.naam }} <b>{{ datum.waarde ? fmt(naarDatum(datum.waarde)) : 'geen datum' }}</b></span>
-    <span v-else-if="info.mijlpaal" class="zk-regel zk-datum">
-      {{ info.mijlpaal.naam }} <b>{{ fmt(info.mijlpaal.datum) }}</b> · {{ dagenKort(info.mijlpaal.dagen) }}
+    <span class="zk-regel zk-datum">
+      <template v-if="datum">{{ datum.naam }} <b>{{ datum.waarde ? fmt(naarDatum(datum.waarde)) : 'geen datum' }}</b></template>
+      <template v-else-if="info.mijlpaal">{{ info.mijlpaal.naam }} <b>{{ fmt(info.mijlpaal.datum) }}</b> · {{ dagenKort(info.mijlpaal.dagen) }}</template>
     </span>
   </NuxtLink>
   <NuxtLink v-else :to="`/projecten/${k.p.slug}`" class="kaart til projectkaartje" :class="{ afgehandeld: isAfgehandeld(k.p), 'met-telaat': k.t.telaat > 0 }" :style="{ '--i': Math.min(volgorde ?? 0, 12) }">
-    <span v-if="k.p.nummer" class="label n">{{ k.p.nummer }}</span>
-    <h3>{{ k.p.naam }}</h3>
-    <span v-if="isAfgehandeld(k.p)" class="tab afgehandeld-tab">Afgehandeld</span>
+    <span class="kaartje-kop">
+      <span class="label n">{{ k.p.nummer }}</span>
+      <span v-if="isAfgehandeld(k.p)" class="tab afgehandeld-tab">Afgehandeld</span>
+    </span>
+    <h3 :title="k.p.naam">{{ k.p.naam }}</h3>
     <span class="mini-balk" role="img" :aria-label="balkTekst(k.t)" :title="balkTekst(k.t)">
       <span class="seg-telaat" :style="{ flexGrow: k.t.telaat }" /><span class="seg-letop" :style="{ flexGrow: k.t.letop }" />
       <span class="seg-klaar" :style="{ flexGrow: k.t.klaar }" /><span class="seg-open" :style="{ flexGrow: k.t.open }" />
@@ -59,7 +63,7 @@ const info = computed(() => (zakelijk.value ? kaartjeInfo(props.k, vandaag()) : 
       <span class="label">{{ ROLLEN[k.rol].kort }}</span><b v-if="k.wie">{{ k.wie }}</b><template v-else>nog niet gekozen</template>
     </span>
     <p v-if="datum" class="kaartje-datum klein">{{ datum.naam }}: {{ datum.waarde ? fmt(naarDatum(datum.waarde)) : 'geen datum' }}</p>
-    <p v-if="k.t.telaat || k.t.open" class="kaartje-telling klein">
+    <p class="kaartje-telling klein">
       <span v-if="k.t.telaat" class="telling-telaat">{{ k.t.telaat }} te laat</span>
       <span v-if="k.t.open" class="telling-open">{{ k.t.open }} open</span>
     </p>

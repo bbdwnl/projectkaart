@@ -139,24 +139,25 @@
   & .gridview .projectkaartje{aspect-ratio:auto}
   & .gridview .projectkaartje .mini-balk{margin-top:4px}
   & .projectkaartje{padding:8px 10px 8px 11px;gap:2px;animation-duration:.25s;animation-delay:0s}
-  & .projectkaartje h3{font-weight:600;font-size:14px;line-height:18px;letter-spacing:0}
+  & .projectkaartje h3{font-weight:600;font-size:14px;line-height:18px;letter-spacing:0;-webkit-line-clamp:2;line-clamp:2;height:36px}
   & .projectkaartje.met-telaat{border-color:var(--lijn);box-shadow:inset 3px 0 0 var(--baksteen)}
   & .projectkaartje[data-licht="letop"]{box-shadow:inset 3px 0 0 var(--oker)}
   & .projectkaartje.afgehandeld{background:var(--grijs-2)}
   & .projectkaartje .mini-balk{height:4px;border-radius:2px;margin:4px 0 2px}
-  & .zk-kop{display:flex;align-items:center;gap:6px;min-height:16px}
+  & .zk-kop{display:flex;align-items:center;gap:6px;height:16px;flex:none}
   & .zk-kop .tab{height:16px;font-size:9.5px;padding:0 5px}
   & .zk-nummer{font-family:var(--mono);font-size:11.5px;line-height:16px;color:var(--stil);margin-right:auto}
   & .zk-regel{display:flex;flex-wrap:wrap;gap:0 10px;font-size:12px;line-height:17px;color:var(--stil);min-width:0}
-  & .zk-mensen{color:var(--zwart)}
+  /* even hoge kaartjes: twee regels voor plaats en mensen, één voor de cijfers en één voor de datum */
+  & .zk-mensen{color:var(--zwart);height:34px;overflow:hidden;align-content:flex-start;flex:none}
   & .zk-mensen small{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--stil)}
   & .zk-leeg{color:var(--stil);font-style:italic}
   & .zk-waar{color:var(--stil)}
-  & .zk-cijfers{font-family:var(--mono);font-size:11px;gap:0 8px}
+  & .zk-cijfers{font-family:var(--mono);font-size:11px;gap:0 8px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden;height:17px;flex:none}
   & .zk-cijfers .telaat{color:var(--baksteen-diep);font-weight:600}
   & .zk-cijfers .letop{color:var(--oker-diep);font-weight:600}
   & .zk-datum b{font-family:var(--mono);font-weight:500;font-size:11.5px;color:var(--zwart)}
-  & .zk-datum{display:block}
+  & .zk-datum{display:block;height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
   & .zk-datum::first-letter{text-transform:uppercase}
 
   /* ---------- lijsten en tabellen: kortere rijen, kleinere letter ---------- */
