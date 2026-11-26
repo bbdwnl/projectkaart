@@ -256,8 +256,10 @@ export interface ProjectDiscipline {
   discipline: Discipline
   leverancier_id: string | null
   contact: string | null
+  /** Niet nodig in dit project: verborgen in de lijst, terug te zetten (beslissing 48). */
+  verborgen: boolean
 }
-export type DisciplineWijziging = Partial<Pick<ProjectDiscipline, 'leverancier_id' | 'contact'>>
+export type DisciplineWijziging = Partial<Pick<ProjectDiscipline, 'leverancier_id' | 'contact' | 'verborgen'>>
 
 /** Feedback uit de knop rechtsonder: de notitie, de pagina en eventueel de plek (pixels op de pagina). Wie en wanneer vult de database in. */
 export interface NieuweFeedback {

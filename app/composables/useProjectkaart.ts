@@ -1,6 +1,6 @@
 import type { InjectionKey } from 'vue'
 import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
-import type { Actie, ActieWijziging, Discipline, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
+import type { Actie, ActieWijziging, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
 import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, weggehaaldVan, type TaakRegel, type WeggehaaldeTaak } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
@@ -212,13 +212,13 @@ function maakKaart(slug: string) {
     }
     return bewaarDiscipline(d, { leverancier_id: leverancierId })
   }
-  async function bewaarDiscipline(d: Discipline, w: { leverancier_id?: string | null, contact?: string | null }): Promise<boolean> {
+  async function bewaarDiscipline(d: Discipline, w: DisciplineWijziging, melding = 'Opgeslagen'): Promise<boolean> {
     const p = project.value
     if (!p) return false
     try {
       const nieuw = await bron.bewaarDiscipline(p.id, d, w)
       disciplines.value = [...disciplines.value.filter(x => x.discipline !== d), nieuw]
-      toon('Opgeslagen')
+      toon(melding)
       return true
     } catch (e) {
       toon(foutTekst(e), 'fout')

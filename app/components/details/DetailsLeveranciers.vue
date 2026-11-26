@@ -26,7 +26,13 @@ const puntenTekst = (id: string) => {
 }
 
 // Per discipline één leverancier (uit dit project of de globale lijst) en een contactpersoon of telefoon.
-const ingevuld = computed(() => DISCIPLINES.filter(d => disciplineVan(d.id)?.leverancier_id).length)
+// Wat in dit project niet nodig is, verberg je met het kruisje (beslissing 48): het telt dan niet mee en staat
+// onderaan onder Verborgen, om terug te zetten.
+const zichtbaar = computed(() => DISCIPLINES.filter(d => !disciplineVan(d.id)?.verborgen))
+const verborgen = computed(() => DISCIPLINES.filter(d => disciplineVan(d.id)?.verborgen))
+const ingevuld = computed(() => zichtbaar.value.filter(d => disciplineVan(d.id)?.leverancier_id).length)
+const verberg = (d: { id: Discipline, naam: string }) => bewaarDiscipline(d.id, { verborgen: true }, `${d.naam} verborgen`)
+const terugzetten = (d: { id: Discipline, naam: string }) => bewaarDiscipline(d.id, { verborgen: false }, `${d.naam} staat weer in de lijst`)
 async function kiesVoor(d: Discipline, e: Event) {
   const el = e.target as HTMLSelectElement
   if (!(await kiesDiscipline(d, el.value || null))) el.value = disciplineVan(d)?.leverancier_id ?? ''
@@ -72,12 +78,12 @@ async function weg(l: Leverancier) {
     <div class="disciplines">
       <div class="disciplines-kop">
         <h3>Per discipline</h3>
-        <span class="klein n">{{ ingevuld }} / {{ DISCIPLINES.length }} ingevuld</span>
-        <span class="voortgang"><i :style="{ width: `${ingevuld / DISCIPLINES.length * 100}%` }" /></span>
+        <span class="klein n">{{ ingevuld }} / {{ zichtbaar.length }} ingevuld</span>
+        <span class="voortgang"><i :style="{ width: `${zichtbaar.length ? ingevuld / zichtbaar.length * 100 : 0}%` }" /></span>
       </div>
       <div class="lijst disciplinelijst">
-        <div class="kolkop"><span>Discipline</span><span>Leverancier</span><span>Contactpersoon, telefoon, notitie</span></div>
-        <div v-for="d in DISCIPLINES" :key="d.id" class="rij" :class="{ ingevuld: disciplineVan(d.id)?.leverancier_id }">
+        <div class="kolkop"><span>Discipline</span><span>Leverancier</span><span>Contactpersoon, telefoon, notitie</span><span /></div>
+        <div v-for="d in zichtbaar" :key="d.id" class="rij" :class="{ ingevuld: disciplineVan(d.id)?.leverancier_id }">
           <div class="rij-hoofd">
             <label class="titel" :for="`disc-${d.id}`">{{ d.naam }}</label>
             <select :id="`disc-${d.id}`" class="veld" :value="disciplineVan(d.id)?.leverancier_id ?? ''" @change="e => kiesVoor(d.id, e)">
@@ -90,10 +96,29 @@ async function weg(l: Leverancier) {
               </optgroup>
             </select>
             <input class="veld" :value="disciplineVan(d.id)?.contact ?? ''" placeholder="Bijvoorbeeld Jan de Vries · 06 1234 5678" :aria-label="`Contact ${d.naam}`" @change="e => contact(d.id, e)">
+            <button
+              type="button" class="taak-weg" :disabled="!!disciplineVan(d.id)?.leverancier_id"
+              :title="disciplineVan(d.id)?.leverancier_id ? 'Er is een leverancier gekozen; maak die eerst leeg om te verbergen' : 'Niet nodig in dit project: verbergen (terug te zetten)'"
+              :aria-label="`${d.naam} verbergen bij dit project`" @click="verberg(d)"
+            >
+              <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            </button>
           </div>
         </div>
       </div>
-      <p class="klein">Staat de leverancier er niet bij, maak hem hieronder aan; daarna kies je hem hier.</p>
+      <p class="klein">Staat de leverancier er niet bij, maak hem hieronder aan; daarna kies je hem hier. Is een discipline in dit project niet nodig, verberg hem dan met het kruisje.</p>
+      <details v-if="verborgen.length" class="weggehaald">
+        <summary class="klein">Verborgen bij dit project: {{ verborgen.length }} {{ verborgen.length === 1 ? 'discipline' : 'disciplines' }}</summary>
+        <p class="klein">Niet nodig in dit project, dus niet in de lijst en niet in de telling. Een contact dat er al stond, komt bij terugzetten terug.</p>
+        <div class="weg-groep">
+          <ul>
+            <li v-for="d in verborgen" :key="d.id">
+              <span>{{ d.naam }}</span>
+              <button type="button" class="link" :aria-label="`${d.naam} terugzetten`" @click="terugzetten(d)">Terugzetten</button>
+            </li>
+          </ul>
+        </div>
+      </details>
     </div>
 
     <h3 class="leveranciers-kop">Alle leveranciers op dit project</h3>

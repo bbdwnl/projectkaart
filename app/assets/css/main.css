@@ -601,13 +601,16 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .disciplines-kop h3,.leveranciers-kop{font-size:17px;font-weight:900;letter-spacing:-.01em;margin:0}
 .leveranciers-kop{margin:0 0 10px}
 .disciplines-kop .voortgang{width:120px;margin-left:0}
-.disciplinelijst .kolkop,.disciplinelijst .rij-hoofd{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.3fr);gap:12px;align-items:center}
+.disciplinelijst .kolkop,.disciplinelijst .rij-hoofd{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.3fr) 22px;gap:12px;align-items:center}
+.disciplinelijst .taak-weg{margin-left:0;vertical-align:middle}
+.disciplinelijst .taak-weg:disabled{cursor:not-allowed;opacity:0!important}
+.disciplines .weggehaald{margin-top:14px;padding-top:10px}
 .disciplinelijst .rij-hoofd{min-height:52px;padding-top:8px;padding-bottom:8px;grid-template-areas:none}
 .disciplinelijst .titel{font-weight:700;font-size:14.5px}
 .disciplinelijst .rij:not(.ingevuld) .titel{color:var(--stil);font-weight:400}
 .disciplinelijst .veld{width:100%}
 .disciplines>.klein{margin:8px 0 0}
-@media (max-width:760px){.disciplinelijst .kolkop{display:none}.disciplinelijst .rij-hoofd{grid-template-columns:1fr;gap:6px}}
+@media (max-width:760px){.disciplinelijst .kolkop{display:none}.disciplinelijst .rij-hoofd{grid-template-columns:minmax(0,1fr) 22px;gap:6px}.disciplinelijst .rij-hoofd>.veld{grid-column:1/-1}.disciplinelijst .taak-weg{grid-column:2;grid-row:1}}
 
 /* actielijst overleg (kaart, tabblad Acties) */
 .actielijst .kolkop,.actielijst .rij-hoofd{grid-template-columns:34px minmax(0,1fr) 150px 96px 150px 56px 32px;gap:10px;align-items:center;grid-template-areas:none}

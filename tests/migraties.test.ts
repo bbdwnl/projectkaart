@@ -170,6 +170,16 @@ describe('aftekenen en logboek', () => {
     expect(d).toEqual({ leverancier_id: null, contact: 'Kees · 06 1234 5678' })
   })
 
+  it('verbergt een discipline die niet nodig is, alleen zonder leverancier', async () => {
+    const [nieuw] = await als<{ verborgen: boolean }>(MICHIEL, `insert into public.project_disciplines (project_id, discipline) values ($1, 'zon') returning verborgen`, [projectId])
+    expect(nieuw!.verborgen).toBe(false)
+    const [weg] = await als<{ verborgen: boolean }>(MICHIEL, `update public.project_disciplines set verborgen = true where project_id = $1 and discipline = 'zon' returning verborgen`, [projectId])
+    expect(weg!.verborgen).toBe(true)
+    const [l] = await als<{ id: string }>(MICHIEL, `insert into public.leveranciers (naam) values ('Zon Oost') returning id`)
+    await als(MICHIEL, `insert into public.project_leveranciers (project_id, leverancier_id) values ($1, $2)`, [projectId, l!.id])
+    await expect(als(MICHIEL, `update public.project_disciplines set leverancier_id = $2 where project_id = $1 and discipline = 'zon'`, [projectId, l!.id])).rejects.toThrow()
+  })
+
   it('bewaart e-mailadressen van actiehouders, alleen geldige', async () => {
     await als(MICHIEL, `insert into public.adressen (naam, email) values ('Carlo', 'carlo@bbdw.nl')`)
     await expect(als(MICHIEL, `insert into public.adressen (naam, email) values ('Hugo', 'geen-adres')`)).rejects.toThrow()

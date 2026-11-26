@@ -372,9 +372,10 @@ export function maakDemoGegevens(nu: Date, basis: ProjectBasis[]): DemoGegevens 
   // Per discipline de leveranciers die op het project staan; Vlijtseweg ook met een paar lege vakken met alleen een contact.
   const disciplines: ProjectDiscipline[] = projectLeveranciers.flatMap((k) => {
     const d = DISCIPLINE_VAN[k.leverancier_id]
-    return d ? [{ project_id: k.project_id, discipline: d[0], leverancier_id: k.leverancier_id, contact: d[1] }] : []
+    return d ? [{ project_id: k.project_id, discipline: d[0], leverancier_id: k.leverancier_id, contact: d[1], verborgen: false }] : []
   })
-  disciplines.push({ project_id: vlijtseweg.id, discipline: 'lift', leverancier_id: null, contact: 'Nog uitvragen bij Liftservice Brabant' })
+  disciplines.push({ project_id: vlijtseweg.id, discipline: 'lift', leverancier_id: null, contact: 'Nog uitvragen bij Liftservice Brabant', verborgen: false })
+  disciplines.push({ project_id: vlijtseweg.id, discipline: 'zon', leverancier_id: null, contact: null, verborgen: true })
 
   // Acties uit het overleg op Vlijtseweg en de projecten in uitvoering: een paar te laat, een paar gereed.
   const acties: Actie[] = []
