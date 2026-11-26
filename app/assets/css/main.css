@@ -380,7 +380,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 /* ---------- details ---------- */
 .gegevens{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 18px;padding-top:12px}
 .gegevens .kaart{padding:26px 20px 18px}
-.velden{margin:0;display:grid;gap:14px}
+.velden{margin:0;display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
 .velden dt{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--stil);margin-bottom:4px}
 .velden dd{margin:0;font-size:15px}
 .velden dd a{font-weight:700;text-underline-offset:3px;text-decoration-thickness:2px;white-space:nowrap}
@@ -938,7 +938,7 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .analyse .titel{font-weight:700}
 
 /* details: velden */
-.velden .naast{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.velden .naast{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .velden .met-link{display:flex;align-items:center;gap:10px}
 .velden .met-link .veld{flex:1;min-width:0}
 .velden .met-link a,.velden .met-link .link{font-size:13px;white-space:nowrap}
