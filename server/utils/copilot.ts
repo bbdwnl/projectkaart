@@ -3,7 +3,7 @@ import type { H3Event } from 'h3'
 import type { Bron } from '../../app/data/bron'
 import { maakSupabaseBron } from '../../app/data/bron-supabase'
 import { emailUitToken, resourceVan, SCOPE, soortNaamVan, zetExtraTerugadressen } from '../mcp/oauth'
-import { hashVan, maakToken, ontsleutel, toegangUitKop, versleutel } from '../mcp/sleutel'
+import { hashVan, maakToken, MIN_GEHEIM, ontsleutel, toegangUitKop, versleutel } from '../mcp/sleutel'
 
 // Copilot werkt namens een medewerker, met een eigen inlogsessie van die medewerker (geen eigen rechten). Die sessie
 // begint als de medewerker de koppeling toestaat (server/utils/oauth.ts): de server logt dan voor hem in, zoals een link
@@ -21,8 +21,16 @@ const TOEGANG_SECONDEN = 3600
 export function copilotInstelling(event: H3Event) {
   const config = useRuntimeConfig(event)
   const { supabaseUrl: url, supabaseKey: publiek } = config.public
-  if (!url || !publiek || !config.supabaseServiceKey || !config.copilotGeheim) {
-    throw createError({ statusCode: 503, statusMessage: 'Copilot is nog niet ingesteld op de server (NUXT_COPILOT_GEHEIM en NUXT_SUPABASE_SERVICE_KEY).' })
+  // Alleen de namen van wat ontbreekt of niet klopt, nooit een waarde.
+  const mist = [
+    !url && 'NUXT_PUBLIC_SUPABASE_URL',
+    !publiek && 'NUXT_PUBLIC_SUPABASE_KEY',
+    !config.supabaseServiceKey && 'NUXT_SUPABASE_SERVICE_KEY',
+    !config.copilotGeheim && 'NUXT_COPILOT_GEHEIM',
+    config.copilotGeheim && config.copilotGeheim.length < MIN_GEHEIM && `NUXT_COPILOT_GEHEIM (minstens ${MIN_GEHEIM} tekens)`,
+  ].filter(Boolean)
+  if (mist.length) {
+    throw createError({ statusCode: 503, statusMessage: `Copilot is nog niet ingesteld op de server. Ontbreekt in Vercel: ${mist.join(', ')}.` })
   }
   zetExtraTerugadressen(config.copilotTerugadressen)
   return {
