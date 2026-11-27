@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bestandVan, maakSql, NIET_IN_BACKUP, TABELLEN, teOud } from '../server/utils/backup'
+import { bestandVan, geheimKlopt, maakSql, NIET_IN_BACKUP, TABELLEN, teOud } from '../server/utils/backup'
 
 describe('back-up', () => {
   const nu = new Date('2026-10-29T03:00:00Z')
@@ -36,5 +36,17 @@ describe('back-up', () => {
   it('bewaart dertig dagen, op naam van het bestand', () => {
     expect(bestandVan(nu)).toBe('2026-10-29.sql')
     expect(teOud(['2026-09-28.sql', '2026-09-29.sql', '2026-10-29.sql', 'iets-anders.txt'], nu)).toEqual(['2026-09-28.sql'])
+  })
+})
+
+describe('het geheim van de cron', () => {
+  it('klopt alleen als het precies gelijk is, en zonder geheim op de server klopt niets', () => {
+    expect(geheimKlopt('een-lang-geheim', 'een-lang-geheim')).toBe(true)
+    expect(geheimKlopt('een-lang-geheiM', 'een-lang-geheim')).toBe(false)
+    expect(geheimKlopt('een-lang-gehei', 'een-lang-geheim')).toBe(false)
+    expect(geheimKlopt('', '')).toBe(false)
+    expect(geheimKlopt('iets', undefined)).toBe(false)
+    expect(geheimKlopt(undefined, 'iets')).toBe(false)
+    expect(geheimKlopt(null, 'iets')).toBe(false)
   })
 })

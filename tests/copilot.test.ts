@@ -55,6 +55,9 @@ describe('oauth', () => {
   it('laat alleen Microsoft, VS Code en deze computer als terugadres toe', () => {
     expect(redirectSoort('https://global.consent.azure-apim.net/redirect/mcp-projectkaart')).toBe('microsoft')
     expect(redirectSoort('https://europe-002.consent.azure-apim.net/redirect')).toBe('microsoft')
+    expect(redirectSoort('https://teams.microsoft.com/api/platform/v1.0/oAuthRedirect')).toBe('microsoft')
+    expect(redirectSoort('https://teams.microsoft.com/api/anders')).toBeNull()
+    expect(redirectSoort('https://teams.microsoft.com/api/platform/v1.0/oAuthRedirect?naar=evil')).toBeNull()
     expect(redirectSoort('https://vscode.dev/redirect')).toBe('vscode')
     expect(redirectSoort('http://127.0.0.1:33418/')).toBe('lokaal')
     expect(redirectSoort('https://consent.azure-apim.net.evil.example/redirect')).toBeNull()

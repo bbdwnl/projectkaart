@@ -2,10 +2,11 @@
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { leesCode, MAX_FOUTE_CODES, veiligPad } from '~/lib/inlog'
 
-// Inloggen met een link per mail: je vult je adres in, krijgt een link, en blijft een week ingelogd. Het scherm zegt
+// Inloggen met een link per mail: je vult je adres in, krijgt een link, en blijft ingelogd zolang je de app gebruikt. Het scherm zegt
 // niet welk domein mag. Na vijf foute adressen op rij gaat het adresveld vijf minuten dicht, ook dat zonder melding.
 // De link brengt je hier terug met token_hash. Pas met een klik op Inloggen wordt hij gebruikt: de linkscanner van
-// Outlook opent links in de mail vooraf, en zou hem anders opmaken voordat jij erop klikt.
+// Outlook opent links in de mail vooraf, en zou hem anders opmaken voordat jij erop klikt. De pagina houdt token_hash vast
+// en haalt hem meteen uit de adresbalk, zodat hij niet in de geschiedenis van de browser blijft staan (beslissing 47).
 useHead({ title: 'Inloggen · Projectkaart' })
 const route = useRoute()
 const router = useRouter()
@@ -17,9 +18,11 @@ const verstuurd = ref(false)
 /** De code uit de mail: inloggen in dit venster, ook als de link in een andere browser opengaat. */
 const code = ref('')
 const fouteCodes = ref(0)
-const tokenHash = computed(() => (typeof route.query.token_hash === 'string' ? route.query.token_hash : ''))
+const tokenHash = ref(typeof route.query.token_hash === 'string' ? route.query.token_hash : '')
 const TYPES: EmailOtpType[] = ['email', 'magiclink', 'signup', 'invite']
-const linkType = computed(() => TYPES.find(t => t === route.query.type) ?? 'email')
+const linkType = ref<EmailOtpType>(TYPES.find(t => t === route.query.type) ?? 'email')
+// Herladen kan daarna niet meer (dan vraag je opnieuw een link aan, of opent de mail nog eens): de link is dan nog ongebruikt.
+if (tokenHash.value) router.replace({ query: Object.fromEntries(Object.entries(route.query).filter(([k]) => k !== 'token_hash' && k !== 'type')) })
 const stap = computed(() => {
   if (gebruiker.value?.naamNodig) return 'naam'
   if (tokenHash.value) return 'link'
@@ -61,7 +64,7 @@ async function verstuur() {
       if (await bewaarNaam(naam.value)) await navigateTo(terug())
     } else if (stap.value === 'link') {
       if (!await metLink(tokenHash.value, linkType.value)) {
-        await router.replace({ query: {} })
+        tokenHash.value = ''
         return
       }
       if (!gebruiker.value?.naamNodig) await navigateTo(terug())
@@ -105,7 +108,7 @@ const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['Inloggen
       <h1>{{ stap === 'naam' ? 'Welkom.' : stap === 'verstuurd' ? 'Kijk in je mail.' : 'Eén plek voor elk project.' }}</h1>
 
       <template v-if="stap === 'adres'">
-        <p class="lead">Vul je e-mailadres in. Je krijgt een link per mail; daarmee blijf je op dit apparaat een week ingelogd.</p>
+        <p class="lead">Vul je e-mailadres in. Je krijgt een link per mail; daarna blijf je op dit apparaat ingelogd zolang je de app gebruikt. Na 30 dagen zonder gebruik log je opnieuw in.</p>
         <div class="login-veld">
           <label for="email">E-mailadres</label>
           <input id="email" v-model="email" class="veld" type="email" autocomplete="email" inputmode="email" required :disabled="dicht">
@@ -121,7 +124,7 @@ const KNOP = { adres: ['Stuur inloglink', 'Versturen…'], verstuurd: ['Inloggen
         <p class="klein">Niets gekregen? Kijk ook bij ongewenste mail. <button type="button" class="link" @click="anderAdres">Ander adres of opnieuw sturen</button></p>
       </template>
       <template v-else-if="stap === 'link'">
-        <p class="lead">Klik op Inloggen. Daarna blijf je op dit apparaat een week ingelogd.</p>
+        <p class="lead">Klik op Inloggen. Daarna blijf je op dit apparaat ingelogd zolang je de app gebruikt.</p>
       </template>
       <template v-else>
         <p class="lead">Nog één ding: hoe heet je? Je naam staat bij wat je aftekent en wijzigt, zodat iedereen ziet wie het was. Je kiest hem één keer; daarna past alleen een beheerder hem aan.</p>

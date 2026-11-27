@@ -1,12 +1,12 @@
-import { BUCKET, bestandVan, maakSql, TABELLEN, teOud } from '../utils/backup'
+import { BUCKET, bestandVan, geheimKlopt, maakSql, TABELLEN, teOud } from '../utils/backup'
 
 // Elke nacht door Vercel Cron aangeroepen (nuxt.config, nitro.vercel.config.crons). Vercel stuurt het geheim mee als
 // Authorization: Bearer <CRON_SECRET>; zonder dat geheim doet de route niets. Leest alles met de service-rol en zet
 // het SQL-bestand in de besloten bucket backups. Daarna gaan bestanden ouder dan 30 dagen weg.
 export default defineEventHandler(async (event) => {
   // Vercel zet hetzelfde geheim (CRON_SECRET) in de omgeving en stuurt het mee; daarom geen NUXT_-variabele.
-  const geheim = process.env.CRON_SECRET
-  if (!geheim || getHeader(event, 'authorization') !== `Bearer ${geheim}`) {
+  const opgave = /^Bearer\s+(\S+)$/i.exec(getHeader(event, 'authorization') ?? '')?.[1]
+  if (!geheimKlopt(opgave, process.env.CRON_SECRET)) {
     throw createError({ statusCode: 401, statusMessage: 'Geen toegang.' })
   }
   const sb = serviceDatabase(event)

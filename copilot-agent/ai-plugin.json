@@ -1,0 +1,20 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.4/schema.json",
+  "schema_version": "v2.4",
+  "name_for_human": "Projectkaart",
+  "namespace": "projectkaart",
+  "description_for_human": "De Projectkaart van BbDW: projecten, taken, acties en het logboek.",
+  "description_for_model": "Tools van de Projectkaart van BbDW: projecten zoeken en bekijken met hun stoplicht, het logboek, opmerkingen en acties lezen, en taken, projectgegevens en acties bijwerken namens de ingelogde medewerker. Vraag bevestiging voor elke wijziging.",
+  "runtimes": [
+    {
+      "type": "RemoteMCPServer",
+      "auth": {
+        "type": "OAuthPluginVault",
+        "reference_id": "{{OAUTH_REGISTRATIE_ID}}"
+      },
+      "spec": {
+        "url": "https://projectkaart.bbdw.nl/api/mcp"
+      }
+    }
+  ]
+}

@@ -1,8 +1,12 @@
-// Inloggen met een link per mail: alleen adressen van het eigen domein, en een inlog geldt een week.
+// Inloggen met een link per mail: alleen adressen van het eigen domein, en een inlog blijft geldig zolang je de app
+// gebruikt (na 30 dagen zonder gebruik log je opnieuw in).
 // De database dwingt hetzelfde af (toegestane_domeinen() en inlogduur() in de migraties); dit is voor het scherm.
 
-/** Zo lang geldt een inlog, vanaf het moment van inloggen. Gebruik verlengt hem niet. Gelijk aan inlogduur() in SQL. */
-export const INLOGDUUR_DAGEN = 7
+/** Zo lang mag je de app niet gebruiken voordat je inlog verloopt; gebruik verlengt hem. Gelijk aan inlogduur() in SQL. */
+export const INLOGDUUR_DAGEN = 30
+
+/** Zo vaak meldt de app hoogstens dat je hem gebruikt (ik_ben_actief() in de database). */
+export const ACTIEF_MINUTEN = 15
 
 /**
  * Inloggen met een link per mail, zoals Supabase het in amr zet: otp (onze mail met token_hash), magiclink en
@@ -46,7 +50,7 @@ export function leesCode(tekst: string): string | null {
 /** Na zoveel verkeerde codes op rij vraag je een nieuwe link aan. Supabase remt het raden zelf ook af. */
 export const MAX_FOUTE_CODES = 5
 
-/** Tot wanneer een inlog van dit moment geldt. */
+/** Tot wanneer een inlog geldt als hij sinds dit moment (inloggen of laatste gebruik) niet meer wordt gebruikt. */
 export const verlooptOp = (moment: Date) => new Date(moment.getTime() + INLOGDUUR_DAGEN * 24 * 3600 * 1000)
 
 /** De melding bij een adres dat niet mag: hij zegt niet welk domein wel mag. */

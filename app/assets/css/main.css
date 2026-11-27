@@ -1249,6 +1249,10 @@ fieldset.kaal:disabled .inst-nieuw,fieldset.kaal:disabled .inst-knopjes button,f
 .copilot-lijst{margin-top:26px}
 .copilot-lijst .kolkop,.copilot-lijst .rij-hoofd{grid-template-columns:minmax(0,1.3fr) 170px 120px 120px}
 .copilot-naam{display:block;font-weight:400}
+.copilot-programmas .copilot-lijst{margin-top:6px}
+.copilot-programmas .kolkop,.copilot-programmas .rij-hoofd{grid-template-columns:minmax(0,1.4fr) 150px minmax(0,1fr) 170px}
+.copilot-acties{display:flex;gap:14px;justify-content:flex-end}
+.koppelen-nieuw{padding:12px 14px;border:var(--rand);border-radius:var(--radius)}
 
 /* copilot koppelen (OAuth) */
 .koppelen-kaart{max-width:640px;margin:40px auto;display:grid;gap:12px}

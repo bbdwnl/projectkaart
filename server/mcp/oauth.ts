@@ -47,7 +47,9 @@ export function zetExtraTerugadressen(lijst: string | undefined) {
 /**
  * Waarheen Copilot na Toestaan terug mag. Alleen bekende plekken, zodat niemand een eigen "client" registreert die een
  * collega via een link laat toestaan en zo zijn token krijgt:
- * - Copilot Studio en Microsoft 365 Copilot: de consent-dienst van Power Platform (*.consent.azure-apim.net)
+ * - Copilot Studio: de consent-dienst van Power Platform (*.consent.azure-apim.net)
+ * - Microsoft 365 Copilot met het eigen app-pakket (map copilot-agent): het vaste terugadres van het Teams Developer
+ *   Portal, https://teams.microsoft.com/api/platform/v1.0/oAuthRedirect ("hetzelfde voor elke plugin", Microsoft)
  * - VS Code: vscode.dev, of een poort op deze computer (127.0.0.1 of localhost, RFC 8252)
  * - Wat er in NUXT_COPILOT_TERUGADRESSEN staat (zetExtraTerugadressen): extra hosts van Microsoft, als Copilot Studio
  *   toch een ander adres blijkt te gebruiken. Dan hoeft er geen code te veranderen, alleen die variabele in Vercel.
@@ -62,6 +64,7 @@ export function redirectSoort(uri: string): 'microsoft' | 'vscode' | 'lokaal' | 
   }
   if (u.hash || u.username || u.password) return null
   if (u.protocol === 'https:' && (u.hostname === 'consent.azure-apim.net' || u.hostname.endsWith('.consent.azure-apim.net'))) return 'microsoft'
+  if (u.protocol === 'https:' && u.hostname === 'teams.microsoft.com' && u.pathname === '/api/platform/v1.0/oAuthRedirect' && !u.search) return 'microsoft'
   if (u.protocol === 'https:' && extraHosts.some(h => (h.startsWith('.') ? u.hostname.endsWith(h) : u.hostname === h))) return 'microsoft'
   if (u.protocol === 'https:' && ['vscode.dev', 'insiders.vscode.dev'].includes(u.hostname) && u.pathname === '/redirect') return 'vscode'
   if (u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname)) return 'lokaal'
@@ -157,6 +160,16 @@ export function emailUitToken(jwt: string): string | null {
   try {
     const email = JSON.parse(Buffer.from(jwt.split('.')[1] ?? '', 'base64url').toString('utf8')).email
     return typeof email === 'string' && email ? email : null
+  } catch {
+    return null
+  }
+}
+
+/** De sessie van Supabase in een access token (claim session_id): daaraan herkent de database een koppeling. */
+export function sessieIdUitToken(jwt: string): string | null {
+  try {
+    const id = JSON.parse(Buffer.from(jwt.split('.')[1] ?? '', 'base64url').toString('utf8')).session_id
+    return typeof id === 'string' && /^[0-9a-f-]{36}$/.test(id) ? id : null
   } catch {
     return null
   }

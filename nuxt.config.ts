@@ -1,36 +1,9 @@
-// Supabase in the CSP: every project on supabase.co, plus the configured URL when it lives elsewhere (a custom
-// domain, or a local `supabase start` on http://127.0.0.1:54321). Read at build time, like the rest of this file.
-const supabaseUrl = URL.canParse(process.env.NUXT_PUBLIC_SUPABASE_URL ?? '') ? new URL(process.env.NUXT_PUBLIC_SUPABASE_URL!) : null
-const supabase = [...new Set([
-  'https://*.supabase.co', 'wss://*.supabase.co',
-  ...(supabaseUrl ? [supabaseUrl.origin, `${supabaseUrl.protocol === 'http:' ? 'ws' : 'wss'}://${supabaseUrl.host}`] : []),
-])]
-const supabaseHttp = supabase.filter(h => h.startsWith('http')).join(' ')
+import { beveiligingsKoppen } from './server/utils/koppen'
 
-// Security headers for every response. Scripts only from the app itself: Nuxt inlines its config script, so
-// 'unsafe-inline' (a strict policy would need nonces), but no other hosts and no eval. The browser only talks
-// to the app, Supabase (database, realtime, storage) and PDOK (the BAG lookup); add a host here if that changes.
-const securityHeaders = {
-  'X-Content-Type-Options': 'nosniff',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'X-Frame-Options': 'DENY',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-  'Content-Security-Policy': [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${supabaseHttp}`,
-    "font-src 'self' data:",
-    `connect-src 'self' data: blob: ${supabase.join(' ')} https://api.pdok.nl`,
-    "worker-src 'self' blob:",
-    "frame-src 'none'",
-    "frame-ancestors 'none'",
-    "form-action 'self'",
-    "base-uri 'self'",
-    "object-src 'none'",
-  ].join('; '),
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-}
+// Beveiligingskoppen voor elk antwoord (server/utils/koppen.ts): CSP, HSTS, geen frames. De Supabase-URL wordt bij het
+// bouwen gelezen, zoals de rest van dit bestand. De pagina zelf krijgt zijn CSP met de hashes van de scripts die Nuxt
+// erin zet, van server/plugins/koppen.ts; zo is 'unsafe-inline' niet nodig.
+const securityHeaders = beveiligingsKoppen(process.env.NUXT_PUBLIC_SUPABASE_URL)
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',

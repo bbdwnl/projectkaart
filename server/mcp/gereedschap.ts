@@ -19,7 +19,7 @@ export interface Context {
   gebruiker: { naam: string, email: string, isMt: boolean }
   /** Het adres van de app, voor de link naar een kaart. */
   appUrl: string
-  /** Tot wanneer de koppeling met Copilot geldt (een week na toestaan). */
+  /** Tot wanneer de koppeling met Copilot geldt: 30 dagen na het laatste gebruik, hoogstens een jaar na toestaan. */
   geldigTot: string
 }
 
@@ -631,6 +631,6 @@ export function instructies(ctx: Pick<Context, 'gebruiker' | 'geldigTot'>): stri
     + 'je verandert de status, of de projectdatums waar de deadlines uit volgen.',
     'Noem projecten bij projectnummer en naam (P20038 Den Bosch). Geef bij een antwoord over een project de link naar de kaart.',
     'De toetssteen: hoe weet ik of dit klopt, of het is afgetekend, en wat de laatste status is. Zeg dus wie aftekende en wanneer, en zeg het als iets niet is afgetekend.',
-    `De koppeling geldt tot ${ctx.geldigTot.slice(0, 10)}; daarna vraagt Copilot de gebruiker opnieuw om in te loggen bij de Projectkaart.`,
+    `De koppeling blijft werken zolang de gebruiker Copilot gebruikt; na 30 dagen zonder gebruik (nu: ${ctx.geldigTot.slice(0, 10)}) of een jaar na toestaan vraagt Copilot opnieuw om in te loggen bij de Projectkaart.`,
   ].join('\n\n')
 }

@@ -1,6 +1,6 @@
 import type { EmailOtpType, Session, SupabaseClient } from '@supabase/supabase-js'
 import type { Gebruiker } from '~/lib/types'
-import { FOUT_ADRES, GEEN_POGINGEN, inlogMoment, leesPogingen, naamUitEmail, naFoutAdres, vanDomein, veiligPad, verlooptOp, type Pogingen } from '~/lib/inlog'
+import { ACTIEF_MINUTEN, FOUT_ADRES, GEEN_POGINGEN, inlogMoment, leesPogingen, naamUitEmail, naFoutAdres, vanDomein, veiligPad, verlooptOp, type Pogingen } from '~/lib/inlog'
 
 /** Waar je was toen je de inloglink aanvroeg; de link zelf brengt je naar /login. */
 const TERUG_SLEUTEL = 'projectkaart_terug'
@@ -22,6 +22,21 @@ function bewaar(p: Pogingen) {
 let sb: SupabaseClient | null = null
 let domein = ''
 let verloopKlok: ReturnType<typeof setTimeout> | undefined
+/** Wanneer de app voor het laatst aan de database meldde dat hij gebruikt wordt (ms). */
+let laatstGemeld = 0
+
+/**
+ * Meldt de database dat deze sessie gebruikt wordt (ik_ben_actief): zo verlengt gebruik de inlog. Hoogstens elk kwartier,
+ * tenzij nu. Geeft terug tot wanneer de inlog geldt zonder verder gebruik (ms), null als hij al verlopen is, of
+ * undefined als er niets gemeld is (te kort geleden, of de database antwoordde niet).
+ */
+async function meldActief(nu = false): Promise<number | null | undefined> {
+  if (!sb || (!nu && Date.now() - laatstGemeld < ACTIEF_MINUTEN * 60_000)) return undefined
+  laatstGemeld = Date.now()
+  const { data, error } = await sb.rpc('ik_ben_actief')
+  if (error) return undefined
+  return typeof data === 'string' ? Date.parse(data) : null
+}
 
 export function useGebruiker() {
   const gebruiker = useState<Gebruiker | null>('gebruiker', () => null)
@@ -30,7 +45,21 @@ export function useGebruiker() {
   const geblokkeerdTot = useState('inlogblokkade', () => leesBewaard().tot)
   const router = useRouter()
 
-  /** Wie bij deze sessie hoort. Een ander domein of een inlog van meer dan een week geleden: uitloggen. */
+  /** Uitloggen zodra de inlog zonder verder gebruik verloopt (de database laat je dan ook niet meer toe). */
+  function zetKlok(tot: number) {
+    clearTimeout(verloopKlok)
+    verloopKlok = setTimeout(() => verlopen(true), Math.max(0, Math.min(tot - Date.now(), 2 ** 31 - 1)))
+  }
+
+  /** Bij gebruik (een andere pagina, terug in dit tabblad): de database verlengt de inlog, en de klok schuift mee. */
+  async function actief() {
+    if (!gebruiker.value) return
+    const tot = await meldActief()
+    if (tot === null) await verlopen(true)
+    else if (tot !== undefined) zetKlok(tot)
+  }
+
+  /** Wie bij deze sessie hoort. Een ander domein, of 30 dagen niet gebruikt: uitloggen. */
   async function zet(sessie: Session | null) {
     clearTimeout(verloopKlok)
     if (!sessie || !sb) {
@@ -44,11 +73,15 @@ export function useGebruiker() {
       await sb.auth.signOut({ scope: 'local' })
       return
     }
+    // Alleen een inlog met een link of code telt (amr), en de database zegt of hij nog geldt; die verlengt hem meteen.
     const moment = inlogMoment(sessie.access_token)
-    const tot = moment ? verlooptOp(moment).getTime() : 0
+    if (!moment) return verlopen(false)
+    const gemeld = await meldActief(true)
+    if (gemeld === null) return verlopen(false)
+    // Antwoordde de database niet, dan rekent het scherm vanaf het inloggen; de database blijft de baas.
+    const tot = gemeld ?? verlooptOp(moment).getTime()
     if (tot <= Date.now()) return verlopen(false)
-    // Blijft het scherm open tot de week om is, dan alsnog uitloggen (de database laat je dan ook niet meer toe).
-    verloopKlok = setTimeout(() => verlopen(true), Math.min(tot - Date.now(), 2 ** 31 - 1))
+    zetKlok(tot)
     // Alleen de naam uit het profiel, zoals wie() in de database; die in het token kan iedereen zelf zetten.
     const { data } = await sb.from('profielen').select('rol, naam').eq('id', sessie.user.id).maybeSingle()
     const naam = data?.naam?.trim() || ''
@@ -58,7 +91,7 @@ export function useGebruiker() {
   /** Alleen op dit apparaat uitloggen: een nieuwere inlog op je telefoon blijft staan. Bij het opstarten stuurt de middleware je naar /login. */
   async function verlopen(naarLogin: boolean) {
     clearTimeout(verloopKlok)
-    melding.value = 'Je inlog was een week geldig en is verlopen. Vraag een nieuwe inloglink aan.'
+    melding.value = 'Je hebt de Projectkaart 30 dagen niet gebruikt, dus je inlog is verlopen. Vraag een nieuwe inloglink aan.'
     gebruiker.value = null
     await sb?.auth.signOut({ scope: 'local' })
     const nu = router.currentRoute.value
@@ -74,6 +107,11 @@ export function useGebruiker() {
     // Geen Supabase-aanroep direct in deze callback (die kan blokkeren): eerst een tik wachten.
     sb.auth.onAuthStateChange((gebeurtenis, sessie) => {
       if (gebeurtenis === 'SIGNED_IN' || gebeurtenis === 'SIGNED_OUT') setTimeout(() => zet(sessie))
+    })
+    // Gebruik verlengt de inlog: bij elke andere pagina en als je terugkomt in dit tabblad (hoogstens elk kwartier).
+    router.afterEach(() => { actief() })
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') actief()
     })
   }
 
@@ -147,7 +185,7 @@ export function useGebruiker() {
 
   /**
    * De code uit dezelfde mail: inloggen in dít venster, ook als de link in een andere browser opengaat (bijvoorbeeld
-   * het inlogvenster van Copilot in Outlook of Teams). Even goed als de link: amr otp, een week geldig.
+   * het inlogvenster van Copilot in Outlook of Teams). Even goed als de link: amr otp, geldig zolang je de app gebruikt.
    */
   async function metCode(email: string, code: string): Promise<boolean> {
     melding.value = ''

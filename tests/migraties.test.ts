@@ -29,7 +29,7 @@ const ingelogd = (dagenGeleden = 0) => [{ method: 'otp', timestamp: Math.floor(D
 const MICHIEL = { sub: '00000000-0000-0000-0000-000000000001', email: 'michiel@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: { full_name: 'Michiel' }, amr: ingelogd() }
 const BENNO = { sub: '00000000-0000-0000-0000-000000000002', email: 'benno@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: { full_name: 'Benno van Bergen' }, amr: ingelogd() }
 const VREEMD = { sub: '00000000-0000-0000-0000-000000000003', email: 'iemand@gmail.com', app_metadata: { provider: 'email' }, user_metadata: {}, amr: ingelogd() }
-const VERLOPEN = { ...MICHIEL, amr: ingelogd(8) }
+const VERLOPEN = { ...MICHIEL, amr: ingelogd(31) }
 const ZONDER_MOMENT = { ...MICHIEL, amr: undefined }
 // Iemand die vooraf met een eigen wachtwoord een account op het adres van een collega aanmaakte.
 const WACHTWOORD = { ...MICHIEL, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) }] }
@@ -71,18 +71,34 @@ describe('seed', () => {
 })
 
 describe('rechten', () => {
-  it('laat alleen adressen van het BBDW-domein binnen, alleen via een link, en een inlog maar een week', async () => {
+  it('laat alleen adressen van het BBDW-domein binnen, alleen via een link, en een inlog vervalt na 30 dagen zonder gebruik', async () => {
     expect(await als(MICHIEL, `select id from public.projecten`)).toHaveLength(27)
-    expect(await als({ ...MICHIEL, amr: ingelogd(6.9) }, `select id from public.projecten`)).toHaveLength(27)
+    expect(await als({ ...MICHIEL, amr: ingelogd(29.9) }, `select id from public.projecten`)).toHaveLength(27)
     expect(await als(VREEMD, `select id from public.projecten`)).toHaveLength(0)
     expect(await als(VERLOPEN, `select id from public.projecten`)).toHaveLength(0)
     expect(await als(ZONDER_MOMENT, `select id from public.projecten`)).toHaveLength(0)
     expect(await als(WACHTWOORD, `select id from public.projecten`)).toHaveLength(0)
     expect(await als({ ...MICHIEL, amr: [{ method: 'magiclink', timestamp: Math.floor(Date.now() / 1000) }] }, `select id from public.projecten`)).toHaveLength(27)
   })
-  it('maakt geen account voor een adres buiten het BBDW-domein', async () => {
-    await expect(db.query(`insert into auth.users (id, email) values (gen_random_uuid(), 'iemand@gmail.com')`)).rejects.toThrow(/bbdw\.nl/)
-    await expect(db.query(`update auth.users set email = 'michiel@gmail.com' where id = $1`, [MICHIEL.sub])).rejects.toThrow(/bbdw\.nl/)
+  it('maakt geen account voor een adres buiten het BBDW-domein, en zegt daarbij niet welk domein wel mag', async () => {
+    for (const poging of [
+      db.query(`insert into auth.users (id, email) values (gen_random_uuid(), 'iemand@gmail.com')`),
+      db.query(`update auth.users set email = 'michiel@gmail.com' where id = $1`, [MICHIEL.sub]),
+    ]) {
+      const fout = await poging.then(() => null, (e: Error) => e)
+      expect(fout?.message).toMatch(/onbekend e-mailadres/)
+      expect(fout?.message).not.toMatch(/bbdw/i)
+    }
+  })
+  it('laat wie niet is ingelogd geen hulpfuncties aanroepen (zoals het domein), en die ziet ook niets', async () => {
+    const ANON = { role: 'anon' }
+    for (const f of ['toegestane_domeinen', 'inlogduur', 'is_medewerker', 'is_mt', 'wie', 'is_server', 'sessie_uit_token', 'copilot_stilte', 'copilot_hoogstens']) {
+      await expect(als(ANON, `select public.${f}()`, [], 'anon'), f).rejects.toThrow(/permission denied/)
+    }
+    expect(await als(ANON, `select id from public.projecten`, [], 'anon')).toHaveLength(0)
+    // Ingelogd blijven ze werken: RLS en de triggers gebruiken ze.
+    expect(await als(MICHIEL, `select public.is_medewerker() as mag, public.is_mt() as mt, public.wie() as wie`)).toEqual([{ mag: true, mt: false, wie: 'Michiel' }])
+    expect(await als(BENNO, `select public.toegestane_domeinen() as d`)).toEqual([{ d: ['bbdw.nl'] }])
   })
   it('zet de naam uit het profiel in het logboek, ook zonder naam in het token', async () => {
     const LINK = { sub: '00000000-0000-0000-0000-000000000005', email: 'jan.de.vries@bbdw.nl', app_metadata: { provider: 'email' }, user_metadata: {}, amr: ingelogd() }
@@ -582,7 +598,7 @@ describe('beveiliging', () => {
     expect(await als(ANNA, `update public.profielen set naam = 'Benno van Bergen' where id = $1 returning id`, [ANNA.sub])).toHaveLength(0)
     await expect(als(BART, `update public.profielen set naam = 'anna de wit' where id = $1`, [BART.sub])).rejects.toMatchObject({ code: '23505' })
     await expect(als(BART, `update public.profielen set naam = 'B' where id = $1`, [BART.sub])).rejects.toThrow()
-    expect(await als({ ...BART, amr: ingelogd(8) }, `update public.profielen set naam = 'Bart' where id = $1 returning id`, [BART.sub])).toHaveLength(0)
+    expect(await als({ ...BART, amr: ingelogd(31) }, `update public.profielen set naam = 'Bart' where id = $1 returning id`, [BART.sub])).toHaveLength(0)
   })
 
   it('laat op het project alleen links naar http(s) toe', async () => {
@@ -632,6 +648,8 @@ describe('copilot (oauth)', () => {
 
   beforeAll(async () => {
     await db.query(`insert into public.oauth_clients (id, naam, redirect_uris) values ($1, 'Copilot Studio', array['https://global.consent.azure-apim.net/redirect/x'])`, [CLIENT])
+    // Benno (MT) keurt het goed; zonder komt er geen code (zie hieronder).
+    await db.query(`update public.oauth_clients set goedgekeurd_op = now(), goedgekeurd_door = $2 where id = $1`, [CLIENT, BENNO.sub])
   })
 
   it('zijn voor de browser niet te lezen of te maken, ook niet de eigen', async () => {
@@ -652,12 +670,90 @@ describe('copilot (oauth)', () => {
     expect((Date.parse(c!.verloopt_op) - Date.parse(c!.aangemaakt_op)) / 60_000).toBeCloseTo(5, 5)
   })
 
-  it('een koppeling geldt een week vanaf toestaan, en dat is niet op te rekken', async () => {
+  it('een programma krijgt pas een code als iemand van het MT het goedkeurde; een registratie komt nooit al goedgekeurd binnen', async () => {
+    const NIEUW = `pkc_${'d'.repeat(43)}`
+    const [c] = (await db.query<{ goedgekeurd_op: string | null }>(
+      `insert into public.oauth_clients (id, naam, redirect_uris, goedgekeurd_op, goedgekeurd_door) values ($1, 'Nep', array['https://global.consent.azure-apim.net/redirect/y'], now(), $2) returning goedgekeurd_op`,
+      [NIEUW, BENNO.sub])).rows
+    expect(c!.goedgekeurd_op).toBeNull()
+    const code = () => db.query(`insert into public.oauth_codes (hash, client_id, gebruiker_id, redirect_uri, code_challenge, verloopt_op) values ($1, $2, $3, 'https://global.consent.azure-apim.net/redirect/y', $4, now())`,
+      [hash(9), NIEUW, MICHIEL.sub, 'c'.repeat(43)])
+    await expect(code()).rejects.toThrow(/goedgekeurd/)
+    // Michiel is geen MT, en zonder wie ook niet.
+    await expect(db.query(`update public.oauth_clients set goedgekeurd_op = now(), goedgekeurd_door = $2 where id = $1`, [NIEUW, MICHIEL.sub])).rejects.toThrow(/MT/)
+    await expect(db.query(`update public.oauth_clients set goedgekeurd_op = now() where id = $1`, [NIEUW])).rejects.toThrow(/MT/)
+    await db.query(`update public.oauth_clients set goedgekeurd_op = '2000-01-01', goedgekeurd_door = $2 where id = $1`, [NIEUW, BENNO.sub])
+    const [na] = (await db.query<{ goedgekeurd_op: string }>(`select goedgekeurd_op from public.oauth_clients where id = $1`, [NIEUW])).rows
+    expect(Date.now() - Date.parse(na!.goedgekeurd_op)).toBeLessThan(60_000) // het moment komt van de database
+    await code()
+  })
+
+  it('wat zich meldt en na een week niet is goedgekeurd, verdwijnt; met een koppeling of goedkeuring blijft het', async () => {
+    const OUD = `pkc_${'e'.repeat(43)}`
+    const OUD_MET_KOPPELING = `pkc_${'f'.repeat(43)}`
+    for (const id of [OUD, OUD_MET_KOPPELING]) await db.query(`insert into public.oauth_clients (id, naam, redirect_uris) values ($1, 'Oud', array['https://vscode.dev/redirect'])`, [id])
+    await db.query(`update public.oauth_clients set aangemaakt_op = now() - interval '8 days' where id in ($1, $2, $3)`, [OUD, OUD_MET_KOPPELING, CLIENT])
+    await db.query(`insert into public.copilot_koppelingen (gebruiker_id, client_id, sessie, toegang, toegang_hash, toegang_tot, ververs_hash) values ($1, $2, 'v1.a.b.c', 'v1.d.e.f', $3, now() + interval '1 hour', $4)`,
+      [BENNO.sub, OUD_MET_KOPPELING, hash(30), hash(1030)])
+    await db.query(`insert into public.oauth_clients (id, naam, redirect_uris) values ($1, 'Nieuw', array['https://vscode.dev/redirect'])`, [`pkc_${'g'.repeat(43)}`])
+    const over = (await db.query<{ id: string }>(`select id from public.oauth_clients where id in ($1, $2, $3)`, [OUD, OUD_MET_KOPPELING, CLIENT])).rows.map(r => r.id)
+    expect(over.sort()).toEqual([CLIENT, OUD_MET_KOPPELING].sort())
+  })
+
+  const dagenTot = (iso: string) => (Date.parse(iso) - Date.now()) / 864e5
+  /** Tijden zetten zonder de trigger, alsof de koppeling al langer bestaat. */
+  const zetTijden = async (id: string, set: string) => {
+    await db.exec(`alter table public.copilot_koppelingen disable trigger copilot_koppelingen_bijwerken`)
+    await db.query(`update public.copilot_koppelingen set ${set} where id = $1`, [id])
+    await db.exec(`alter table public.copilot_koppelingen enable trigger copilot_koppelingen_bijwerken`)
+  }
+  const geldigTot = async (id: string) => (await db.query<{ geldig_tot: string }>(`select geldig_tot from public.copilot_koppelingen where id = $1`, [id])).rows[0]!.geldig_tot
+
+  it('een koppeling geldt 30 dagen na toestaan, en dat is niet met de hand op te rekken', async () => {
     const [k] = (await koppel(2, `now() + interval '1 year'`)).rows
-    expect((Date.parse(k!.geldig_tot) - Date.parse(k!.aangemaakt_op)) / 864e5).toBeCloseTo(7, 5)
+    expect((Date.parse(k!.geldig_tot) - Date.parse(k!.aangemaakt_op)) / 864e5).toBeCloseTo(30, 5)
     await db.query(`update public.copilot_koppelingen set geldig_tot = now() + interval '1 year', gebruiker_id = $2 where id = $1`, [k!.id, BENNO.sub])
     const [na] = (await db.query<{ geldig_tot: string, gebruiker_id: string }>(`select geldig_tot, gebruiker_id from public.copilot_koppelingen where id = $1`, [k!.id])).rows
     expect(na).toMatchObject({ geldig_tot: k!.geldig_tot, gebruiker_id: MICHIEL.sub })
+  })
+
+  it('gebruik schuift het einde op naar 30 dagen later, maar nooit voorbij een jaar na toestaan', async () => {
+    const [k] = (await koppel(5)).rows
+    await zetTijden(k!.id, `aangemaakt_op = now() - interval '200 days', laatst_gebruikt_op = now() - interval '20 days', geldig_tot = now() + interval '10 days'`)
+    await db.query(`update public.copilot_koppelingen set laatst_gebruikt_op = now() where id = $1`, [k!.id])
+    expect(dagenTot(await geldigTot(k!.id))).toBeCloseTo(30, 1)
+    await zetTijden(k!.id, `aangemaakt_op = now() - interval '360 days'`)
+    await db.query(`update public.copilot_koppelingen set laatst_gebruikt_op = '2100-01-01' where id = $1`, [k!.id])
+    expect(dagenTot(await geldigTot(k!.id))).toBeCloseTo(30, 1) // al later dan een jaar na toestaan: niet korter, niet langer
+    await zetTijden(k!.id, `geldig_tot = now() + interval '1 day'`)
+    await db.query(`update public.copilot_koppelingen set laatst_gebruikt_op = now() where id = $1`, [k!.id])
+    expect(dagenTot(await geldigTot(k!.id))).toBeCloseTo(5, 1) // een jaar na toestaan is over vijf dagen
+  })
+
+  it('verlopen blijft verlopen, ook als hij daarna nog gebruikt wordt', async () => {
+    const [k] = (await koppel(6)).rows
+    await zetTijden(k!.id, `geldig_tot = now() - interval '1 day'`)
+    await db.query(`update public.copilot_koppelingen set laatst_gebruikt_op = now() where id = $1`, [k!.id])
+    expect(dagenTot(await geldigTot(k!.id))).toBeLessThan(0)
+  })
+
+  it('laat de sessie van een geldige koppeling toe, ook na de week van een inlog; alleen van dezelfde persoon', async () => {
+    const [k] = (await koppel(7)).rows
+    const sessie = '11111111-2222-4333-8444-555555555555'
+    await db.query(`update public.copilot_koppelingen set sessie_id = $2 where id = $1`, [k!.id, sessie])
+    const oud = { ...MICHIEL, amr: ingelogd(40), session_id: sessie }
+    const alle = (await als(MICHIEL, `select id from public.projecten`)).length
+    expect(alle).toBeGreaterThan(0)
+    expect(await als(oud, `select id from public.projecten`)).toHaveLength(alle)
+    expect(await als({ ...oud, session_id: undefined }, `select id from public.projecten`)).toHaveLength(0)
+    expect(await als({ ...oud, session_id: '99999999-2222-4333-8444-555555555555' }, `select id from public.projecten`)).toHaveLength(0)
+    expect(await als({ ...BENNO, amr: ingelogd(40), session_id: sessie }, `select id from public.projecten`)).toHaveLength(0)
+    expect(await als({ ...oud, session_id: 'geen-uuid' }, `select id from public.projecten`)).toHaveLength(0)
+    await zetTijden(k!.id, `geldig_tot = now() - interval '1 minute'`)
+    expect(await als(oud, `select id from public.projecten`)).toHaveLength(0)
+    await zetTijden(k!.id, `geldig_tot = now() + interval '1 day'`)
+    await db.query(`update public.copilot_koppelingen set ingetrokken_op = now() where id = $1`, [k!.id])
+    expect(await als(oud, `select id from public.projecten`)).toHaveLength(0)
   })
 
   it('verliest sessie en tokens bij intrekken, en ingetrokken blijft ingetrokken', async () => {
@@ -675,5 +771,46 @@ describe('copilot (oauth)', () => {
     await expect(koppel(20)).rejects.toThrow(/tien/)
     await db.query(`update public.copilot_koppelingen set ingetrokken_op = now() where toegang_hash = $1`, [hash(10)])
     await expect(koppel(20)).resolves.toBeTruthy()
+  })
+})
+
+describe('inlog verlengt bij gebruik', () => {
+  const sessie = (n: number) => `aaaaaaaa-bbbb-4ccc-8ddd-${String(n).padStart(12, '0')}`
+  const actief = (claims: object) => als<{ tot: string | null }>(claims, `select public.ik_ben_actief() as tot`)
+  const projecten = async (claims: object) => (await als(claims, `select id from public.projecten`)).length
+  const laatst = (sid: string, dagen: number) => db.query(`update public.sessies set laatst_op = now() - make_interval(days => $2) where sessie_id = $1`, [sid, dagen])
+
+  it('gebruik binnen 30 dagen houdt een oude inlog geldig, en verlengt hem naar 30 dagen na nu', async () => {
+    const alle = await projecten(MICHIEL)
+    const nieuw = { ...MICHIEL, amr: ingelogd(20), session_id: sessie(1) }
+    const [{ tot }] = (await actief(nieuw)) as [{ tot: string }]
+    expect((Date.parse(tot) - Date.now()) / 864e5).toBeCloseTo(30, 1)
+    await laatst(sessie(1), 5)
+    const oud = { ...nieuw, amr: ingelogd(100) }
+    expect(await projecten(oud)).toBe(alle) // honderd dagen geleden ingelogd, vijf dagen geleden gebruikt
+    await laatst(sessie(1), 31)
+    expect(await projecten(oud)).toBe(0) // 31 dagen niet gebruikt
+  })
+
+  it('een verlopen inlog kan zichzelf niet meer verlengen', async () => {
+    const oud = { ...MICHIEL, amr: ingelogd(40), session_id: sessie(2) }
+    expect(await actief(oud)).toEqual([{ tot: null }])
+    expect((await db.query(`select 1 from public.sessies where sessie_id = $1`, [sessie(2)])).rows).toHaveLength(0)
+    expect(await projecten(oud)).toBe(0)
+  })
+
+  it('een sessie hoort bij één persoon, en zonder link of code telt gebruik niet', async () => {
+    await actief({ ...MICHIEL, amr: ingelogd(1), session_id: sessie(3) })
+    expect(await projecten({ ...BENNO, amr: ingelogd(40), session_id: sessie(3) })).toBe(0) // andermans sessie
+    expect(await projecten({ ...MICHIEL, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 40 * 864e2 }], session_id: sessie(3) })).toBe(0)
+    expect(await projecten({ ...MICHIEL, amr: undefined, session_id: sessie(3) })).toBe(0)
+  })
+
+  it('is voor de browser verder niet te lezen of te wijzigen', async () => {
+    expect(await als(MICHIEL, `select * from public.sessies`)).toHaveLength(0)
+    await expect(als(MICHIEL, `insert into public.sessies (sessie_id, gebruiker_id) values ($1, $2)`, [sessie(4), MICHIEL.sub])).rejects.toThrow()
+    await expect(als(MICHIEL, `update public.sessies set laatst_op = now() + interval '1 year'`)).resolves.toBeDefined()
+    expect((await db.query<{ n: number }>(`select count(*)::int as n from public.sessies where laatst_op > now() + interval '1 day'`)).rows[0]!.n).toBe(0)
+    await expect(als({ role: 'anon' }, `select public.ik_ben_actief()`, [], 'anon')).rejects.toThrow()
   })
 })

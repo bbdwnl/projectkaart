@@ -49,8 +49,8 @@ npm run build
    - **URL Configuration**: Site URL = `https://projectkaart.bbdw.nl` (zonder `/` aan het eind). De link in de
      inlogmail is daarop gebouwd (`{{ .SiteURL }}`), dus een ander adres hier stuurt iedereen naar dat adres.
      Bij Redirect URLs `https://projectkaart.bbdw.nl/**` en `http://localhost:3000/**`.
-   - Optioneel, op een betaald plan: Sessions → Time-box user sessions op 168 uur. De app en de database
-     houden de week ook zelf bij.
+   - **Niet** aanzetten onder Authentication → Sessions (alleen op een betaald plan): *Time-box user sessions* en *Inactivity timeout*. Dat zou ook de sessies
+     achter de koppelingen met Copilot afkappen. De app en de database houden zelf bij wanneer een inlog verloopt.
 3. **Omgeving** (Vercel en `.env`, zie [.env.example](.env.example)):
    `NUXT_PUBLIC_SUPABASE_URL` en `NUXT_PUBLIC_SUPABASE_KEY`. In Vercel onder Domains: `projectkaart.bbdw.nl` als
    hoofddomein, en het oude `projectkaart-nine.vercel.app` met een doorverwijzing (308) daarnaartoe.
@@ -63,7 +63,9 @@ npm run build
    Een naam corrigeren gaat ook daar (iedereen kiest zijn naam één keer):
    `update profielen set naam = 'Jan de Vries' where email = 'jan@bbdw.nl';`
 6. **Nieuwe externe dienst in de browser** (bijvoorbeeld Microsoft Graph voor SharePoint): zet de host in de
-   Content-Security-Policy in [nuxt.config.ts](nuxt.config.ts), anders blokkeert de browser hem.
+   Content-Security-Policy in [server/utils/koppen.ts](server/utils/koppen.ts), anders blokkeert de browser hem. Scripts
+   mogen alleen van de app zelf komen: de twee regels script die Nuxt in de pagina zet, krijgen per antwoord hun hash in
+   de CSP (`server/plugins/koppen.ts`), dus `'unsafe-inline'` is er niet.
 6. **Back-up.** Elke nacht om 03:00 UTC maakt Vercel Cron een back-up: alle rijen van alle tabellen als één
    SQL-bestand in de besloten bucket `backups` in Supabase Storage (Frankfurt), 30 dagen bewaard. Zet daarvoor in
    Vercel `CRON_SECRET` (een lang willekeurig geheim, bijvoorbeeld `openssl rand -hex 32`) naast
@@ -88,7 +90,11 @@ npm run build
    `https://projectkaart.bbdw.nl/api/mcp`, Authentication **OAuth 2.0 → Dynamic discovery**. Copilot Studio vindt de
    rest zelf (`/.well-known/oauth-protected-resource` en `/.well-known/oauth-authorization-server`) en registreert zich,
    met een eigen geheim en PKCE. Bij *Create a new connection* logt iemand met een `@bbdw.nl`-adres in op `/koppelen` en
-   kiest Toestaan. **Daarna, belangrijk:** de verbinding van de tool op de inlog van de gebruiker zetten (*end user
+   kiest Toestaan. **Een programma dat zich voor het eerst meldt, moet door iemand van het MT zijn goedgekeurd**
+   (beslissing 47): is de maker MT, dan doet hij dat op `/koppelen` in één keer (*Goedkeuren en toestaan*); anders keurt
+   het MT het goed onder Instellingen → Copilot (*Programma's die mogen koppelen*) en begint de maker opnieuw. Zonder
+   goedkeuring geeft de database geen code. Daar trekt het MT een programma ook weer in; wat na een week niet is
+   goedgekeurd, verdwijnt vanzelf. **Daarna, belangrijk:** de verbinding van de tool op de inlog van de gebruiker zetten (*end user
    credentials*), niet op die van de maker; anders werkt iedereen onder de naam van de maker. Dan Publish, en onder
    Channels → Microsoft 365 en Microsoft Teams met *Make agent available in Microsoft Copilot*. Een DLP-beleid van Power
    Platform moet de verbinding toelaten (MCP-tools lopen via connectoren).
@@ -98,26 +104,34 @@ npm run build
    dan mislukt het registreren en staat er in de log van Vercel `[copilot] registreren geweigerd` met het adres. Zet die
    host dan in `NUXT_COPILOT_TERUGADRESSEN` (Vercel) en deploy opnieuw; de code hoeft niet te veranderen.
 
+   **Microsoft 365 Copilot zonder Copilot Studio (eigen agent als app-pakket):** de map
+   [copilot-agent](copilot-agent/README.md) heeft een declarative agent met de Projectkaart als MCP-plugin. Geen
+   Copilot Studio-omgeving, geen DLP-beleid en geen credits nodig. `npm run copilot:client` vraagt een client aan, het
+   MT keurt hem goed, een beheerder registreert OAuth in het Teams Developer Portal, `npm run copilot:pakket --
+   --oauth-id=…` maakt de zip, en een beheerder uploadt die. Stappen en waarden in `copilot-agent/README.md`.
+
    **Per medewerker:** de eerste keer dat Copilot de projectkaart gebruikt, vraagt het om in te loggen. Dat opent
    `/koppelen` in de app (eerst inloggen als je nog niet bent ingelogd: met de link, of met de code uit dezelfde mail
    als de link in een andere browser opengaat), en
-   daar kies je **Toestaan**. Een koppeling geldt een week, net als een inlog; daarna vraagt Copilot opnieuw. Onder
+   daar kies je **Toestaan**. Een koppeling blijft werken zolang de medewerker Copilot gebruikt: na 30 dagen zonder gebruik, of een jaar na toestaan, vraagt Copilot opnieuw (`copilot_stilte()` en `copilot_hoogstens()` in de migratie). Inloggen in de browser verlengt ook bij gebruik (30 dagen, zonder maximum). Onder
    Instellingen → Copilot zie je je koppelingen en ontkoppel je ze.
 
    **GitHub Copilot in VS Code:** [.vscode/mcp.json](.vscode/mcp.json) staat in de repo (`projectkaart` wijst naar
    productie, `projectkaart-lokaal` naar `npm run dev`), of MCP: Add Server → HTTP met
    `https://projectkaart.bbdw.nl/api/mcp`. VS Code doet OAuth zelf en
-   opent `/koppelen`. Kies in de chat de modus **Agent**.
+   opent `/koppelen`; ook die registratie keurt het MT eerst goed (één keer per VS Code-installatie). Kies in de chat de
+   modus **Agent**.
 
    Copilot mag wat de medewerker mag en wat het wijzigt of aftekent, staat op diens naam in het logboek. Het kan
    projecten zoeken en bekijken (met het stoplicht), het logboek, opmerkingen en acties lezen, en taken, projectgegevens
-   en acties bijwerken; niet verwijderen, niet aan financiën of instellingen. De koppelingen staan in `oauth_clients`,
-   `oauth_codes` en `copilot_koppelingen` (tokens alleen als hash, de sessie versleuteld); alleen de server leest die.
+   en acties bijwerken; niet verwijderen, niet aan financiën of instellingen. De koppelingen staan in `oauth_clients`
+   (met wie van het MT het programma goedkeurde), `oauth_codes` en `copilot_koppelingen` (tokens alleen als hash, de
+   sessie versleuteld); alleen de server leest die.
 
 Alleen e-mailadressen op `@bbdw.nl` komen erin. De database maakt voor een ander adres geen account aan
 (dus gaat er ook geen link naartoe), en de RLS-policies laten alleen `@bbdw.nl` toe (`toegestane_domeinen()`).
-Een inlog geldt een week vanaf het moment van inloggen; gebruik verlengt hem niet (`inlogduur()` in de
-migratie, `INLOGDUUR_DAGEN` in `app/lib/inlog.ts`). Daarna vraag je een nieuwe link aan. Bij de eerste inlog
+Een inlog blijft geldig zolang je de app gebruikt; na 30 dagen zonder gebruik ben je uitgelogd (`inlogduur()` en
+`ik_ben_actief()` in de migratie inlog_verlengt, `INLOGDUUR_DAGEN` in `app/lib/inlog.ts`). Daarna vraag je een nieuwe link aan. Bij de eerste inlog
 vraagt de app je naam: die staat in het logboek en bij wat je aftekent. Je kiest hem één keer, en niet een naam
 die een collega al heeft; daarna wijzigt alleen een beheerder hem (stap 5), zodat niemand onder andermans naam aftekent.
 
@@ -130,4 +144,5 @@ die een collega al heeft; daarna wijzigt alleen een beheerder hem (stap 5), zoda
 | `app/composables/useProjectkaart.ts` | Alles van één projectkaart: laden, stoplicht per fase, wijzigen (direct op het scherm, terug bij een fout). |
 | `app/components/` | `kaart/` (kop, stoplicht, tabbladen, weergave), `taken/`, `proces/`, `details/`. |
 | `supabase/migrations/` | Schema, rechten (RLS), triggers voor aftekenen en het logboek. |
+| `server/utils/koppen.ts`, `server/plugins/koppen.ts` | De beveiligingskoppen (CSP, HSTS, geen frames) voor elk antwoord, en per pagina de CSP met de hashes van de scripts die Nuxt erin zet, zonder `x-powered-by`. Getest in `tests/koppen.test.ts`. |
 | `server/mcp/`, `server/api/mcp.ts`, `server/api/oauth/` | De MCP-server voor Copilot: het protocol, het gereedschap (op de Bron en de regels uit `app/lib`) en de regels van OAuth. De stappen van OAuth staan in `server/utils/oauth.ts`, de sessie per koppeling in `server/utils/copilot.ts`, de toestemmingspagina in `app/pages/koppelen.vue`. Getest in `tests/copilot.test.ts`. |

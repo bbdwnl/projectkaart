@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.25",
+  "version": "1.0.0",
+  "id": "fc19e5f3-ede5-4a37-b18e-b2a76f1509af",
+  "developer": {
+    "name": "BbDW",
+    "websiteUrl": "https://projectkaart.bbdw.nl",
+    "privacyUrl": "https://projectkaart.bbdw.nl",
+    "termsOfUseUrl": "https://projectkaart.bbdw.nl"
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "name": {
+    "short": "Projectkaart",
+    "full": "Projectkaart BbDW"
+  },
+  "description": {
+    "short": "Projecten van BbDW opzoeken, de stand geven en taken bijwerken.",
+    "full": "Zoek projecten op, vraag de stand en wat er te laat is, en werk taken, acties en projectgegevens bij in de Projectkaart van BbDW. Copilot werkt namens jou: met jouw rechten, en wat het wijzigt of aftekent staat op jouw naam in het logboek. De eerste keer log je in bij de Projectkaart en geef je toestemming."
+  },
+  "accentColor": "#FFFFFF",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "projectkaart",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": [
+    "projectkaart.bbdw.nl"
+  ]
+}

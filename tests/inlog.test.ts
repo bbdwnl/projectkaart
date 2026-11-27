@@ -16,7 +16,7 @@ describe('inloggen met een link', () => {
   it('leest het moment van inloggen uit het token, en een inlog geldt daarna een week', () => {
     const moment = inlogMoment(token({ email: 'benno@bbdw.nl', amr: [{ method: 'otp', timestamp: 1_793_000_000 }] }))
     expect(moment).toEqual(new Date(1_793_000_000_000))
-    expect(verlooptOp(moment!).getTime() - moment!.getTime()).toBe(7 * 24 * 3600 * 1000)
+    expect(verlooptOp(moment!).getTime() - moment!.getTime()).toBe(30 * 24 * 3600 * 1000)
     expect(inlogMoment(token({ amr: [{ method: 'otp', timestamp: 200 }, { method: 'magiclink', timestamp: 100 }] }))).toEqual(new Date(100_000))
     expect(inlogMoment(token({ email: 'benno@bbdw.nl' }))).toBeNull()
     expect(inlogMoment('geen token')).toBeNull()

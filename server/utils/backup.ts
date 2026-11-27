@@ -1,3 +1,5 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
+
 // De dagelijkse back-up (Vercel Cron → /api/backup): alle rijen van alle tabellen in public, als één SQL-bestand in
 // een besloten bucket in Supabase Storage (Frankfurt). De structuur staat in supabase/migrations; met die twee samen
 // zet je de database terug (README, Back-up). Foto's en tekeningen staan in Storage zelf en zitten er niet in.
@@ -24,10 +26,21 @@ export const TABELLEN: { naam: string, volgorde: string, identity?: string }[] =
 ]
 
 /**
- * Niet in de back-up: de koppelingen met Copilot (OAuth). Daarin staan versleutelde sessies en hashes van tokens; die
- * horen niet in een bestand dat 30 dagen blijft liggen, en na terugzetten koppelt iedereen Copilot gewoon opnieuw.
+ * Niet in de back-up: de koppelingen met Copilot (OAuth) en het laatste gebruik per inlogsessie. Daarin staan versleutelde
+ * sessies en hashes van tokens; die horen niet in een bestand dat 30 dagen blijft liggen. Na terugzetten koppelt iedereen
+ * Copilot opnieuw en logt opnieuw in.
  */
-export const NIET_IN_BACKUP = ['oauth_clients', 'oauth_codes', 'copilot_koppelingen']
+export const NIET_IN_BACKUP = ['oauth_clients', 'oauth_codes', 'copilot_koppelingen', 'sessies']
+
+/**
+ * Of het meegestuurde geheim het geheim van de server is (CRON_SECRET), in constante tijd: de vergelijking duurt even lang
+ * bij elk verschil, ook in lengte, zodat de duur niets verraadt. Zonder geheim op de server klopt niets.
+ */
+export function geheimKlopt(opgave: string | null | undefined, geheim: string | null | undefined): boolean {
+  if (!opgave || !geheim) return false
+  const vingerafdruk = (s: string) => createHash('sha256').update(s, 'utf8').digest()
+  return timingSafeEqual(vingerafdruk(opgave), vingerafdruk(geheim))
+}
 
 export const BUCKET = 'backups'
 /** Zoveel dagen blijven bewaard; oudere bestanden gaan weg. */
