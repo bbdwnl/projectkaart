@@ -1,6 +1,6 @@
 /** Wat iemand op de projectkaart wil zien. Per apparaat bewaard in een cookie. */
 
-export const TABS = ['proces', 'taken', 'acties', 'controle', 'details'] as const
+export const TABS = ['proces', 'taken', 'acties', 'controle', 'fotodossier', 'details'] as const
 export type Tab = typeof TABS[number]
 
 export interface Weergave {

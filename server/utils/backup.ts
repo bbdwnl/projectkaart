@@ -18,6 +18,7 @@ export const TABELLEN: { naam: string, volgorde: string, identity?: string }[] =
   { naam: 'project_disciplines', volgorde: 'project_id,discipline' },
   { naam: 'tekeningen', volgorde: 'id' },
   { naam: 'controlepunten', volgorde: 'id' },
+  { naam: 'dossierfotos', volgorde: 'id' },
   { naam: 'deellinks', volgorde: 'id' },
   { naam: 'acties', volgorde: 'id' },
   { naam: 'adressen', volgorde: 'naam' },

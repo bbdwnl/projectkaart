@@ -3,10 +3,10 @@ import { TABS, type Tab } from '~/lib/weergave'
 
 const route = useRoute()
 const kaart = useProjectkaart(String(route.params.slug))
-const { project, stand, fout, lichten, tabFase, filter, openPunten, openActies, nu } = kaart
+const { project, stand, fout, lichten, tabFase, filter, openPunten, openActies, nu, dossierfotos } = kaart
 const { weergave } = useWeergave()
 
-// Een link met #taken, #proces, #acties, #controle of #details opent dat tabblad; anders het laatst gebruikte.
+// Een link met #taken, #proces, #acties, #controle, #fotodossier of #details opent dat tabblad; anders het laatst gebruikte.
 const uitLink = route.hash.slice(1) as Tab
 if (TABS.includes(uitLink)) weergave.value.tab = uitLink
 const richting = ref(1)
@@ -38,6 +38,10 @@ const pilActies = computed(() => {
   return { licht: laat ? 'telaat' as const : 'open' as const, tekst: laat ? `${laat} te laat` : `${n} open` }
 })
 const pilControle = computed(() => openPunten.value ? `${openPunten.value} open` : null)
+
+/** Een nieuwe foto voor het fotodossier: vanuit het tabblad, of op de telefoon met de cameraknop rechtsonder. */
+const fotoNieuw = ref<{ toon: (bestand: File) => void }>()
+const nieuweFoto = (bestand: File) => fotoNieuw.value?.toon(bestand)
 
 function naarTabs() {
   document.getElementById('tabanker')?.scrollIntoView({ behavior: minderBeweging() ? 'auto' : 'smooth', block: 'start' })
@@ -76,14 +80,20 @@ function planning() {
     <template v-else-if="project">
       <KaartKop @lamp="lamp" @planning="planning" />
       <div id="tabanker" />
-      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-acties="pilActies" :pil-controle="pilControle" />
+      <KaartTabs v-model="weergave.tab" :pil-taken="pilTaken" :pil-acties="pilActies" :pil-controle="pilControle" :pil-fotos="dossierfotos.length" />
       <Transition :name="richting > 0 ? 'paneel-vooruit' : 'paneel-terug'" mode="out-in">
         <KaartTaken v-if="weergave.tab === 'taken'" key="taken" />
         <KaartProces v-else-if="weergave.tab === 'proces'" key="proces" />
         <KaartActies v-else-if="weergave.tab === 'acties'" key="acties" />
         <KaartControle v-else-if="weergave.tab === 'controle'" key="controle" />
+        <KaartFotodossier v-else-if="weergave.tab === 'fotodossier'" key="fotodossier" @foto="nieuweFoto" />
         <KaartDetails v-else key="details" />
       </Transition>
+      <FotodossierKnop class="foto-fab" title="Foto voor het fotodossier" @gekozen="nieuweFoto">
+        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h3l1.6-2.5h6.8L17 7.5h3a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8.5a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" /><circle cx="12" cy="13" r="3.6" fill="none" stroke="currentColor" stroke-width="1.9" /></svg>
+        <span class="verborgen">Foto maken voor het fotodossier</span>
+      </FotodossierKnop>
+      <FotodossierNieuw ref="fotoNieuw" />
     </template>
 
     <footer>Projectkaart BbDW</footer>

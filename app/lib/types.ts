@@ -203,6 +203,17 @@ export interface Controlepunt {
   afgekeurd_door: string | null
   afgekeurd_reden: string | null
 }
+/** Een foto in het fotodossier van een project (beslissing 50): de foto, en een titel als je die opgaf. */
+export interface Dossierfoto {
+  id: string
+  project_id: string
+  /** null: zonder titel. */
+  titel: string | null
+  /** Pad in de opslag (bucket fotodossier): '<project_id>/<naam>.jpg'. */
+  foto: string
+  aangemaakt_door: string | null
+  aangemaakt_op: string
+}
 /** Afkeuren: gereed_op null, met de reden. Wie en wanneer vult de database in. */
 export type ControlepuntWijziging = Partial<Pick<Controlepunt, 'opgelost' | 'leverancier_id' | PlekVeld | 'gereed_op' | 'afgekeurd_reden'>>
 export type MeldingVeld = 'gereed_op' | 'gereed_door' | 'afgekeurd_op' | 'afgekeurd_door' | 'afgekeurd_reden'

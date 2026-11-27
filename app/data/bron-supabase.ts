@@ -1,7 +1,7 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
 import type { Bron, InstellingRij, Luister, NieuwControlepunt, NieuweUitzondering } from './bron'
 import { BronFout } from './bron'
-import type { Actie, Adres, ProjectDiscipline, Controlepunt, Deellink, Financien, Leverancier, LogRegel, Opmerking, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
+import type { Actie, Adres, ProjectDiscipline, Controlepunt, Deellink, Dossierfoto, Financien, Leverancier, LogRegel, Opmerking, Project, ProjectLeverancier, Taak, Tekening, Uitzondering } from '~/lib/types'
 import { fotoPad } from '~/lib/controle'
 import type { ExternAntwoord } from '~/lib/deellink'
 
@@ -19,6 +19,7 @@ const IN_GEBRUIK = '23503'
 const ZELF_GEMELD = 'P0001' // raise exception in een trigger: de melding is voor de gebruiker
 const FOTOS = 'controle'
 const TEKENINGEN = 'tekeningen'
+const DOSSIER = 'fotodossier'
 
 /** De pagina van de leverancier praat met de server (server/api/punten), niet met de database. */
 async function viaServer<T>(pad: string, body: { code: string } & Record<string, unknown>): Promise<T> {
@@ -292,6 +293,34 @@ export function maakSupabaseBron(sb: SupabaseClient): Bron {
       const res = await sb.from('controlepunten').delete().eq('id', punt.id)
       if (res.error) uitkomst(res, 'het aandachtspunt weghalen')
       await sb.storage.from(FOTOS).remove([punt.foto]) // lukt dit niet, dan blijft alleen een losse foto achter
+    },
+
+    async dossierfotos(projectId) {
+      return uitkomst(await sb.from('dossierfotos').select('*').eq('project_id', projectId).order('aangemaakt_op', { ascending: false }), 'het fotodossier laden') as Dossierfoto[]
+    },
+    async dossierfotoUrls(paden) {
+      if (!paden.length) return {}
+      const res = await sb.storage.from(DOSSIER).createSignedUrls(paden, 60 * 60)
+      if (res.error) throw new BronFout(`De foto's laden is niet gelukt. ${res.error.message}`)
+      const urls: Record<string, string> = {}
+      for (const f of res.data) if (f.path && f.signedUrl) urls[f.path] = f.signedUrl
+      return urls
+    },
+    async voegDossierfotoToe(projectId, invoer) {
+      const pad = fotoPad(projectId, crypto.randomUUID())
+      const upload = await sb.storage.from(DOSSIER).upload(pad, invoer.foto, { contentType: 'image/jpeg', upsert: false })
+      if (upload.error) throw new BronFout(`De foto opslaan is niet gelukt. ${upload.error.message}`)
+      const res = await sb.from('dossierfotos').insert({ project_id: projectId, titel: invoer.titel, foto: pad }).select().single()
+      if (res.error) await sb.storage.from(DOSSIER).remove([pad])
+      return uitkomst(res, 'de foto opslaan') as Dossierfoto
+    },
+    async bewaarDossierfoto(id, titel) {
+      return uitkomst(await sb.from('dossierfotos').update({ titel }).eq('id', id).select().single(), 'de titel opslaan') as Dossierfoto
+    },
+    async verwijderDossierfoto(foto) {
+      const res = await sb.from('dossierfotos').delete().eq('id', foto.id)
+      if (res.error) uitkomst(res, 'de foto weghalen')
+      await sb.storage.from(DOSSIER).remove([foto.foto]) // lukt dit niet, dan blijft alleen een los bestand achter
     },
 
     async deellinks() {

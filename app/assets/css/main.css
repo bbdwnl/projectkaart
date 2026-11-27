@@ -769,6 +769,41 @@ footer{padding:70px 0 60px;color:var(--stil);font-size:13px}
 .fotovenster figcaption{margin-top:10px;font-size:15px;line-height:22px}
 .fotovenster figcaption small{display:block;color:var(--stil);font-size:13px}
 
+/* fotodossier (beslissing 50): foto's per dag in een raster; op de telefoon een cameraknop rechtsonder */
+.fotodossier-knop{cursor:pointer}
+.fotodossier-knop:focus-within{outline:3px solid var(--blauw);outline-offset:2px}
+.fotodossier .blokkop .knop{flex:none}
+.dossier-dag{margin-top:22px}
+.dossier-dag:first-of-type{margin-top:6px}
+.dossier-dag .label{margin:0 0 10px}
+.dossier-raster{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px}
+.dossier-foto{display:grid;gap:8px;width:100%;padding:0;border:0;background:none;text-align:left;font:inherit;color:inherit;cursor:zoom-in}
+.dossier-duim{display:block;aspect-ratio:4/3;border:var(--rand);border-radius:var(--radius-s);background:var(--grijs);overflow:hidden}
+.dossier-duim img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .4s var(--veer)}
+.dossier-foto:hover .dossier-duim img{transform:scale(1.03)}
+.dossier-onderschrift{display:grid;gap:2px;font-size:14px;line-height:19px}
+.dossier-titeltekst{font-weight:700;overflow-wrap:anywhere}
+.dossier-titeltekst.leeg{font-weight:400;color:var(--stil)}
+.dossier-onderschrift small{color:var(--stil);font-size:12.5px}
+.dossier-nieuw{width:min(560px,calc(100vw - 32px))}
+.dossier-nieuw h2{font-size:22px;margin:0 0 12px}
+.dossier-voorbeeld{display:grid;place-items:center;min-height:180px;margin-bottom:14px;border-radius:var(--radius-s);background:var(--grijs-2);color:var(--stil);font-weight:700;overflow:hidden}
+.dossier-voorbeeld img{display:block;width:100%;max-height:calc(100dvh - 300px);object-fit:contain}
+.dossier-titel{display:grid;gap:6px;margin-bottom:14px}
+.dossier-titel .label{margin:0}
+.dossier-titel .veld{width:100%}
+.dossier-nieuw .knoppen,.dossier-bewerk .knoppen{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.dossier-bewerk .knoppen .link{font-size:14px}
+.dossier-bewerk{width:min(560px,100%);margin:0 auto}
+.foto-fab{position:fixed;right:max(20px,env(safe-area-inset-right));bottom:calc(max(20px,env(safe-area-inset-bottom)) + 54px);z-index:44;display:none;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--verloop-zwart);color:var(--wit);box-shadow:var(--zacht-hoog);transition:transform .3s var(--veer)}
+.foto-fab:active{transform:scale(.94)}
+@media (max-width:760px){
+  .foto-fab{display:grid}
+  .dossier-raster{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .fotodossier .blokkop{flex-wrap:wrap}
+}
+@media print{.foto-fab{display:none}}
+
 /* takenlijst op een smal scherm: stand en notitie, de taak, dan de gegevens eronder */
 @media (max-width:1100px){
   #taken .rij-hoofd{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 34px;grid-template-areas:"tab tab knop" "titel titel titel" "dl eig akk" "st doc doc";gap:8px 12px;padding:12px 14px;align-items:center}

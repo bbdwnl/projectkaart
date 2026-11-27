@@ -1,6 +1,6 @@
 import type { InjectionKey } from 'vue'
 import type { NieuwControlepunt, NieuweUitzondering } from '~/data/bron'
-import type { Actie, ActieWijziging, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
+import type { Actie, ActieWijziging, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Dossierfoto, Plek, Tekening, Fase, Financien, Leverancier, NieuweLeverancier, Licht, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering } from '~/lib/types'
 import { FASEN } from '~/lib/fasen'
 import { OPEN_LICHTEN, standZin, takenVan, telling, volgendeMijlpaal, weggehaaldVan, type TaakRegel, type WeggehaaldeTaak } from '~/lib/stoplicht'
 import { aantalPerUitzondering, bereiktFase } from '~/lib/uitzonderingen'
@@ -34,6 +34,7 @@ function maakKaart(slug: string) {
   const leveranciers = ref<Leverancier[]>([])
   const globaleLeveranciers = ref<Leverancier[]>([])
   const controlepunten = ref<Controlepunt[]>([])
+  const dossierfotos = ref<Dossierfoto[]>([])
   /** Per discipline de leverancier en het contact. */
   const disciplines = ref<ProjectDiscipline[]>([])
   /** De actielijst van het overleg, oudste eerst. */
@@ -56,10 +57,11 @@ function maakKaart(slug: string) {
         if (!stil) stand.value = 'niet-gevonden'
         return
       }
-      const [t, c, f, l, alle, ps, lev, glob, cp, tek, opm, dis, act] = await Promise.all([
+      const [t, c, f, l, alle, ps, lev, glob, cp, tek, opm, dis, act, df] = await Promise.all([
         bron.taken(p.id), bron.uitzonderingen(), bron.financien(p.id), bron.logboek(p.id), bron.taken(), bron.projecten(),
         bron.leveranciers(p.id), bron.globaleLeveranciers(), bron.controlepunten(p.id), bron.tekeningen(p.id), bron.opmerkingen(p.id),
-        bron.disciplines(p.id), bron.acties(p.id),
+        // Het fotodossier mag de kaart niet breken (bijvoorbeeld als de migratie er nog niet op staat): dan leeg.
+        bron.disciplines(p.id), bron.acties(p.id), bron.dossierfotos(p.id).catch(() => [] as Dossierfoto[]),
       ])
       project.value = p
       taken.value = t
@@ -72,6 +74,7 @@ function maakKaart(slug: string) {
       leveranciers.value = lev
       globaleLeveranciers.value = glob
       controlepunten.value = cp
+      dossierfotos.value = df
       tekeningen.value = tek
       gebruik.value = aantalPerUitzondering(alle)
       projecten.value = ps.map(x => ({ id: x.id, fase: x.fase }))
@@ -88,7 +91,7 @@ function maakKaart(slug: string) {
   useLive(() => {
     const id = project.value?.id
     return id
-      ? (['projecten', 'taken', 'opmerkingen', 'acties', 'controlepunten', 'project_leveranciers', 'project_disciplines', 'tekeningen'] as const).map(tabel => ({ tabel, projectId: id }))
+      ? (['projecten', 'taken', 'opmerkingen', 'acties', 'controlepunten', 'project_leveranciers', 'project_disciplines', 'tekeningen', 'dossierfotos'] as const).map(tabel => ({ tabel, projectId: id }))
       : null
   }, () => laad(true))
 
@@ -459,6 +462,41 @@ function maakKaart(slug: string) {
     }
   }
 
+  // ---------- fotodossier ----------
+  async function voegDossierfotoToe(foto: Blob, titel: string): Promise<boolean> {
+    if (!project.value) return false
+    try {
+      dossierfotos.value = [await bron.voegDossierfotoToe(project.value.id, { foto, titel: titel.trim() || null }), ...dossierfotos.value]
+      toon('Foto opgeslagen in het fotodossier')
+      return true
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+      return false
+    }
+  }
+
+  async function wijzigDossiertitel(foto: Dossierfoto, titel: string) {
+    const nieuw = titel.trim() || null
+    if (nieuw === foto.titel) return
+    try {
+      const opgeslagen = await bron.bewaarDossierfoto(foto.id, nieuw)
+      dossierfotos.value = dossierfotos.value.map(f => (f.id === foto.id ? opgeslagen : f))
+      toon(nieuw ? 'Titel opgeslagen' : 'Titel weggehaald')
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+    }
+  }
+
+  async function verwijderDossierfoto(foto: Dossierfoto) {
+    try {
+      await bron.verwijderDossierfoto(foto)
+      dossierfotos.value = dossierfotos.value.filter(f => f.id !== foto.id)
+      toon('Foto weggehaald')
+    } catch (e) {
+      toon(foutTekst(e), 'fout')
+    }
+  }
+
   return {
     project, taken, catalogus, gebruik, financien, logboek, leveranciers, globaleLeveranciers, controlepunten, stand, fout, nu, tabFase, filter, nadruk,
     regelsPerFase, weggehaald, zetWeggehaald, huidig, lichten, zin, mijlpaal, bereikt, openPunten,
@@ -466,6 +504,7 @@ function maakKaart(slug: string) {
     disciplines, disciplineVan, kiesDiscipline, bewaarDiscipline, acties, openActies, nieuweActie, wijzigActie, verwijderActie,
     nieuweLeverancier, koppelLeverancier, ontkoppelLeverancier, maakGlobaal, voegControlepuntToe, zetOpgelost, keurAf, kiesLeverancier, verwijderControlepunt,
     tekeningen, nummers, uploadTekening, hernoemTekening, verwijderTekening, zetPlek,
+    dossierfotos, voegDossierfotoToe, wijzigDossiertitel, verwijderDossierfoto,
   }
 }
 

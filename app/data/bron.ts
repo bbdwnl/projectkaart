@@ -1,4 +1,4 @@
-import type { Actie, ActieWijziging, NieuweFeedback, Adres, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Deellink, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
+import type { Actie, ActieWijziging, NieuweFeedback, Adres, Discipline, DisciplineWijziging, ProjectDiscipline, Controlepunt, ControlepuntWijziging, Deellink, Dossierfoto, Plek, Tekening, Fase, Financien, Leverancier, LeverancierWijziging, NieuweLeverancier, NieuwProject, ProjectLeverancier, LogRegel, Opmerking, Project, ProjectWijziging, Taak, TaakWijziging, Uitzondering, UitzonderingStatus } from '~/lib/types'
 import type { ExternAntwoord } from '~/lib/deellink'
 
 /** Waar de gegevens vandaan komen: Supabase (bron-supabase.ts). De schermen praten alleen met deze interface. */
@@ -91,6 +91,15 @@ export interface Bron {
   bewaarControlepunt(id: string, wijziging: ControlepuntWijziging): Promise<Controlepunt>
   verwijderControlepunt(punt: Controlepunt): Promise<void>
 
+  /** Het fotodossier van één project, nieuwste eerst. */
+  dossierfotos(projectId: string): Promise<Dossierfoto[]>
+  /** Adressen waarop de browser de foto's uit het fotodossier kan tonen, per pad. Tijdelijk geldig. */
+  dossierfotoUrls(paden: string[]): Promise<Record<string, string>>
+  /** foto: al verkleind tot een jpg (utils/foto.ts). Een lege titel wordt null. */
+  voegDossierfotoToe(projectId: string, invoer: { titel: string | null, foto: Blob }): Promise<Dossierfoto>
+  bewaarDossierfoto(id: string, titel: string | null): Promise<Dossierfoto>
+  verwijderDossierfoto(foto: Dossierfoto): Promise<void>
+
   /** De links voor leveranciers, nieuwste eerst. */
   deellinks(): Promise<Deellink[]>
   /** Een nieuwe link voor deze leverancier: een maand geldig, met een code van vijf cijfers. Alleen met open punten. */
@@ -108,7 +117,7 @@ export interface Bron {
 export interface InstellingRij { sleutel: string, waarde: unknown, gewijzigd_door: string | null, gewijzigd_op: string }
 
 export interface Luister {
-  tabel: 'projecten' | 'taken' | 'opmerkingen' | 'acties' | 'controlepunten' | 'project_leveranciers' | 'project_disciplines' | 'tekeningen' | 'instellingen'
+  tabel: 'projecten' | 'taken' | 'opmerkingen' | 'acties' | 'controlepunten' | 'project_leveranciers' | 'project_disciplines' | 'tekeningen' | 'dossierfotos' | 'instellingen'
   projectId?: string
 }
 

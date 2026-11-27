@@ -427,6 +427,34 @@ describe('tekeningen', () => {
   })
 })
 
+describe('fotodossier', () => {
+  it('vult wie de foto maakte, maakt een lege titel null en laat foto, project en maker vastliggen', async () => {
+    const [f] = await als<{ id: string, titel: string | null, aangemaakt_door: string }>(MICHIEL,
+      `insert into public.dossierfotos (project_id, titel, foto, aangemaakt_door) values ($1, '  ', $2, 'Vervalst') returning id, titel, aangemaakt_door`,
+      [projectId, `${projectId}/d.jpg`])
+    expect(f).toMatchObject({ titel: null, aangemaakt_door: 'Michiel' })
+    const [na] = await als<{ titel: string, foto: string, aangemaakt_door: string }>(BENNO,
+      `update public.dossierfotos set titel = ' Leidingwerk vloer 2 ', foto = 'elders/x.jpg', aangemaakt_door = 'Benno' where id = $1 returning titel, foto, aangemaakt_door`, [f!.id])
+    expect(na).toEqual({ titel: 'Leidingwerk vloer 2', foto: `${projectId}/d.jpg`, aangemaakt_door: 'Michiel' })
+    expect(await als(VREEMD, `select id from public.dossierfotos`)).toHaveLength(0)
+    expect(await als(VREEMD, `delete from public.dossierfotos returning id`)).toHaveLength(0)
+    await als(MICHIEL, `delete from public.dossierfotos where id = $1`, [f!.id])
+  })
+
+  it('weigert een foto buiten de map van het project', async () => {
+    await expect(als(MICHIEL, `insert into public.dossierfotos (project_id, foto) values ($1, 'ergens/a.jpg')`, [projectId])).rejects.toThrow()
+  })
+
+  it('maakt een besloten bucket voor de foto\'s, alleen voor medewerkers', async () => {
+    const [b] = (await db.query<{ public: boolean }>(`select public from storage.buckets where id = 'fotodossier'`)).rows
+    expect(b!.public).toBe(false)
+    await als(MICHIEL, `insert into storage.objects (bucket_id, name) values ('fotodossier', $1)`, [`${projectId}/d.jpg`])
+    expect(await als(MICHIEL, `select name from storage.objects where bucket_id = 'fotodossier'`)).toHaveLength(1)
+    expect(await als(VREEMD, `select name from storage.objects where bucket_id = 'fotodossier'`)).toHaveLength(0)
+    await expect(als(VREEMD, `insert into storage.objects (bucket_id, name) values ('fotodossier', 'x/b.jpg')`)).rejects.toThrow()
+  })
+})
+
 describe('deellinks', () => {
   const SERVER = { role: 'service_role' }
   const ANONIEM = { role: 'anon' }
